@@ -1,0 +1,8 @@
+include README.rst
+include LICENSE.txt
+include HISTORY.rst 
+include CLASSIFIERS
+recursive-include requirements *.txt
+recursive-include examples *.py
+recursive-include doc/source *
+recursive-include doc *.py Make*

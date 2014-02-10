@@ -1,0 +1,5 @@
+-r main.txt
+nose
+coverage
+nose-cov
+hiro
