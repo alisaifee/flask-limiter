@@ -1,0 +1,12 @@
+language: python
+python:
+    - "2.6"
+    - "2.7"
+    - "3.3"
+    - "pypy"
+install:
+    - pip install -r requirements/ci.txt --use-mirrors
+
+script: nosetests tests --with-cov -v
+after_success:
+    - coveralls
