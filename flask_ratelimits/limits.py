@@ -1,6 +1,7 @@
 """
 
 """
+from six import add_metaclass
 
 Types = dict(
 	DAY=(0, "day"),
@@ -22,7 +23,7 @@ class GranularityMeta(type):
 			Granularities.append(granularity)
 		return granularity
 
-
+@add_metaclass(GranularityMeta)
 class Granularity(object):
 	__metaclass__ = GranularityMeta
 
