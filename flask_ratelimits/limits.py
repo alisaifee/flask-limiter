@@ -3,7 +3,7 @@
 """
 from six import add_metaclass
 
-Types = dict(
+TIME_TYPES = dict(
     DAY=(60 * 60 * 24, "day"),
     MONTH=(60 * 60 * 24 * 30, "month"),
     YEAR=(60 * 60 * 24 * 30 * 12, "year"),
@@ -12,7 +12,7 @@ Types = dict(
     SECOND=(1, "second")
 )
 
-Granularities = []
+GRANULARITIES = []
 
 
 class GranularityMeta(type):
@@ -20,10 +20,10 @@ class GranularityMeta(type):
         granularity = super(GranularityMeta, cls).__new__(cls, name, parents,
                                                           dct)
         if 'granularity' in dct:
-            Granularities.append(granularity)
+            GRANULARITIES.append(granularity)
         return granularity
 
-
+#pylint: disable=no-member
 @add_metaclass(GranularityMeta)
 class Granularity(object):
     __metaclass__ = GranularityMeta
@@ -47,32 +47,33 @@ class Granularity(object):
     def __repr__(self):
         return "%d per %s" % (self.amount, self.granularity[1])
 
+#pylint: disable=invalid-name
 class PER_YEAR(Granularity):
-    granularity = Types["YEAR"]
+    granularity = TIME_TYPES["YEAR"]
 
 
 class PER_MONTH(Granularity):
-    granularity = Types["MONTH"]
+    granularity = TIME_TYPES["MONTH"]
 
 
 class PER_DAY(Granularity):
-    granularity = Types["DAY"]
+    granularity = TIME_TYPES["DAY"]
 
 
 class PER_HOUR(Granularity):
-    granularity = Types["HOUR"]
+    granularity = TIME_TYPES["HOUR"]
 
 
 class PER_MINUTE(Granularity):
-    granularity = Types["MINUTE"]
+    granularity = TIME_TYPES["MINUTE"]
 
 
 class PER_SECOND(Granularity):
-    granularity = Types["SECOND"]
+    granularity = TIME_TYPES["SECOND"]
 
 
 def granularity_from_string(granularity_string):
-    for granularity in Granularities:
+    for granularity in GRANULARITIES:
         if granularity.check_granularity_string(granularity_string):
             return granularity
     raise ValueError("no granularity matched for %s" % granularity_string)
