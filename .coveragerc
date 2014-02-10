@@ -1,0 +1,10 @@
+[run]
+include = 
+    **/flask_ratelimits/*
+omit =
+    /*/flask_ratelimits/_version*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
