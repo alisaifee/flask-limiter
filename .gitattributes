@@ -1,1 +1,1 @@
-flask_ratelimit/_version.py export-subst
+flask_ratelimits/_version.py export-subst

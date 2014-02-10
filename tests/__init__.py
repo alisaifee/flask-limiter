@@ -1,7 +1,7 @@
 
 def test_import():
-	import flask_ratelimit
+	import flask_ratelimits
 
 def test_module_version():
-	import flask_ratelimit
-	print flask_ratelimit.__version__
+	import flask_ratelimits
+	assert flask_ratelimits.__version__ is not None
