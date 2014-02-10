@@ -42,6 +42,11 @@ class Granularity(object):
 class PER_HOUR(Granularity):
 	granularity = Types["HOUR"]
 
+class PER_MINUTE(Granularity):
+	granularity = Types["MINUTE"]
+
+class PER_SECOND(Granularity):
+	granularity = Types["SECOND"]
 
 def granularity_from_string(granularity_string):
 	for granularity in Granularities:
