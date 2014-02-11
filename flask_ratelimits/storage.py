@@ -15,6 +15,9 @@ from .util import get_dependency
 
 @six.add_metaclass(ABCMeta)
 class Storage(object):
+    def __init__(self):
+        self.lock = threading.RLock()
+
     @abstractmethod
     def set_and_get(self, key, expiry):
         raise NotImplementedError
@@ -37,8 +40,8 @@ class Storage(object):
 class MemoryStorage(Storage):
     def __init__(self):
         self.storage = Counter()
-        self.lock = threading.RLock()
         self.expirations = {}
+        super(MemoryStorage, self).__init__()
 
     def set_and_get(self, key, expiry):
         with self.ctx():
@@ -58,12 +61,14 @@ class MemoryStorage(Storage):
                 self.delete(key)
             return self.storage.get(key, 0)
 
-
 class RedisStorage(Storage):
     def __init__(self, redis_url):
         if not get_dependency("redis"):
-            raise ConfigurationError("redis prerequisite not available")
-        self.storage = get_dependency("redis").Redis(** get_dependency("redis").from_url(redis_url))
+            raise ConfigurationError("redis prerequisite not available") # pragma: no cover
+        self.storage = get_dependency("redis").from_url(redis_url)
+        if not self.storage.ping():
+            raise ConfigurationError("unable to connect to redis at %s" % redis_url) # pragma: no cover
+        super(RedisStorage, self).__init__()
 
     def set_and_get(self, key, expiry):
         try:

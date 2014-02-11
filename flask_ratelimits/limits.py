@@ -18,13 +18,15 @@ TIME_TYPES = dict(
 
 GRANULARITIES = []
 
+
 class ItemMeta(type):
     def __new__(cls, name, parents, dct):
         granularity = super(ItemMeta, cls).__new__(cls, name, parents,
-                                                          dct)
+                                                   dct)
         if 'granularity' in dct:
             GRANULARITIES.append(granularity)
         return granularity
+
 
 #pylint: disable=no-member
 @add_metaclass(ItemMeta)
@@ -32,7 +34,7 @@ class Item(object):
     __metaclass__ = ItemMeta
 
     def __init__(self, amount, multiples=1, namespace=None, uuid=None):
-        self.key  = "%s%s" % (namespace + "/" if namespace else "", uuid or uuid4().hex)
+        self.key = "%s%s" % (namespace + "/" if namespace else "", uuid or uuid4().hex)
         self.amount = int(amount)
         self.multiples = int(multiples or 1)
 
@@ -54,6 +56,7 @@ class Item(object):
 
     def __repr__(self):
         return "%d per %s (namespace: %s)" % (self.amount, self.granularity[1], self.key)
+
 
 #pylint: disable=invalid-name
 class PER_YEAR(Item):

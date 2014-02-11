@@ -3,9 +3,9 @@
 """
 from functools import wraps
 from flask import request, current_app
-from flask.ext.ratelimits.errors import RateLimitException
-from flask.ext.ratelimits.limits import Limiter
-from flask.ext.ratelimits.util import storage_from_string, parse_many
+from flask_ratelimits.errors import RateLimitException
+from flask_ratelimits.limits import Limiter
+from flask_ratelimits.util import storage_from_string, parse_many
 
 class LimitCollection(list):
     def __init__(self, key_func, *args):
