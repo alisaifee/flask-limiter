@@ -1,5 +1,5 @@
 import unittest
-from flask_ratelimits import limits
+from flask_limiter import limits
 
 
 class GranularityTests(unittest.TestCase):

@@ -83,7 +83,7 @@ class PER_SECOND(Item):
     granularity = TIME_TYPES["SECOND"]
 
 
-class Limiter(object):
+class RateManager(object):
     def __init__(self, storage):
         self.storage = weakref.ref(storage)
 

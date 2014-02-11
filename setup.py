@@ -1,5 +1,5 @@
 """
-setup.py for Flask-Ratelimits
+setup.py for Flask-Limiter
 
 
 """
@@ -16,17 +16,17 @@ REQUIREMENTS = filter(None, open(
 
 import versioneer
 
-versioneer.versionfile_source = "flask_ratelimits/_version.py"
-versioneer.versionfile_build = "flask_ratelimits/version.py"
+versioneer.versionfile_source = "flask_limiter/_version.py"
+versioneer.versionfile_build = "flask_limiter/version.py"
 versioneer.tag_prefix = ""
-versioneer.parentdir_prefix = "flask_ratelimits-"
+versioneer.parentdir_prefix = "flask_limiter-"
 
 setup(
-    name='Flask-Ratelimits',
+    name='Flask-Limiter',
     author=__author__,
     author_email=__email__,
     license=open("LICENSE.txt").read(),
-    url="https://flask-ratelimits.readthedocs.org/en/latest/",
+    url="https://flask-limiter.readthedocs.org/en/latest/",
     zip_safe=False,
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),

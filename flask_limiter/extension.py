@@ -3,9 +3,9 @@
 """
 from functools import wraps
 from flask import request, current_app
-from flask_ratelimits.errors import RateLimitException
-from flask_ratelimits.limits import Limiter
-from flask_ratelimits.util import storage_from_string, parse_many
+from flask_limiter.errors import RateLimitException
+from flask_limiter.limits import RateManager
+from flask_limiter.util import storage_from_string, parse_many
 
 class LimitCollection(list):
     def __init__(self, key_func, *args):
@@ -17,7 +17,7 @@ def get_ipaddr():
     return request.remote_addr
 
 
-class RateLimits(object):
+class Limiter(object):
     def __init__(self, app):
         self.app = app
         self.global_limits = []
@@ -30,7 +30,7 @@ class RateLimits(object):
         self.storage = storage_from_string(
             app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
-        self.limiter = Limiter(self.storage)
+        self.limiter = RateManager(self.storage)
         global_limit = app.config.get("RATELIMIT_GLOBAL", None)
         if global_limit:
             self.global_limits = LimitCollection(get_ipaddr, parse_many(global_limit))

@@ -145,8 +145,8 @@ def versions_from_parentdir(parentdir_prefix, root, verbose=False):
     return {"version": dirname[len(parentdir_prefix):], "full": ""}
 
 tag_prefix = ""
-parentdir_prefix = "flask_ratelimits-"
-versionfile_source = "flask_ratelimits/_version.py"
+parentdir_prefix = "flask_limiter-"
+versionfile_source = "flask_limiter/_version.py"
 
 def get_versions(default={"version": "unknown", "full": ""}, verbose=False):
     # I am in _version.py, which lives at ROOT/VERSIONFILE_SOURCE. If we have

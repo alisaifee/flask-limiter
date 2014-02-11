@@ -4,16 +4,16 @@ import time
 import hiro
 import mock
 
-from flask_ratelimits.errors import ConfigurationError
-from flask_ratelimits.limits import Limiter, PER_MINUTE, PER_SECOND
-from flask_ratelimits.storage import MemoryStorage, RedisStorage
+from flask_limiter.errors import ConfigurationError
+from flask_limiter.limits import RateManager, PER_MINUTE, PER_SECOND
+from flask_limiter.storage import MemoryStorage, RedisStorage
 
 
 class StorageTests(unittest.TestCase):
     def test_in_memory(self):
         with hiro.Timeline().freeze() as timeline:
             storage = MemoryStorage()
-            limiter = Limiter(storage)
+            limiter = RateManager(storage)
             per_min = PER_MINUTE(10)
             for i in range(0,10):
                 self.assertTrue(limiter.hit(per_min))
@@ -23,13 +23,13 @@ class StorageTests(unittest.TestCase):
 
 
     def test_redis_prerequisite_fail(self):
-        with mock.patch("flask_ratelimits.storage.get_dependency") as dep_getter:
+        with mock.patch("flask_limiter.storage.get_dependency") as dep_getter:
             dep_getter.return_value = None
             self.assertRaises(ConfigurationError, RedisStorage, "blah")
 
     def test_redis(self):
         storage = RedisStorage("redis://localhost:6379")
-        limiter = Limiter(storage)
+        limiter = RateManager(storage)
         per_min = PER_SECOND(10)
         start = time.time()
         count = 0

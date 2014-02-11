@@ -4,17 +4,17 @@
 import unittest
 from flask import Flask
 import hiro
-from flask.ext.ratelimits.extension import RateLimits
+from flask.ext.limiter.extension import Limiter
 
 
 class FlaskExtTests(unittest.TestCase):
     def test_global_rate_limits(self):
         app = Flask(__name__)
         app.config.setdefault("RATELIMIT_GLOBAL", "1 per hour;10 per day")
-        ratelimits = RateLimits(app)
+        limiter = Limiter(app)
 
         @app.route("/t1")
-        @ratelimits.limit("100 per hour;10/minute")
+        @limiter.limit("100 per hour;10/minute")
         def t1():
             return "t1"
 
@@ -39,9 +39,9 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_key_func(self):
         app = Flask(__name__)
-        ratelimits = RateLimits(app)
+        limiter = Limiter(app)
         @app.route("/t1")
-        @ratelimits.limit("100 per minute", lambda:"test")
+        @limiter.limit("100 per minute", lambda:"test")
         def t1():
             return "test"
 
