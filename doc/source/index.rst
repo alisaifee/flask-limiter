@@ -1,22 +1,48 @@
-.. Flask-Ratelimit documentation master file, created by
-   sphinx-quickstart on Mon Feb 10 20:15:31 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Welcome to Flask-Limiter's documentation!
+=========================================
 
-Welcome to Flask-Ratelimit's documentation!
-===========================================
+Example use
+-----------
+.. code-block:: python
 
-Contents:
+   from flask import Flask
+   from flask_limiter import Limiter
 
-.. toctree::
-   :maxdepth: 2
+   app = Flask(__name__)
+   limiter = Limiter(Flask)
+   limiter.global_limits += "100 per day"
+
+   @app.route("/slow")
+   @limiter.limit("1 per day")
+   def slow():
+       return 24
+
+   @app.route("/fast")
+   def fast():
+       return 42
 
 
+Configuration
+-------------
+The following flask configuration values are honored by
+:class:`~flask_limiter.Limiter`
 
-Indices and tables
-==================
+.. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+============================== ================================================
+``RATELIMIT_GLOBAL``           The size of the random integer to be used when
+                               generating random session ids through
+                               :func:`~flaskext.kvsession.generate_session_key`
+                               . Defaults to 64.
+``RATELIMIT_STORE_URL``        An object supporting
+                               :func:`random.getrandbits`, used as a random
+                               source by the module. Defaults to an instance of
+                               :class:`random.SystemRandom`.
+============================== ================================================
+
+API reference
+-------------
+.. automodule:: flask_ratelimits
+    :members:
+
 
