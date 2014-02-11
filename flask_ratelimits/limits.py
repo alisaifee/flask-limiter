@@ -1,6 +1,7 @@
 """
 
 """
+import uuid
 from six import add_metaclass
 
 TIME_TYPES = dict(
@@ -29,6 +30,7 @@ class Granularity(object):
     __metaclass__ = GranularityMeta
 
     def __init__(self, amount):
+        self.uuid = uuid.uuid4().hex
         self.amount = int(amount)
 
     @classmethod
@@ -45,7 +47,7 @@ class Granularity(object):
         )
 
     def __repr__(self):
-        return "%d per %s" % (self.amount, self.granularity[1])
+        return "%d per %s (namespace: %s)" % (self.amount, self.granularity[1], self.uuid)
 
 #pylint: disable=invalid-name
 class PER_YEAR(Granularity):
