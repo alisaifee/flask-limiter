@@ -2,4 +2,5 @@
 nose
 coverage
 nose-cov
+redis
 hiro
