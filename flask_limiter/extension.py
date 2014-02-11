@@ -5,7 +5,8 @@ from functools import wraps
 from flask import request, current_app
 from flask_limiter.errors import RateLimitException
 from flask_limiter.limits import RateManager
-from flask_limiter.util import storage_from_string, parse_many
+from flask_limiter.util import storage_from_string, parse_many, parse
+
 
 class LimitCollection(list):
     def __init__(self, key_func, *args):
@@ -18,9 +19,12 @@ def get_ipaddr():
 
 
 class Limiter(object):
-    def __init__(self, app):
+    """
+    The flask extension to wrap the :class:`flask.Flask`
+    """
+    def __init__(self, app, **global_limits):
         self.app = app
-        self.global_limits = []
+        self.global_limits = [parse(limit) for limit in global_limits]
         self.route_limits = {}
         self.storage = self.limiter = None
         if app:

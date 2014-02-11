@@ -9,8 +9,7 @@ Example use
    from flask_limiter import Limiter
 
    app = Flask(__name__)
-   limiter = Limiter(Flask)
-   limiter.global_limits += "100 per day"
+   limiter = Limiter(Flask, "200 per day", "50 per hour")
 
    @app.route("/slow")
    @limiter.limit("1 per day")
@@ -30,19 +29,15 @@ The following flask configuration values are honored by
 .. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
 ============================== ================================================
-``RATELIMIT_GLOBAL``           The size of the random integer to be used when
-                               generating random session ids through
-                               :func:`~flaskext.kvsession.generate_session_key`
-                               . Defaults to 64.
-``RATELIMIT_STORE_URL``        An object supporting
-                               :func:`random.getrandbits`, used as a random
-                               source by the module. Defaults to an instance of
-                               :class:`random.SystemRandom`.
+``RATELIMIT_GLOBAL``           A comma (or some other delimiter) separated string
+                               that will be used to apply a global limit on all
+                               routes.
+``RATELIMIT_STORE_URL``        One of ``memory://`` or ``redis://host:port``
 ============================== ================================================
 
 API reference
 -------------
-.. automodule:: flask_ratelimits
+.. automodule:: flask_limiter
     :members:
 
 
