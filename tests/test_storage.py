@@ -1,11 +1,13 @@
 import unittest
+import time
+
 import hiro
 import mock
-import time
-from flask.ext.ratelimits.errors import ConfigurationError
-from flask.ext.ratelimits.limits import Limiter, PER_MINUTE, PER_SECOND
-from flask.ext.ratelimits.storage import MemoryStorage, RedisStorage
-from flask_ratelimits import parser, limits
+
+from flask_ratelimits.errors import ConfigurationError
+from flask_ratelimits.limits import Limiter, PER_MINUTE, PER_SECOND
+from flask_ratelimits.storage import MemoryStorage, RedisStorage
+
 
 class StorageTests(unittest.TestCase):
     def test_in_memory(self):

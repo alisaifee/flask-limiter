@@ -1,5 +1,6 @@
 import unittest
-from flask_ratelimits import parser, limits
+from flask_ratelimits import limits
+
 
 class GranularityTests(unittest.TestCase):
     def test_seconds_value(self):
