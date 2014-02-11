@@ -5,6 +5,9 @@ python:
     - "3.3"
 install:
     - pip install -r requirements/ci.txt --use-mirrors
+    
+services:
+    - redis-server
 
 script: nosetests tests --with-cov -v
 after_success:
