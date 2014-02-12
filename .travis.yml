@@ -7,6 +7,7 @@ install:
     
 services:
     - redis-server
+    - memcached
 
 script: nosetests tests --with-cov -v
 after_success:
