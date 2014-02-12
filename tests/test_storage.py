@@ -22,12 +22,6 @@ class StorageTests(unittest.TestCase):
             timeline.forward(61)
             self.assertTrue(limiter.hit(per_min))
 
-
-    def test_redis_prerequisite_fail(self):
-        with mock.patch("flask_limiter.storage.get_dependency") as dep_getter:
-            dep_getter.return_value = None
-            self.assertRaises(ConfigurationError, RedisStorage, "blah")
-
     def test_redis(self):
         storage = RedisStorage("redis://localhost:6379")
         limiter = RateLimitManager(storage)

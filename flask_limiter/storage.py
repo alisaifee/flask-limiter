@@ -86,7 +86,7 @@ class RedisStorage(Storage):
 class MemcachedStorage(Storage):
     def __init__(self, host, port):
         if not get_dependency("memcache"):
-            raise ConfigurationError("memcached prerequisite not available")
+            raise ConfigurationError("memcached prerequisite not available") # pragma: no cover
         self.storage = get_dependency("memcache").Client(["%s:%d" % (host, port)])
 
     def get(self, key):
