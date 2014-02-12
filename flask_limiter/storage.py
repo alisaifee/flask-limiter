@@ -81,3 +81,25 @@ class RedisStorage(Storage):
 
     def get(self, key):
         return self.storage.get(key)
+
+
+class MemcachedStorage(Storage):
+    def __init__(self, host, port):
+        if not get_dependency("memcache"):
+            raise ConfigurationError("memcached prerequisite not available")
+        self.storage = get_dependency("memcache").Client(["%s:%d" % (host, port)])
+
+    def get(self, key):
+        return int(self.storage.get(key))
+
+
+    def delete(self, key):
+        self.storage.delete(key)
+
+    def set_and_get(self, key, expiry):
+        if not self.storage.add(key, 1, expiry):
+            value = int(self.get(key))
+            while not self.storage.cas(key, value + 1, expiry):
+                value = int(self.get(key))
+            return value + 1
+        return 1

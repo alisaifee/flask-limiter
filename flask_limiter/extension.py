@@ -4,8 +4,8 @@
 from functools import wraps
 from flask import request, current_app
 
-from .errors import RateLimitException
-from .limits import RateManager
+from .errors import RateLimitExceeded
+from .limits import RateLimitManager
 from .util import storage_from_string, parse_many, parse, get_ipaddr
 
 
@@ -25,7 +25,7 @@ class Limiter(object):
         self.storage = storage_from_string(
             app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
-        self.limiter = RateManager(self.storage)
+        self.limiter = RateLimitManager(self.storage)
         global_limit = app.config.get("RATELIMIT_GLOBAL", None)
         if global_limit:
             self.global_limits = [
@@ -45,7 +45,7 @@ class Limiter(object):
             or self.global_limits
         )
         if not all([self.limiter.hit(l, k(), endpoint) for k, l in limits]):
-            raise RateLimitException()
+            raise RateLimitExceeded()
 
     def limit(self, limit_string, key_func=get_ipaddr):
         def _inner(fn):

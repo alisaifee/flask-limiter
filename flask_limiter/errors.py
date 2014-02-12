@@ -7,6 +7,6 @@ from werkzeug.exceptions import abort
 class ConfigurationError(Exception):
     pass
 
-class RateLimitException(Exception):
+class RateLimitExceeded(Exception):
     def __init__(self, msg=None):
-        abort(429)
+        abort(429, msg)

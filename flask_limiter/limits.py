@@ -18,9 +18,9 @@ TIME_TYPES = dict(
 GRANULARITIES = []
 
 
-class ItemMeta(type):
+class RateLimitItemMeta(type):
     def __new__(cls, name, parents, dct):
-        granularity = super(ItemMeta, cls).__new__(cls, name, parents,
+        granularity = super(RateLimitItemMeta, cls).__new__(cls, name, parents,
                                                    dct)
         if 'granularity' in dct:
             GRANULARITIES.append(granularity)
@@ -28,9 +28,13 @@ class ItemMeta(type):
 
 
 #pylint: disable=no-member
-@add_metaclass(ItemMeta)
-class Item(object):
-    __metaclass__ = ItemMeta
+@add_metaclass(RateLimitItemMeta)
+class RateLimitItem(object):
+    """
+    defines a Rate limited resource which contains characteristics
+     namespace, amount and granularity of rate limiting window.
+    """
+    __metaclass__ = RateLimitItemMeta
 
     def __init__(self, amount, multiples=1, namespace='LIMITER'):
         self.namespace = namespace
@@ -39,13 +43,27 @@ class Item(object):
 
     @classmethod
     def check_granularity_string(cls, granularity_string):
+        """
+        checks if this instance matches a granularity string
+        of type 'n per hour' etc.
+
+        :return: True/False
+        """
         return granularity_string.lower() in cls.granularity[1:]
 
     @property
     def expiry(self):
+        """
+        :return: the size of the window in seconds.
+        """
         return self.granularity[0] * self.multiples
 
     def key_for(self, *identifiers):
+        """
+        :param identifiers: a list of strings to append to the key
+        :return: a string key identifying this resource with
+         each identifier appended with a '/' delimiter.
+        """
         remainder = "/".join(
             identifiers + (str(self.multiples), self.granularity[1])
         )
@@ -63,31 +81,31 @@ class Item(object):
 
 
 #pylint: disable=invalid-name
-class PER_YEAR(Item):
+class PER_YEAR(RateLimitItem):
     granularity = TIME_TYPES["YEAR"]
 
 
-class PER_MONTH(Item):
+class PER_MONTH(RateLimitItem):
     granularity = TIME_TYPES["MONTH"]
 
 
-class PER_DAY(Item):
+class PER_DAY(RateLimitItem):
     granularity = TIME_TYPES["DAY"]
 
 
-class PER_HOUR(Item):
+class PER_HOUR(RateLimitItem):
     granularity = TIME_TYPES["HOUR"]
 
 
-class PER_MINUTE(Item):
+class PER_MINUTE(RateLimitItem):
     granularity = TIME_TYPES["MINUTE"]
 
 
-class PER_SECOND(Item):
+class PER_SECOND(RateLimitItem):
     granularity = TIME_TYPES["SECOND"]
 
 
-class RateManager(object):
+class RateLimitManager(object):
     def __init__(self, storage):
         self.storage = weakref.ref(storage)
 

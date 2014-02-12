@@ -1,8 +1,9 @@
+*****************************************
 Welcome to Flask-Limiter's documentation!
-=========================================
+*****************************************
 
-Example use
------------
+Quickstart
+==========
 .. code-block:: python
 
    from flask import Flask
@@ -22,22 +23,38 @@ Example use
 
 
 Configuration
--------------
+=============
 The following flask configuration values are honored by
-:class:`~flask_limiter.Limiter`
+:class:`flask_limiter.Limiter`
 
 .. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
 ============================== ================================================
 ``RATELIMIT_GLOBAL``           A comma (or some other delimiter) separated string
                                that will be used to apply a global limit on all
-                               routes.
+                               routes. If not provided, the global limits can be
+                               passed to the :class:`flask_limiter.Limiter` constructor
+                               as well.
 ``RATELIMIT_STORE_URL``        One of ``memory://`` or ``redis://host:port``
+                               or ``memcache://host:port``
 ============================== ================================================
 
-API reference
--------------
-.. automodule:: flask_limiter
-    :members:
 
+
+
+
+
+
+API
+===
+
+Core
+----
+.. autoclass:: flask_limiter.Limiter
+
+
+Exceptions
+----------
+.. autoexception:: flask_limiter.ConfigurationError
+.. autoexception:: flask_limiter.RateLimitExceeded
 
