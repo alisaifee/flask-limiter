@@ -55,8 +55,10 @@ class MemoryStorage(Storage):
     def get(self, key):
         with self.ctx():
             if self.expirations.get(key, 0) <= time.time():
-                self.storage.pop(key)
-                self.expirations.pop(key)
+                if key in self.storage:
+                    self.storage.pop(key)
+                if key in self.expirations:
+                    self.expirations.pop(key)
             return self.storage.get(key, 0)
 
 class RedisStorage(Storage):
