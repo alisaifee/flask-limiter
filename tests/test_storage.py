@@ -3,11 +3,11 @@ import time
 
 import hiro
 import mock
+from flask.ext.limiter.util import get_dependency
 
 from flask_limiter.errors import ConfigurationError
 from flask_limiter.limits import RateLimitManager, PER_MINUTE, PER_SECOND
 from flask_limiter.storage import MemoryStorage, RedisStorage, MemcachedStorage
-from tests import is_py3
 
 
 class StorageTests(unittest.TestCase):
@@ -42,7 +42,7 @@ class StorageTests(unittest.TestCase):
             time.sleep(0.1)
         self.assertTrue(limiter.hit(per_min))
 
-    @unittest.skipIf(is_py3, "memcached on py3 isn't installable")
+    @unittest.skipIf(get_dependency("memcache"), "run memcache tests only if installed")
     def test_memcached(self):
         storage = MemcachedStorage("localhost", 11211)
         limiter = RateLimitManager(storage)
