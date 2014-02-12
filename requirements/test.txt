@@ -3,5 +3,4 @@ nose
 coverage
 nose-cov
 redis
-python-memcached
 hiro
