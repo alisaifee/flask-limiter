@@ -12,9 +12,9 @@ class GranularityTests(unittest.TestCase):
         self.assertEqual(limits.PER_YEAR(1).expiry, 60*60*24*30*12)
 
     def test_representation(self):
-        self.assertTrue("1 per hour" in str(limits.PER_HOUR(1)))
-        self.assertTrue("1 per minute" in str(limits.PER_MINUTE(1)))
-        self.assertTrue("1 per second" in str(limits.PER_SECOND(1)))
-        self.assertTrue("1 per day" in str(limits.PER_DAY(1)))
-        self.assertTrue("1 per month" in str(limits.PER_MONTH(1)))
-        self.assertTrue("1 per year" in str(limits.PER_YEAR(1)))
+        self.assertTrue("1 per 1 hour" in str(limits.PER_HOUR(1)))
+        self.assertTrue("1 per 1 minute" in str(limits.PER_MINUTE(1)))
+        self.assertTrue("1 per 1 second" in str(limits.PER_SECOND(1)))
+        self.assertTrue("1 per 1 day" in str(limits.PER_DAY(1)))
+        self.assertTrue("1 per 1 month" in str(limits.PER_MONTH(1)))
+        self.assertTrue("1 per 1 year" in str(limits.PER_YEAR(1)))

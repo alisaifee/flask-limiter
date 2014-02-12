@@ -1,7 +1,6 @@
 """
 
 """
-from uuid import uuid4
 import weakref
 
 from six import add_metaclass
@@ -33,8 +32,8 @@ class ItemMeta(type):
 class Item(object):
     __metaclass__ = ItemMeta
 
-    def __init__(self, amount, multiples=1, namespace=None, uuid=None):
-        self.key = "%s%s" % (namespace + "/" if namespace else "", uuid or uuid4().hex)
+    def __init__(self, amount, multiples=1, namespace='LIMITER'):
+        self.namespace = namespace
         self.amount = int(amount)
         self.multiples = int(multiples or 1)
 
@@ -47,7 +46,10 @@ class Item(object):
         return self.granularity[0] * self.multiples
 
     def key_for(self, *identifiers):
-        return self.key if not identifiers else "%s/%s" % (self.key, "/".join(identifiers))
+        remainder = "/".join(
+            identifiers + (str(self.multiples), self.granularity[1])
+        )
+        return "%s/%s" % (self.namespace, remainder)
 
     def __eq__(self, other):
         return (self.amount == other.amount
@@ -55,7 +57,9 @@ class Item(object):
         )
 
     def __repr__(self):
-        return "%d per %s (namespace: %s)" % (self.amount, self.granularity[1], self.key)
+        return "%d per %d %s (namespace: %s)" % (
+        self.amount, self.multiples, self.granularity[1], self.namespace
+        )
 
 
 #pylint: disable=invalid-name

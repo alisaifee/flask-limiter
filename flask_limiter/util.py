@@ -3,6 +3,7 @@
 """
 import re
 from six.moves import urllib
+from flask import request
 from .limits import GRANULARITIES
 
 EXPR = re.compile(
@@ -45,3 +46,6 @@ def storage_from_string(storage_string):
     else:
         return None
 
+
+def get_ipaddr():
+    return request.remote_addr or '127.0.0.1'
