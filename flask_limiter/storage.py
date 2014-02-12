@@ -38,6 +38,11 @@ class Storage(object):
 
 
 class MemoryStorage(Storage):
+    """
+    rate limit storage using :class:`collections.Counter`
+    as an in memory storage.
+
+    """
     def __init__(self):
         self.storage = Counter()
         self.expirations = {}
@@ -62,6 +67,9 @@ class MemoryStorage(Storage):
             return self.storage.get(key, 0)
 
 class RedisStorage(Storage):
+    """
+    rate limit storage with redis as backend
+    """
     def __init__(self, redis_url):
         if not get_dependency("redis"):
             raise ConfigurationError("redis prerequisite not available") # pragma: no cover
@@ -84,6 +92,9 @@ class RedisStorage(Storage):
 
 
 class MemcachedStorage(Storage):
+    """
+    rate limit storage with memcached as backend
+    """
     def __init__(self, host, port):
         if not get_dependency("memcache"):
             raise ConfigurationError("memcached prerequisite not available") # pragma: no cover
