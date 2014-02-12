@@ -1,8 +1,8 @@
 [run]
 include = 
-    **/flask_ratelimits/*
+    **/flask_limiter/*
 omit =
-    /*/flask_ratelimits/_version*
+    /*/flask_limiter/_version*
 
 [report]
 exclude_lines =
