@@ -26,10 +26,6 @@ class Storage(object):
     def get(self, key):
         raise NotImplementedError
 
-    @abstractmethod
-    def delete(self, key):
-        raise NotImplementedError
-
     @contextmanager
     def ctx(self):
         self.lock.acquire()
@@ -56,14 +52,11 @@ class MemoryStorage(Storage):
             self.expirations[key] = time.time() + expiry
             return self.storage.get(key, 0)
 
-    def delete(self, key):
-        if key in self.storage:
-            self.storage.pop(key)
-
     def get(self, key):
         with self.ctx():
             if self.expirations.get(key, 0) <= time.time():
-                self.delete(key)
+                self.storage.pop(key)
+                self.expirations.pop(key)
             return self.storage.get(key, 0)
 
 class RedisStorage(Storage):
@@ -84,9 +77,6 @@ class RedisStorage(Storage):
         finally:
             self.storage.expire(key, expiry)
 
-    def delete(self, key):
-        self.storage.delete(key)
-
     def get(self, key):
         return self.storage.get(key)
 
@@ -102,10 +92,6 @@ class MemcachedStorage(Storage):
 
     def get(self, key):
         return int(self.storage.get(key))
-
-
-    def delete(self, key):
-        self.storage.delete(key)
 
     def set_and_get(self, key, expiry):
         if not self.storage.add(key, 1, expiry):
