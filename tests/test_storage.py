@@ -42,7 +42,7 @@ class StorageTests(unittest.TestCase):
             time.sleep(0.1)
         self.assertTrue(limiter.hit(per_min))
 
-    @unittest.skipIf(get_dependency("memcache"), "run memcache tests only if installed")
+    @unittest.skipIf(not get_dependency("memcache"), "run memcache tests only if installed")
     def test_memcached(self):
         storage = MemcachedStorage("localhost", 11211)
         limiter = RateLimitManager(storage)
