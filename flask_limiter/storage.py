@@ -88,17 +88,18 @@ class MemcachedStorage(Storage):
     rate limit storage with memcached as backend
     """
     def __init__(self, host, port):
-        if not get_dependency("memcache"):
-            raise ConfigurationError("memcached prerequisite not available") # pragma: no cover
-        self.storage = get_dependency("memcache").Client(["%s:%d" % (host, port)])
+        if not get_dependency("pymemcache"):
+            raise ConfigurationError("memcached prerequisite not available."
+                                     " please install pymemcache") # pragma: no cover
+        self.storage = get_dependency("pymemcache.client").client.Client((host, port))
 
     def get(self, key):
-        return int(self.storage.get(key))
+        return int(self.storage.get(key) or 0)
 
     def set_and_get(self, key, expiry):
-        if not self.storage.add(key, 1, expiry):
-            value = int(self.get(key))
-            while not self.storage.cas(key, value + 1, expiry):
-                value = int(self.get(key))
-            return value + 1
+        if not self.storage.add(key, 1, expiry, noreply=False):
+            value, cas = self.storage.gets(key)
+            while not self.storage.cas(key, int(value)+1, cas, expiry):
+                value, cas = self.storage.gets(key)
+            return int(value) + 1
         return 1

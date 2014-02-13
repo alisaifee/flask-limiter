@@ -75,8 +75,8 @@ class RateLimitItem(object):
         )
 
     def __repr__(self):
-        return "%d per %d %s (namespace: %s)" % (
-        self.amount, self.multiples, self.granularity[1], self.namespace
+        return "%d per %d %s" % (
+            self.amount, self.multiples, self.granularity[1]
         )
 
 

@@ -2,15 +2,20 @@ import unittest
 import time
 
 import hiro
-import mock
-from flask.ext.limiter.util import get_dependency
-
-from flask_limiter.errors import ConfigurationError
-from flask_limiter.limits import RateLimitManager, PER_MINUTE, PER_SECOND
-from flask_limiter.storage import MemoryStorage, RedisStorage, MemcachedStorage
+from flask.ext.limiter.util import get_dependency, storage_from_string
+from flask.ext.limiter.errors import ConfigurationError
+from flask.ext.limiter.limits import RateLimitManager, PER_MINUTE, PER_SECOND
+from flask.ext.limiter.storage import MemoryStorage, RedisStorage, MemcachedStorage
 
 
 class StorageTests(unittest.TestCase):
+    def test_storage_string(self):
+        self.assertTrue(isinstance(storage_from_string("memory://"), MemoryStorage))
+        self.assertTrue(isinstance(storage_from_string("redis://localhost:6379"), RedisStorage))
+        if get_dependency("memcache"):
+            self.assertTrue(isinstance(storage_from_string("memcached://localhost:11211"), MemcachedStorage))
+        self.assertRaises(ConfigurationError, storage_from_string, "blah://")
+
     def test_in_memory(self):
         with hiro.Timeline().freeze() as timeline:
             storage = MemoryStorage()
@@ -36,7 +41,6 @@ class StorageTests(unittest.TestCase):
             time.sleep(0.1)
         self.assertTrue(limiter.hit(per_min))
 
-    @unittest.skipIf(not get_dependency("memcache"), "run memcache tests only if installed")
     def test_memcached(self):
         storage = MemcachedStorage("localhost", 11211)
         limiter = RateLimitManager(storage)

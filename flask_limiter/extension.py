@@ -2,7 +2,7 @@
 
 """
 from functools import wraps
-from flask import request, current_app
+from flask import request, current_app, session
 
 from .errors import RateLimitExceeded
 from .limits import RateLimitManager
@@ -11,29 +11,36 @@ from .util import storage_from_string, parse_many, parse, get_ipaddr
 
 class Limiter(object):
     """
-    The flask extension to wrap the :class:`flask.Flask`
+    :param app: :class:`flask.Flask` instance to initialize the extension
+     with.
+    :param global_limits: a variable list of strings denoting global
+     limits to apply to all routes.
     """
-    def __init__(self, app, **global_limits):
+    def __init__(self, app, key_func=get_ipaddr, *global_limits):
         self.app = app
         self.global_limits = [parse(limit) for limit in global_limits]
         self.route_limits = {}
         self.storage = self.limiter = None
+        self.key_func = key_func
         if app:
             self.init_app(app)
 
     def init_app(self, app):
+        """
+        :param app: :class:`flask.Flask` instance to rate limit.
+        """
         self.storage = storage_from_string(
             app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
         self.limiter = RateLimitManager(self.storage)
-        global_limit = app.config.get("RATELIMIT_GLOBAL", None)
-        if global_limit:
+        conf_limits = app.config.get("RATELIMIT_GLOBAL", None)
+        if not self.global_limits and conf_limits:
             self.global_limits = [
-                (get_ipaddr, limit) for limit in parse_many(global_limit)
+                (self.key_func, limit) for limit in parse_many(conf_limits)
             ]
-        app.before_request(self.check_request_limit)
+        app.before_request(self.__check_request_limit)
 
-    def check_request_limit(self):
+    def __check_request_limit(self):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
         name = ("%s.%s" % (
@@ -44,10 +51,26 @@ class Limiter(object):
             name in self.route_limits and self.route_limits[name]
             or self.global_limits
         )
-        if not all([self.limiter.hit(l, k(), endpoint) for k, l in limits]):
-            raise RateLimitExceeded()
+        failed_limit = None
+        for key_func, limit in limits:
+            if not self.limiter.hit(limit, key_func(), endpoint):
+                current_app.logger.info(
+                    "ratelimit %s (%s) exceeded at endpoint: %s" % (
+                    limit, key_func(), endpoint))
+                failed_limit = limit
+        if failed_limit:
+            raise RateLimitExceeded(failed_limit)
 
-    def limit(self, limit_string, key_func=get_ipaddr):
+    def limit(self, limit_string, key_func=None):
+        """
+        decorator to be used for rate limiting specific routes.
+
+        :param limit_string: rate limit string(s) refer to :ref:`ratelimit-string`
+        :param key_func: function/lambda to extract the unique identifier for
+         the rate limit. defaults to remote address of the request.
+        :return:
+        """
+
         def _inner(fn):
             name = "%s.%s" % (fn.__module__, fn.__name__)
             @wraps(fn)
@@ -55,7 +78,7 @@ class Limiter(object):
                 return fn(*a, **k)
             self.route_limits.setdefault(name, [])
             self.route_limits[name].extend(
-                [(key_func, limit) for limit in parse_many(limit_string)]
+                [(key_func or self.key_func, limit) for limit in parse_many(limit_string)]
             )
             return __inner
         return _inner

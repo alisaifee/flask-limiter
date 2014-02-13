@@ -1,9 +1,11 @@
 """
 
 """
+import logging
 import unittest
 from flask import Flask
 import hiro
+import mock
 from flask.ext.limiter.extension import Limiter
 
 
@@ -68,3 +70,20 @@ class FlaskExtTests(unittest.TestCase):
                                      cli.get("/t1", headers = {"HTTP_X_FORWARDED_FOR":"127.0.0.2"}).status_code
                     )
                 self.assertEqual(429, cli.get("/t1").status_code)
+
+    def test_logging(self):
+        fake_logger = mock.Mock()
+        app = Flask(__name__)
+        mock_handler = mock.Mock()
+        mock_handler.level = logging.INFO
+        app.logger.setLevel(logging.INFO)
+        app.logger.addHandler(mock_handler)
+        limiter = Limiter(app)
+        @app.route("/t1")
+        @limiter.limit("1/minute")
+        def t1():
+            return "test"
+        with app.test_client() as cli:
+            self.assertEqual(200,cli.get("/t1").status_code)
+            self.assertEqual(429,cli.get("/t1").status_code)
+        self.assertEqual(mock_handler.handle.call_count, 1)
