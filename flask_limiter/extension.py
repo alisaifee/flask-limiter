@@ -50,6 +50,8 @@ class Limiter(object):
     def __check_request_limit(self):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
+        if view_func == current_app.send_static_file:
+            return
         name = ("%s.%s" % (
                 view_func.__module__, view_func.__name__
             ) if view_func else ""
