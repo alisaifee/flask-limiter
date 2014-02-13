@@ -1,9 +1,9 @@
 .. _pymemcache: https://pypi.python.org/pypi/pymemcache
 .. _redis: https://pypi.python.org/pypi/redis
 
-*****************************************
-Welcome to Flask-Limiter's documentation!
-*****************************************
+*************
+Flask-Limiter
+*************
 
 Quickstart
 ==========
@@ -106,8 +106,33 @@ Rate limiting all requests by country::
         return gi.record_by_name(request.remote_addr)['region_name']
 
     app = Flask(__name__)
-    limiter = Limiter(app, "10/hour", key_func = get_request_country)
+    limiter = Limiter(app, global_limits=["10/hour"], key_func = get_request_country)
 
+
+
+Error Handling
+==============
+The default configuration results in an ``abort(409)`` being called everytime
+a ratelimit is exceeded for a particular route. The exceeded limit is added to
+the response and results in an response body that looks something like::
+
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+    <title>429 Too Many Requests</title>
+    <h1>Too Many Requests</h1>
+    <p>1 per 1 day</p>
+
+
+If you want to configure the response you can register an error handler for the
+``409`` error code in a manner similar to the following example, which returns a
+json response instead::
+
+    @app.errorhandler(429)
+    def ratelimit_handler(e):
+        print type(e.description)
+        return make_response(
+                jsonify(error="ratelimit exceeded %s" % e.description)
+                , 429
+        )
 
 
 API

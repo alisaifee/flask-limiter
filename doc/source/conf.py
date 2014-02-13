@@ -34,7 +34,7 @@ htmlhelp_basename = 'Flask-Ratelimitdoc'
 html_logo = 'tap-logo.png'
 
 html_sidebars = {
-    'index': ['sidebarintro.html', 'sourcelink.html', 'searchbox.html'],
+    'index': ['sidebarintro.html', 'localtoc.html', 'sourcelink.html', 'searchbox.html'],
     '**': ['localtoc.html', 'relations.html',
            'sourcelink.html', 'searchbox.html']
 }
