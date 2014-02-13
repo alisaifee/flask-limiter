@@ -80,7 +80,7 @@ class RedisStorage(Storage):
             self.storage.expire(key, expiry)
 
     def get(self, key):
-        return self.storage.get(key)
+        return int(self.storage.get(key))
 
 
 class MemcachedStorage(Storage):

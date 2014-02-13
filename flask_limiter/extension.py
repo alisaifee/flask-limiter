@@ -17,7 +17,7 @@ class Limiter(object):
      limits to apply to all routes.
     """
 
-    def __init__(self, app, key_func=get_ipaddr, global_limits=[]):
+    def __init__(self, app=None, key_func=get_ipaddr, global_limits=[]):
         self.app = app
         self.global_limits = []
         for limit in global_limits:

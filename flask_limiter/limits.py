@@ -115,5 +115,5 @@ class RateLimitManager(object):
             <= item.amount
         )
 
-    def check(self, item):
-        return self.storage().get(item.key) <= item.amount
+    def check(self, item, *identifiers):
+        return self.storage().get(item.key_for(*identifiers)) <= item.amount
