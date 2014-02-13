@@ -17,13 +17,16 @@ with current implementations for in-memory, redis and memcache.
 Quickstart
 ===========
 
+Add the rate limiter to your flask app. The following example uses the default
+in memory implementation for storage.
+
 .. code-block:: python
 
    from flask import Flask
    from flask_limiter import Limiter
 
    app = Flask(__name__)
-   limiter = Limiter(app, global_limits=["200 per day", "50 per hour"])
+   limiter = Limiter(app, global_limits=["2 per minute", "1 per second"])
 
    @app.route("/slow")
    @limiter.limit("1 per day")
@@ -37,12 +40,21 @@ Quickstart
    app.run()
 
 
+
+Test it out. The ``fast`` endpoint respects the global rate limit while the
+``slow`` endpoint uses the decorated one.
+
 .. code-block:: bash
 
     $ curl localhost:5000/fast
     42
     $ curl localhost:5000/fast
     42
+    $ curl localhost:5000/fast
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+    <title>429 Too Many Requests</title>
+    <h1>Too Many Requests</h1>
+    <p>2 per 1 minute</p>
     $ curl localhost:5000/slow
     24
     $ curl localhost:5000/slow
