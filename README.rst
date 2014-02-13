@@ -2,8 +2,8 @@
     :target: https://travis-ci.org/#!/alisaifee/flask-limiter?branch=master
 .. |coveralls| image:: https://coveralls.io/repos/alisaifee/flask-limiter/badge.png?branch=master
     :target: https://coveralls.io/r/alisaifee/flask-limiter?branch=master
-.. |pypi| image:: https://pypip.in/v/flask-limiter/badge.png
-    :target: https://crate.io/packages/flask-limiter/
+.. |pypi| image:: https://pypip.in/v/Flask-Limiter/badge.png
+    :target: https://crate.io/packages/Flask-Limiter/
 
 *************
 Flask-Limiter
