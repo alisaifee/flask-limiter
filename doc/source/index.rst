@@ -13,7 +13,7 @@ Quickstart
    from flask_limiter import Limiter
 
    app = Flask(__name__)
-   limiter = Limiter(Flask, "200 per day", "50 per hour")
+   limiter = Limiter(app, global_limits=["200 per day", "50 per hour"])
 
    @app.route("/slow")
    @limiter.limit("1 per day")

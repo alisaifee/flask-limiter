@@ -16,9 +16,16 @@ class Limiter(object):
     :param global_limits: a variable list of strings denoting global
      limits to apply to all routes.
     """
-    def __init__(self, app, key_func=get_ipaddr, *global_limits):
+
+    def __init__(self, app, key_func=get_ipaddr, global_limits=[]):
         self.app = app
-        self.global_limits = [parse(limit) for limit in global_limits]
+        self.global_limits = []
+        for limit in global_limits:
+            self.global_limits.extend(
+                [
+                    (key_func, limit) for limit in parse_many(limit)
+                ]
+            )
         self.route_limits = {}
         self.storage = self.limiter = None
         self.key_func = key_func
