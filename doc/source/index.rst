@@ -128,7 +128,6 @@ json response instead::
 
     @app.errorhandler(429)
     def ratelimit_handler(e):
-        print type(e.description)
         return make_response(
                 jsonify(error="ratelimit exceeded %s" % e.description)
                 , 429
