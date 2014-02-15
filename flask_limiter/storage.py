@@ -3,7 +3,6 @@
 """
 from abc import abstractmethod, ABCMeta
 from collections import Counter
-from contextlib import contextmanager
 import threading
 import time
 
@@ -16,14 +15,27 @@ from .util import get_dependency
 @six.add_metaclass(ABCMeta)
 class Storage(object):
     def __init__(self):
+        """
+
+
+        """
         self.lock = threading.RLock()
 
     @abstractmethod
     def incr(self, key, expiry):
+        """
+        increments the counter for a given rate limit key
+
+        :param str key: the key to increment
+        :param int expiry: amount in seconds for the key to expire in
+        """
         raise NotImplementedError
 
     @abstractmethod
     def get(self, key):
+        """
+        :param str key: the key to get the counter value for
+        """
         raise NotImplementedError
 
 class LockableEntry(threading._RLock):
@@ -66,6 +78,12 @@ class MemoryStorage(Storage):
             self.timer.start()
 
     def incr(self, key, expiry, elastic_expiry=False):
+        """
+        increments the counter for a given rate limit key
+
+        :param str key: the key to increment
+        :param int expiry: amount in seconds for the key to expire in
+        """
         self.get(key)
         self.storage[key] += 1
         if elastic_expiry or self.storage[key] == 1:
@@ -73,6 +91,9 @@ class MemoryStorage(Storage):
         return self.storage.get(key, 0)
 
     def get(self, key):
+        """
+        :param str key: the key to get the counter value for
+        """
         if self.expirations.get(key, 0) <= time.time():
             if key in self.storage:
                 self.storage.pop(key)
@@ -81,6 +102,14 @@ class MemoryStorage(Storage):
         return self.storage.get(key, 0)
 
     def acquire_entry(self, key, limit, expiry, no_add=False):
+        """
+        :param str key: rate limit key to acquire an entry in
+        :param int limit: amount of entries allowed
+        :param int expiry: expiry of the entry
+        :param bool no_add: if False an entry is not actually acquired but instead
+         serves as a 'check'
+        :return: True/False
+        """
         self.events.setdefault(key, [])
         self.__schedule_expiry()
         try:
@@ -103,6 +132,11 @@ class RedisStorage(Storage):
     rate limit storage with redis as backend
     """
     def __init__(self, redis_url):
+        """
+        :param str redis_url: url of the form 'redis://host:port'
+        :raise ConfigurationError: when the redis library is not available
+         or if the redis host cannot be pinged.
+        """
         if not get_dependency("redis"):
             raise ConfigurationError("redis prerequisite not available") # pragma: no cover
         self.storage = get_dependency("redis").from_url(redis_url)
@@ -111,15 +145,32 @@ class RedisStorage(Storage):
         super(RedisStorage, self).__init__()
 
     def incr(self, key, expiry, elastic_expiry=False):
+        """
+        increments the counter for a given rate limit key
+
+        :param str key: the key to increment
+        :param int expiry: amount in seconds for the key to expire in
+        """
         value = self.storage.incr(key)
         if elastic_expiry or value == 1:
             self.storage.expire(key, expiry)
         return value
 
     def get(self, key):
+        """
+        :param str key: the key to get the counter value for
+        """
         return int(self.storage.get(key))
 
     def acquire_entry(self, key, limit, expiry, no_add=False):
+        """
+        :param str key: rate limit key to acquire an entry in
+        :param int limit: amount of entries allowed
+        :param int expiry: expiry of the entry
+        :param bool no_add: if False an entry is not actually acquired but instead
+         serves as a 'check'
+        :return: True/False
+        """
         with self.storage.lock("%s/LOCK" % key):
             entry = self.storage.lindex(key, limit - 1)
             now = time.time()
@@ -139,16 +190,25 @@ class MemcachedStorage(Storage):
     rate limit storage with memcached as backend
     """
     MAX_CAS_RETRIES = 10
+
     def __init__(self, host, port):
+        """
+        :param str host: memcached host
+        :param int port: memcached port
+        :raise ConfigurationError: when pymemcached is not available
+        """
         if not get_dependency("pymemcache"):
             raise ConfigurationError("memcached prerequisite not available."
-                                     " please install pymemcache") # pragma: no cover
+                                     " please install pymemcache")  # pragma: no cover
         self.host, self.port = host, port
         self.local_storage = threading.local()
         self.local_storage.storage = None
 
     @property
     def storage(self):
+        """
+        lazily creates a memcached client instance using a thread local
+        """
         if not (hasattr(self.local_storage, "storage") and self.local_storage.storage):
             self.local_storage.storage = get_dependency(
                 "pymemcache.client"
@@ -156,9 +216,18 @@ class MemcachedStorage(Storage):
         return self.local_storage.storage
 
     def get(self, key):
+        """
+        :param str key: the key to get the counter value for
+        """
         return int(self.storage.get(key) or 0)
 
     def incr(self, key, expiry, elastic_expiry=False):
+        """
+        increments the counter for a given rate limit key
+
+        :param str key: the key to increment
+        :param int expiry: amount in seconds for the key to expire in
+        """
         if not self.storage.add(key, 1, expiry, noreply=False):
             if elastic_expiry:
                 value, cas = self.storage.gets(key)

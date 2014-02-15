@@ -15,12 +15,24 @@ class RateLimiter(object):
     @abstractmethod
     def hit(self, item, *identifiers):
         """
+        creates a hit on the rate limit and returns True if successful.
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: True/False
         """
         raise NotImplementedError
 
     @abstractmethod
     def check(self, item, *identifiers):
         """
+        checks whether the rate limit has been exceeded or not
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: True/False
         """
         raise NotImplementedError
 
@@ -33,11 +45,23 @@ class MovingWindowRateLimiter(RateLimiter):
 
     def hit(self, item, *identifiers):
         """
+        creates a hit on the rate limit and returns True if successful.
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: True/False
         """
         return self.storage().acquire_entry(item.key_for(*identifiers), item.amount, item.expiry)
 
     def check(self, item, *identifiers):
         """
+        checks whether the rate limit has been exceeded or not
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: True/False
         """
         return self.storage().acquire_entry(item.key_for(*identifiers), item.amount, item.expiry, True)
 
@@ -45,6 +69,12 @@ class MovingWindowRateLimiter(RateLimiter):
 class FixedWindowRateLimiter(RateLimiter):
     def hit(self, item, *identifiers):
         """
+        creates a hit on the rate limit and returns True if successful.
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: True/False
         """
         return (
             self.storage().incr(item.key_for(*identifiers), item.expiry)
@@ -52,6 +82,12 @@ class FixedWindowRateLimiter(RateLimiter):
         )
     def check(self, item, *identifiers):
         """
+        checks whether the rate limit has been exceeded or not
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: True/False
         """
         return self.storage().get(item.key_for(*identifiers)) <= item.amount
 
@@ -59,6 +95,12 @@ class FixedWindowRateLimiter(RateLimiter):
 class FixedWindowElasticExpiryRateLimiter(FixedWindowRateLimiter):
     def hit(self, item, *identifiers):
         """
+        creates a hit on the rate limit and returns True if successful.
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: True/False
         """
         return (
             self.storage().incr(item.key_for(*identifiers), item.expiry, True)
