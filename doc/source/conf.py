@@ -32,7 +32,7 @@ html_theme = 'flask'
 html_static_path = ['_static']
 htmlhelp_basename = 'Flask-Ratelimitdoc'
 html_logo = 'tap-logo.png'
-
+html_favicon = 'tap-icon.png'
 html_sidebars = {
     'index': ['sidebarintro.html', 'localtoc.html', 'sourcelink.html', 'searchbox.html'],
     '**': ['localtoc.html', 'relations.html',
