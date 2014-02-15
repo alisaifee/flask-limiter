@@ -82,7 +82,7 @@ Rate limiting strategies
 Flask-Limiter comes with three different rate limiting strategies built-in. Pick
 the one that works for your use-case by specifying it in your flask config as
 ``RATELIMIT_STRATEGY`` (one of ``fixed-window``, ``fixed-window-elastic-expiry``,
-or ``moving-window``. The default configuration is ``fixed-window``.
+or ``moving-window``). The default configuration is ``fixed-window``.
 
 
 Fixed Window
