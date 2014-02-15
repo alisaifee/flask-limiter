@@ -26,6 +26,12 @@ class Storage(object):
     def get(self, key):
         raise NotImplementedError
 
+class LockableEntry(threading._RLock):
+    __slots__ = ["atime", "expiry"]
+    def __init__(self, expiry):
+        self.atime = time.time()
+        self.expiry = self.atime + expiry
+        super(LockableEntry, self).__init__()
 
 class MemoryStorage(Storage):
     """
@@ -76,11 +82,6 @@ class MemoryStorage(Storage):
     def acquire_entry(self, key, limit, expiry, no_add=False):
         self.events.setdefault(key, [])
         self.__schedule_expiry()
-        def __create_event(expiry):
-            event = threading.RLock()
-            event.atime = time.time()
-            event.expiry = expiry
-            return event
         try:
             entry = self.events[key][limit - 1]
         except IndexError:
@@ -93,7 +94,7 @@ class MemoryStorage(Storage):
             return False
         else:
             if not no_add:
-                self.events[key].insert(0, __create_event(time.time() + expiry))
+                self.events[key].insert(0, LockableEntry(expiry))
             return True
 
 class RedisStorage(Storage):
