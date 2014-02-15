@@ -33,6 +33,19 @@ class StorageTests(unittest.TestCase):
             timeline.forward(61)
             self.assertTrue(limiter.hit(per_min))
 
+    def test_in_memory_expiry(self):
+        with hiro.Timeline().freeze() as timeline:
+            storage = MemoryStorage()
+            limiter = FixedWindowRateLimiter(storage)
+            per_min = PER_MINUTE(10)
+            for i in range(0,10):
+                self.assertTrue(limiter.hit(per_min))
+            timeline.forward(60)
+            # touch another key and yield
+            limiter.hit(PER_SECOND(1))
+            time.sleep(0.1)
+            self.assertTrue(per_min.key_for() not in storage.storage)
+
     def test_redis(self):
         storage = RedisStorage("redis://localhost:6379")
         limiter = FixedWindowRateLimiter(storage)

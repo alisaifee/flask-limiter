@@ -1,49 +1,109 @@
 """
 
 """
+import threading
 import time
-from datetime import datetime
 import unittest
-from flask.ext.limiter.limits import PER_SECOND, PER_DAY, PER_HOUR, PER_MONTH, \
-    PER_MINUTE, PER_YEAR
-from flask.ext.limiter.util import find_windows
+
+import hiro
+import redis
+import pymemcache.client
+
+from flask.ext.limiter.limits import PER_SECOND, PER_MINUTE
+from flask.ext.limiter.storage import MemoryStorage, RedisStorage, \
+    MemcachedStorage
+from flask.ext.limiter.strategies import MovingWindowRateLimiter, \
+    FixedWindowElasticExpiryRateLimiter, FixedWindowRateLimiter
 
 
 class WindowTests(unittest.TestCase):
     def setUp(self):
-        self.ref_time = 1392347512.400
-        t = datetime.fromtimestamp(self.ref_time)
-        self.year, self.month, self.day, self.hour, self.minute, self.second, _, _, _ = t.timetuple()
+        redis.Redis().flushall()
+        pymemcache.client.Client(('localhost', 11211)).flush_all()
 
-    def test_second_window(self):
-        self.assertEqual(find_windows(self.ref_time, PER_SECOND(1, 3)),
-                         [(datetime(self.year, self.month, self.day, self.hour,
-                                    self.minute, self.second)),
-                          (datetime(self.year, self.month, self.day, self.hour,
-                                    self.minute, self.second - 1)),
-                          (datetime(self.year, self.month, self.day, self.hour,
-                                    self.minute, self.second - 2)),
-                         ]
-        )
-    def test_minute_window(self):
-        self.assertEqual(find_windows(self.ref_time, PER_MINUTE(1, 3)),
-                         [(datetime(self.year, self.month, self.day, self.hour,
-                                    self.minute, 0)),
-                          (datetime(self.year, self.month, self.day, self.hour,
-                                    self.minute - 1, 0)),
-                          (datetime(self.year, self.month, self.day, self.hour,
-                                    self.minute - 2, 0))
-                          ]
-        )
-    def test_hour_window(self):
-        self.assertEqual(find_windows(self.ref_time, PER_HOUR(1, 3)),
-                         [(datetime(self.year, self.month, self.day, self.hour,
-                                    0, 0)),
-                          (datetime(self.year, self.month, self.day,
-                                    self.hour - 1,
-                                    0, 0)),
-                          (datetime(self.year, self.month, self.day,
-                                    self.hour - 2,
-                                    0, 0)),
-                         ]
-        )
+    def test_fixed_window(self):
+        storage = MemoryStorage()
+        limiter = FixedWindowRateLimiter(storage)
+        with hiro.Timeline().freeze() as timeline:
+            limit = PER_SECOND(10, 2)
+            self.assertTrue(all([limiter.hit(limit) for _ in range(0,10)]))
+            timeline.forward(1)
+            self.assertFalse(limiter.hit(limit))
+            timeline.forward(1)
+            self.assertTrue(limiter.hit(limit))
+
+    def test_fixed_window_with_elastic_expiry_in_memory(self):
+        storage = MemoryStorage()
+        limiter = FixedWindowElasticExpiryRateLimiter(storage)
+        with hiro.Timeline().freeze() as timeline:
+            limit = PER_SECOND(10, 2)
+            self.assertTrue(all([limiter.hit(limit) for _ in range(0,10)]))
+            timeline.forward(1)
+            self.assertFalse(limiter.hit(limit))
+            timeline.forward(1)
+            self.assertFalse(limiter.hit(limit))
+
+    def test_fixed_window_with_elastic_expiry_memcache(self):
+        storage = MemcachedStorage('localhost', 11211)
+        limiter = FixedWindowElasticExpiryRateLimiter(storage)
+        limit = PER_SECOND(10, 2)
+        self.assertTrue(all([limiter.hit(limit) for _ in range(0,10)]))
+        time.sleep(1)
+        self.assertFalse(limiter.hit(limit))
+        time.sleep(1)
+        self.assertFalse(limiter.hit(limit))
+
+    def test_fixed_window_with_elastic_expiry_memcache_concurrency(self):
+        storage = MemcachedStorage('localhost', 11211)
+        limiter = FixedWindowElasticExpiryRateLimiter(storage)
+        limit = PER_SECOND(100, 2)
+        def _c():
+            for i in range(0,50):
+                limiter.hit(limit)
+        t1, t2 = threading.Thread(target=_c), threading.Thread(target=_c)
+        t1.start(), t2.start()
+        [t1.join(), t2.join()]
+        self.assertEqual(storage.get(limit.key_for()), 100)
+
+    def test_fixed_window_with_elastic_expiry_redis(self):
+        storage = RedisStorage('redis://localhost:6379')
+        limiter = FixedWindowElasticExpiryRateLimiter(storage)
+        limit = PER_SECOND(10, 2)
+        self.assertTrue(all([limiter.hit(limit) for _ in range(0,10)]))
+        time.sleep(1)
+        self.assertFalse(limiter.hit(limit))
+        time.sleep(1)
+        self.assertFalse(limiter.hit(limit))
+
+    def test_moving_window_in_memory(self):
+        storage = MemoryStorage()
+        limiter = MovingWindowRateLimiter(storage)
+        with hiro.Timeline().freeze() as timeline:
+            limit = PER_MINUTE(10)
+            for i in range(0,5):
+                self.assertTrue(limiter.hit(limit))
+                self.assertTrue(limiter.hit(limit))
+                timeline.forward(10)
+            self.assertFalse(limiter.hit(limit))
+            timeline.forward(20)
+            self.assertTrue(limiter.hit(limit))
+            self.assertTrue(limiter.hit(limit))
+            self.assertFalse(limiter.hit(limit))
+            self.assertTrue(len(storage.events[limit.key_for()]) == 10)
+
+    def test_moving_window_redis(self):
+        storage = RedisStorage("redis://localhost:6379")
+        limiter = MovingWindowRateLimiter(storage)
+        limit = PER_SECOND(10)
+        start = time.time()
+        for i in range(0,10):
+            self.assertTrue(limiter.hit(limit))
+            time.sleep(0.095)
+        print time.time() - start
+        self.assertFalse(limiter.hit(limit))
+        time.sleep(0.2)
+        self.assertTrue(limiter.hit(limit))
+        self.assertTrue(limiter.hit(limit))
+        self.assertFalse(limiter.hit(limit))
+        self.assertTrue(storage.storage.llen(limit.key_for()) == 10)
+
