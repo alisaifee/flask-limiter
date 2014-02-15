@@ -48,7 +48,7 @@ class MemoryStorage(Storage):
                 if event.expiry > time.time() and event in self.events[key]:
                     self.events[key].remove(event)
                 event.release()
-        for key in self.expirations.keys():
+        for key in list(self.expirations.keys()):
             if self.expirations[key] <= time.time():
                 self.storage.pop(key)
                 self.expirations.pop(key)
