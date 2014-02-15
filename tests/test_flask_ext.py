@@ -34,7 +34,7 @@ class FlaskExtTests(unittest.TestCase):
                     self.assertEqual(200, cli.get("/t1").status_code)
                     if not i % 10 == 0:
                         timeline.forward(60)
-                self.assertEqual(429, cli.get("/t1").status_code)
+                self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t2").status_code)
                 self.assertEqual(429, cli.get("/t2").status_code)
 

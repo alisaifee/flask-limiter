@@ -1,7 +1,6 @@
 """
 
 """
-import weakref
 
 from six import add_metaclass
 
@@ -65,7 +64,9 @@ class RateLimitItem(object):
          each identifier appended with a '/' delimiter.
         """
         remainder = "/".join(
-            identifiers + (str(self.multiples), self.granularity[1])
+            identifiers + (
+                str(self.amount), str(self.multiples), self.granularity[1]
+            )
         )
         return "%s/%s" % (self.namespace, remainder)
 
@@ -104,16 +105,3 @@ class PER_MINUTE(RateLimitItem):
 class PER_SECOND(RateLimitItem):
     granularity = TIME_TYPES["SECOND"]
 
-
-class RateLimitManager(object):
-    def __init__(self, storage):
-        self.storage = weakref.ref(storage)
-
-    def hit(self, item, *identifiers):
-        return (
-            self.storage().set_and_get(item.key_for(*identifiers), item.expiry)
-            <= item.amount
-        )
-
-    def check(self, item, *identifiers):
-        return self.storage().get(item.key_for(*identifiers)) <= item.amount
