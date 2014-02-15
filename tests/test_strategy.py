@@ -99,7 +99,6 @@ class WindowTests(unittest.TestCase):
         for i in range(0,10):
             self.assertTrue(limiter.hit(limit))
             time.sleep(0.095)
-        print time.time() - start
         self.assertFalse(limiter.hit(limit))
         time.sleep(0.2)
         self.assertTrue(limiter.hit(limit))
@@ -107,3 +106,6 @@ class WindowTests(unittest.TestCase):
         self.assertFalse(limiter.hit(limit))
         self.assertTrue(storage.storage.llen(limit.key_for()) == 10)
 
+    def test_moving_window_memcached(self):
+        storage = MemcachedStorage('localhost', 11211)
+        self.assertRaises(NotImplementedError, MovingWindowRateLimiter, storage)

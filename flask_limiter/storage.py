@@ -74,13 +74,13 @@ class MemoryStorage(Storage):
         return self.storage.get(key, 0)
 
     def acquire_entry(self, key, limit, expiry, no_add=False):
+        self.events.setdefault(key, [])
         self.__schedule_expiry()
         def __create_event(expiry):
             event = threading.RLock()
             event.atime = time.time()
             event.expiry = expiry
             return event
-        self.events.setdefault(key, [])
         try:
             entry = self.events[key][limit - 1]
         except IndexError:
@@ -125,8 +125,11 @@ class RedisStorage(Storage):
                 return False
             else:
                 if not no_add:
-                    self.storage.lpush(key, now)
-                    self.storage.ltrim(key, 0, limit - 1)
+                    with self.storage.pipeline() as pipeline:
+                        pipeline.lpush(key, now)
+                        pipeline.ltrim(key, 0, limit - 1)
+                        pipeline.expire(key, expiry)
+                        pipeline.execute()
                 return True
 
 class MemcachedStorage(Storage):

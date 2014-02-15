@@ -1,9 +1,13 @@
+import random
+import threading
 import unittest
 import time
+from uuid import uuid4
 
 import hiro
 import redis
-from flask.ext.limiter.strategies import FixedWindowRateLimiter
+from flask.ext.limiter.strategies import FixedWindowRateLimiter, \
+    MovingWindowRateLimiter
 
 from flask.ext.limiter.util import get_dependency, storage_from_string
 from flask.ext.limiter.errors import ConfigurationError
@@ -73,3 +77,24 @@ class StorageTests(unittest.TestCase):
         while time.time() - start < 1:
             time.sleep(0.1)
         self.assertTrue(limiter.hit(per_min))
+
+
+    def test_large_dataset_redis_moving_window_expiry(self):
+        storage = RedisStorage("redis://localhost:6379")
+        limiter = MovingWindowRateLimiter(storage)
+        limit = PER_SECOND(1000)
+        # 100 routes
+        fake_routes = [uuid4().hex for _ in range(0,100)]
+        # go as fast as possible in 2 seconds.
+        start = time.time()
+        def smack(e):
+            while not e.is_set():
+                self.assertTrue(limiter.hit(limit, random.choice(fake_routes)))
+        events = [threading.Event() for _ in range(0,100)]
+        threads = [threading.Thread(target=smack, args=(e,)) for e in events]
+        [k.start() for k in threads]
+        while time.time() - start < 2:
+            time.sleep(0.1)
+        [k.set() for k in events]
+        time.sleep(2)
+        self.assertTrue(storage.storage.keys("*") == [])

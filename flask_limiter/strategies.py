@@ -26,6 +26,11 @@ class RateLimiter(object):
 
 
 class MovingWindowRateLimiter(RateLimiter):
+    def __init__(self, storage):
+        if not hasattr(storage, "acquire_entry"):
+            raise NotImplementedError("MovingWindowRateLimiting is not implemented for storage of type %s" % storage.__class__)
+        super(MovingWindowRateLimiter, self).__init__(storage)
+
     def hit(self, item, *identifiers):
         """
         """
