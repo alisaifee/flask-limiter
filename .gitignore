@@ -1,0 +1,10 @@
+*.pyc
+*.log
+cover/*
+.coverage*
+.test_env
+.idea
+build/
+dist/
+htmlcov
+*egg-info*

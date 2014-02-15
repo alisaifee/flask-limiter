@@ -2,11 +2,12 @@
 
 """
 from functools import wraps
-from flask import request, current_app, session
 
-from .errors import RateLimitExceeded
-from .limits import RateLimitManager
-from .util import storage_from_string, parse_many, parse, get_ipaddr
+from flask import request, current_app
+
+from .errors import RateLimitExceeded, ConfigurationError
+from .strategies import STRATEGIES
+from .util import storage_from_string, parse_many, get_ipaddr
 
 
 class Limiter(object):
@@ -39,7 +40,10 @@ class Limiter(object):
         self.storage = storage_from_string(
             app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
-        self.limiter = RateLimitManager(self.storage)
+        strategy = app.config.setdefault('RATELIMIT_STRATEGY', 'fixed-window')
+        if not strategy in STRATEGIES:
+            raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
+        self.limiter = STRATEGIES[strategy](self.storage)
         conf_limits = app.config.get("RATELIMIT_GLOBAL", None)
         if not self.global_limits and conf_limits:
             self.global_limits = [
