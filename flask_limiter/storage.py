@@ -2,7 +2,11 @@
 
 """
 from abc import abstractmethod, ABCMeta
-from collections import Counter
+try:
+    from collections import Counter
+except ImportError:
+    from .backports.counter import Counter # pragma: no cover
+
 import threading
 import time
 
