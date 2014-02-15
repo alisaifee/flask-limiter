@@ -69,3 +69,4 @@ Test it out. The ``fast`` endpoint respects the global rate limit while the
 `Read the docs <http://flask-limiter.readthedocs.org>`_
 
 
+
