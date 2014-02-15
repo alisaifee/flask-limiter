@@ -39,6 +39,7 @@ class MemoryStorage(Storage):
     as an in memory storage.
 
     """
+
     def __init__(self):
         self.storage = Counter()
         self.expirations = {}

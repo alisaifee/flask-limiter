@@ -64,3 +64,9 @@ class FixedWindowElasticExpiryRateLimiter(FixedWindowRateLimiter):
             self.storage().incr(item.key_for(*identifiers), item.expiry, True)
             <= item.amount
         )
+
+STRATEGIES = {
+    "fixed-window": FixedWindowRateLimiter,
+    "fixed-window-elastic": FixedWindowElasticExpiryRateLimiter,
+    "moving-window": MovingWindowRateLimiter
+}
