@@ -109,6 +109,6 @@ class FixedWindowElasticExpiryRateLimiter(FixedWindowRateLimiter):
 
 STRATEGIES = {
     "fixed-window": FixedWindowRateLimiter,
-    "fixed-window-elastic": FixedWindowElasticExpiryRateLimiter,
+    "fixed-window-elastic-expiry": FixedWindowElasticExpiryRateLimiter,
     "moving-window": MovingWindowRateLimiter
 }
