@@ -3,10 +3,11 @@
 """
 import logging
 import unittest
-from flask import Flask
+from flask import Flask, Blueprint
 import hiro
 import mock
 from flask.ext.limiter.extension import Limiter
+
 
 
 class FlaskExtTests(unittest.TestCase):
@@ -87,3 +88,25 @@ class FlaskExtTests(unittest.TestCase):
             self.assertEqual(200,cli.get("/t1").status_code)
             self.assertEqual(429,cli.get("/t1").status_code)
         self.assertEqual(mock_handler.handle.call_count, 1)
+
+    def test_blueprint(self):
+
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["1/minute"])
+        bp = Blueprint("main", __name__)
+        @bp.route("/t1")
+        def t1():
+            return "test"
+
+        @bp.route("/t2")
+        @limiter.limit("10 per minute")
+        def t2():
+            return "test"
+        app.register_blueprint(bp)
+
+        with app.test_client() as cli:
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 429)
+            for i in range(0,10):
+                self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 429)
