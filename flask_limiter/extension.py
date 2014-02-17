@@ -22,6 +22,7 @@ class Limiter(object):
     def __init__(self, app=None, key_func=get_ipaddr, global_limits=[]):
         self.app = app
         self.global_limits = []
+        self.exempt_routes = []
         for limit in global_limits:
             self.global_limits.extend(
                 [
@@ -55,12 +56,14 @@ class Limiter(object):
     def __check_request_limit(self):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
-        if view_func == current_app.send_static_file:
-            return
         name = ("%s.%s" % (
                 view_func.__module__, view_func.__name__
             ) if view_func else ""
         )
+        if (view_func == current_app.send_static_file
+            or name in self.exempt_routes
+        ):
+            return
         limits = (
             name in self.route_limits and self.route_limits[name]
             or self.global_limits
@@ -96,3 +99,14 @@ class Limiter(object):
             )
             return __inner
         return _inner
+
+    def exempt(self, fn):
+        """
+        decorator to mark a view as exempt from rate limits.
+        """
+        name = "%s.%s" % (fn.__module__, fn.__name__)
+        @wraps(fn)
+        def __inner(*a, **k):
+            return fn(*a, **k)
+        self.exempt_routes.append(name)
+        return __inner

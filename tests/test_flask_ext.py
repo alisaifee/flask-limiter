@@ -89,6 +89,27 @@ class FlaskExtTests(unittest.TestCase):
             self.assertEqual(429,cli.get("/t1").status_code)
         self.assertEqual(mock_handler.handle.call_count, 1)
 
+    def test_exempt_routes(self):
+
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["1/minute"])
+
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        @app.route("/t2")
+        @limiter.exempt
+        def t2():
+            return "test"
+
+        with app.test_client() as cli:
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 429)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+
+
     def test_blueprint(self):
 
         app = Flask(__name__)

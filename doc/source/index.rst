@@ -24,11 +24,22 @@ Quickstart
    def fast():
        return "42"
 
+   @app.route("/ping")
+   @limiter.exempt
+   def ping():
+       return "PONG"
 
-The above Flask app will have a global rate limit of 200 per day, and 50 per hour
-applied to all routes. The ``slow`` route having an explicit rate limit decorator
-will bypass the global rate limit and only allow 1 request per day. Every time
-a request exceeds the rate limit, the view function will not get called and instead
+
+The above Flask app will have the following rate limiting characteristics:
+
+* A global rate limit of 200 per day, and 50 per hour applied to all routes.
+* The ``slow`` route having an explicit rate limit decorator will bypass the global
+  rate limit and only allow 1 request per day.
+* The ``ping`` route will be exempt from any global rate limits.
+
+.. tip:: The built in flask static files routes are also exempt from rate limits.
+
+Every time a request exceeds the rate limit, the view function will not get called and instead
 a `429 <http://tools.ietf.org/html/rfc6585#section-4>`_ http error will be raised.
 
 Configuration
