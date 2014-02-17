@@ -128,7 +128,7 @@ Moving Window
 
 This strategy is the most effective in terms of not allowing bursts to by-pass the
 rate limit as the window for each limit is not fixed at the start and end of each time unit
-(i.e. 10/second for a moving window means 5 in the last 1000 milliseconds). There is
+(i.e. N/second for a moving window means N in the last 1000 milliseconds). There is
 however a higher memory cost associated with this strategy as it requires ``N`` items to
 be maintained in memory per resource and rate limit.
 
