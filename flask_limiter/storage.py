@@ -26,12 +26,14 @@ class Storage(object):
         self.lock = threading.RLock()
 
     @abstractmethod
-    def incr(self, key, expiry):
+    def incr(self, key, expiry, elastic_expiry=False):
         """
         increments the counter for a given rate limit key
 
         :param str key: the key to increment
         :param int expiry: amount in seconds for the key to expire in
+        :param bool elastic_expiry: whether to keep extending the rate limit
+         window every hit.
         """
         raise NotImplementedError
 
@@ -86,6 +88,8 @@ class MemoryStorage(Storage):
 
         :param str key: the key to increment
         :param int expiry: amount in seconds for the key to expire in
+        :param bool elastic_expiry: whether to keep extending the rate limit
+         window every hit.
         """
         self.get(key)
         self.storage[key] += 1
@@ -229,6 +233,8 @@ class MemcachedStorage(Storage):
 
         :param str key: the key to increment
         :param int expiry: amount in seconds for the key to expire in
+        :param bool elastic_expiry: whether to keep extending the rate limit
+         window every hit.
         """
         if not self.storage.add(key, 1, expiry, noreply=False):
             if elastic_expiry:
