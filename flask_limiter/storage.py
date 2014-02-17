@@ -67,10 +67,9 @@ class MemoryStorage(Storage):
     def __expire_events(self):
         for key in self.events:
             for event in list(self.events[key]):
-                event.acquire()
-                if event.expiry > time.time() and event in self.events[key]:
-                    self.events[key].remove(event)
-                event.release()
+                with event:
+                    if event.expiry > time.time() and event in self.events[key]:
+                        self.events[key].remove(event)
         for key in list(self.expirations.keys()):
             if self.expirations[key] <= time.time():
                 self.storage.pop(key)
@@ -121,10 +120,9 @@ class MemoryStorage(Storage):
         except IndexError:
             entry = None
         if entry and entry.atime >= time.time() - expiry:
-            entry.acquire()
-            if entry in self.events[key]:
-                self.events[key].remove(entry)
-            entry.release()
+            with entry:
+                if entry in self.events[key]:
+                    self.events[key].remove(entry)
             return False
         else:
             if not no_add:
