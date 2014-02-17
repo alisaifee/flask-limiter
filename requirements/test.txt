@@ -1,5 +1,6 @@
 -r main.txt
 nose
+mock
 coverage
 nose-cov
 git+https://github.com/alisaifee/pymemcache.git#egg=pymemcache
