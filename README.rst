@@ -37,12 +37,18 @@ in memory implementation for storage.
    def fast():
        return "42"
 
+   @app.route("/ping")
+   @limiter.exempt
+   def ping():
+       return 'PONG'
+
    app.run()
 
 
 
 Test it out. The ``fast`` endpoint respects the global rate limit while the
-``slow`` endpoint uses the decorated one.
+``slow`` endpoint uses the decorated one. ``ping`` has no rate limit associated
+with it.
 
 .. code-block:: bash
 
@@ -62,6 +68,14 @@ Test it out. The ``fast`` endpoint respects the global rate limit while the
     <title>429 Too Many Requests</title>
     <h1>Too Many Requests</h1>
     <p>1 per 1 day</p>
+    $ curl localhost:5000/ping
+    PONG
+    $ curl localhost:5000/ping
+    PONG
+    $ curl localhost:5000/ping
+    PONG
+    $ curl localhost:5000/ping
+    PONG
 
 
 
