@@ -60,7 +60,7 @@ class StorageTests(unittest.TestCase):
             self.assertTrue(limiter.hit(per_min))
             count += 1
         self.assertFalse(limiter.hit(per_min))
-        while time.time() - start < 1:
+        while time.time() - start <= 1:
             time.sleep(0.1)
         self.assertTrue(limiter.hit(per_min))
 
@@ -74,7 +74,7 @@ class StorageTests(unittest.TestCase):
             self.assertTrue(limiter.hit(per_min))
             count += 1
         self.assertFalse(limiter.hit(per_min))
-        while time.time() - start < 1:
+        while time.time() - start <= 1:
             time.sleep(0.1)
         self.assertTrue(limiter.hit(per_min))
 
