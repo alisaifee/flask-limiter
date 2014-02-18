@@ -21,6 +21,7 @@ class Limiter(object):
 
     def __init__(self, app=None, key_func=get_ipaddr, global_limits=[]):
         self.app = app
+        self.enabled = True
         self.global_limits = []
         self.exempt_routes = []
         for limit in global_limits:
@@ -39,6 +40,7 @@ class Limiter(object):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
+        self.enabled = app.config.setdefault("RATELIMIT_ENABLED", True)
         self.storage = storage_from_string(
             app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
@@ -62,6 +64,7 @@ class Limiter(object):
         )
         if (view_func == current_app.send_static_file
             or name in self.exempt_routes
+            or not self.enabled
         ):
             return
         limits = (

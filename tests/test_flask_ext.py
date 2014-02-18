@@ -131,3 +131,24 @@ class FlaskExtTests(unittest.TestCase):
             for i in range(0,10):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 429)
+
+    def test_disabled_flag(self):
+        app = Flask(__name__)
+        app.config.setdefault("RATELIMIT_ENABLED", False)
+        limiter = Limiter(app, global_limits=["1/minute"])
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        @app.route("/t2")
+        @limiter.limit("10 per minute")
+        def t2():
+            return "test"
+
+        with app.test_client() as cli:
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            for i in range(0,10):
+                self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+

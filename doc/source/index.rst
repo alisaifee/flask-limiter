@@ -62,6 +62,7 @@ The following flask configuration values are honored by
                                while memcached relies on the `pymemcache`_ package.
 ``RATELIMIT_STRATEGY``         The rate limiting strategy to use.  :ref:`ratelimit-strategy`
                                for details.
+``RATELIMIT_ENABLED``          Overall killswitch for ratelimits. Defaults to ``True``
 ============================== ================================================
 
 
