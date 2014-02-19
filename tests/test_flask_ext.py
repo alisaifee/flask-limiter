@@ -51,7 +51,7 @@ class FlaskExtTests(unittest.TestCase):
             with app.test_client() as cli:
                 for i in range(0,100):
                     self.assertEqual(200,
-                                     cli.get("/t1", headers = {"HTTP_X_FORWARDED_FOR":"127.0.0.2"}).status_code
+                                     cli.get("/t1", headers = {"X_FORWARDED_FOR":"127.0.0.2"}).status_code
                     )
                 self.assertEqual(429, cli.get("/t1").status_code)
 
@@ -68,7 +68,7 @@ class FlaskExtTests(unittest.TestCase):
             with app.test_client() as cli:
                 for i in range(0,100):
                     self.assertEqual(200 if i < 50 else 429,
-                                     cli.get("/t1", headers = {"HTTP_X_FORWARDED_FOR":"127.0.0.2"}).status_code
+                                     cli.get("/t1", headers = {"X_FORWARDED_FOR":"127.0.0.2"}).status_code
                     )
                 self.assertEqual(429, cli.get("/t1").status_code)
 
