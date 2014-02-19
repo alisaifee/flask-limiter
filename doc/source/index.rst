@@ -134,7 +134,7 @@ instance are
                def my_route():
                    ...
 
-        .. danger:: The provided callable will be called in the for every request
+        .. danger:: The provided callable will be called for every request
            on the decorated route. For expensive retrievals, consider
            caching the response.
         .. note:: The callable is called from within a
