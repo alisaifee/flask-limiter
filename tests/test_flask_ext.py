@@ -3,7 +3,7 @@
 """
 import logging
 import unittest
-from flask import Flask, Blueprint
+from flask import Flask, Blueprint, request, current_app
 import hiro
 import mock
 from flask.ext.limiter.extension import Limiter
@@ -152,3 +152,90 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
 
+    def test_dynamic_limits(self):
+        app = Flask(__name__)
+        app.config.setdefault("X", "2 per second")
+        limiter = Limiter(app)
+
+        def request_context_limit():
+            limits = {
+                "127.0.0.1": "10 per minute",
+                "127.0.0.2": "1 per minute"
+            }
+            remote_addr = (request.access_route and request.access_route[0]) or request.remote_addr or '127.0.0.1'
+            limit = limits.setdefault(remote_addr, '1 per minute')
+            return limit
+
+        @app.route("/t1")
+        @limiter.limit("20/day")
+        @limiter.limit(lambda: current_app.config.get("X"))
+        @limiter.limit(request_context_limit)
+        def t1():
+            return "42"
+
+        R1 = {"X_FORWARDED_FOR": "127.0.0.1, 127.0.0.0"}
+        R2 = {"X_FORWARDED_FOR": "127.0.0.2"}
+
+        with app.test_client() as cli:
+            with hiro.Timeline().freeze() as timeline:
+                for i in range(0,10):
+                    self.assertEqual(cli.get("/t1", headers=R1).status_code, 200)
+                    timeline.forward(1)
+                self.assertEqual(cli.get("/t1", headers=R1).status_code, 429)
+                self.assertEqual(cli.get("/t1", headers=R2).status_code, 200)
+                self.assertEqual(cli.get("/t1", headers=R2).status_code, 429)
+                timeline.forward(60)
+                self.assertEqual(cli.get("/t1", headers=R2).status_code, 200)
+
+
+    def test_multiple_apps(self):
+        app1 = Flask("app1")
+        app2 = Flask("app2")
+
+        limiter = Limiter(global_limits = ["1/second"])
+        limiter.init_app(app1)
+        limiter.init_app(app2)
+
+        @app1.route("/ping")
+        def ping():
+            return "PONG"
+
+        @app1.route("/slowping")
+        @limiter.limit("1/minute")
+        def slow_ping():
+            return "PONG"
+
+
+        @app2.route("/ping")
+        @limiter.limit("2/second")
+        def ping_2():
+            return "PONG"
+
+        @app2.route("/slowping")
+        @limiter.limit("2/minute")
+        def slow_ping_2():
+            return "PONG"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app1.test_client() as cli:
+                self.assertEqual(cli.get("/ping").status_code, 200)
+                self.assertEqual(cli.get("/ping").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/ping").status_code, 200)
+                self.assertEqual(cli.get("/slowping").status_code, 200)
+                timeline.forward(59)
+                self.assertEqual(cli.get("/slowping").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/slowping").status_code, 200)
+            with app2.test_client() as cli:
+                self.assertEqual(cli.get("/ping").status_code, 200)
+                self.assertEqual(cli.get("/ping").status_code, 200)
+                self.assertEqual(cli.get("/ping").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/ping").status_code, 200)
+                self.assertEqual(cli.get("/slowping").status_code, 200)
+                timeline.forward(59)
+                self.assertEqual(cli.get("/slowping").status_code, 200)
+                self.assertEqual(cli.get("/slowping").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/slowping").status_code, 200)

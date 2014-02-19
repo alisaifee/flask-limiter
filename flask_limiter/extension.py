@@ -16,7 +16,7 @@ class Limiter(object):
     :param app: :class:`flask.Flask` instance to initialize the extension
      with.
     :param global_limits: a variable list of strings denoting global
-     limits to apply to all routes.
+     limits to apply to all routes. :ref:`ratelimit-string` for  more details.
     """
 
     def __init__(self, app=None, key_func=get_ipaddr, global_limits=[]):
@@ -31,6 +31,7 @@ class Limiter(object):
                 ]
             )
         self.route_limits = {}
+        self.dynamic_route_limits = {}
         self.storage = self.limiter = None
         self.key_func = key_func
         if app:
@@ -71,8 +72,14 @@ class Limiter(object):
             name in self.route_limits and self.route_limits[name]
             or self.global_limits
         )
+        d_limits = []
+        if name in self.dynamic_route_limits:
+            for key_func, limit_func in self.dynamic_route_limits[name]:
+                d_limits.extend(
+                    [key_func, limit] for limit in parse_many(limit_func())
+                )
         failed_limit = None
-        for key_func, limit in limits:
+        for key_func, limit in limits + d_limits:
             if not self.limiter.hit(limit, key_func(), endpoint):
                 current_app.logger.info(
                     "ratelimit %s (%s) exceeded at endpoint: %s" % (
@@ -81,11 +88,12 @@ class Limiter(object):
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
 
-    def limit(self, limit_string, key_func=None):
+    def limit(self, limit_value, key_func=None):
         """
         decorator to be used for rate limiting specific routes.
 
-        :param limit_string: rate limit string(s) refer to :ref:`ratelimit-string`
+        :param limit_value: rate limit string or a callable that returns a string.
+         :ref:`ratelimit-string` for more details.
         :param key_func: function/lambda to extract the unique identifier for
          the rate limit. defaults to remote address of the request.
         :return:
@@ -93,12 +101,19 @@ class Limiter(object):
 
         def _inner(fn):
             name = "%s.%s" % (fn.__module__, fn.__name__)
+            print name
             @wraps(fn)
             def __inner(*a, **k):
                 return fn(*a, **k)
             self.route_limits.setdefault(name, [])
-            self.route_limits[name].extend(
-                [(key_func or self.key_func, limit) for limit in parse_many(limit_string)]
+            self.dynamic_route_limits.setdefault(name, [])
+            func = key_func or self.key_func
+            if callable(limit_value):
+                self.dynamic_route_limits[name].append((func, limit_value))
+
+            else:
+                self.route_limits[name].extend(
+                    [(func, limit) for limit in parse_many(limit_value)]
             )
             return __inner
         return _inner
