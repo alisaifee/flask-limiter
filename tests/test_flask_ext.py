@@ -155,7 +155,7 @@ class FlaskExtTests(unittest.TestCase):
     def test_dynamic_limits(self):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per second")
-        limiter = Limiter(app)
+        limiter = Limiter(app, global_limits=["1/second"])
 
         def request_context_limit():
             limits = {
@@ -173,6 +173,11 @@ class FlaskExtTests(unittest.TestCase):
         def t1():
             return "42"
 
+        @app.route("/t2")
+        @limiter.limit(lambda: current_app.config.get("X"))
+        def t2():
+            return "42"
+
         R1 = {"X_FORWARDED_FOR": "127.0.0.1, 127.0.0.0"}
         R2 = {"X_FORWARDED_FOR": "127.0.0.2"}
 
@@ -186,6 +191,11 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t1", headers=R2).status_code, 429)
                 timeline.forward(60)
                 self.assertEqual(cli.get("/t1", headers=R2).status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/t2").status_code, 200)
 
 
     def test_multiple_apps(self):

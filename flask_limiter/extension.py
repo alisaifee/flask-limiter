@@ -70,7 +70,7 @@ class Limiter(object):
             return
         limits = (
             name in self.route_limits and self.route_limits[name]
-            or self.global_limits
+            or [] if name in self.dynamic_route_limits else self.global_limits
         )
         d_limits = []
         if name in self.dynamic_route_limits:
