@@ -30,6 +30,8 @@ html_theme_options = {
 html_theme_path = ["_themes"]
 html_theme = 'flask'
 html_static_path = ['_static']
+html_style = 'limiter.css'
+
 htmlhelp_basename = 'Flask-Ratelimitdoc'
 html_logo = 'tap-logo.png'
 html_favicon = 'tap-icon.png'

@@ -1,0 +1,25 @@
+@import url("flasky.css");
+div.warning, div.attention{
+    background-color: #ffedcc;
+}
+div.danger {
+    background-color: #fdf3f2;
+}
+div.info, div.note {
+    background-color: #e7f2fa;
+}
+div.tip, div.important {
+    background-color: #dbfaf4;
+}
+div.alert {
+    background-color: #ffedcc;
+}
+div.admonition{
+    border: none;
+}
+div.admonition p.admonition-title{
+    font-variant: small-caps;
+}
+p.admonition-title:after{
+    content: "";
+}

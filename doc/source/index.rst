@@ -4,9 +4,13 @@
 *************
 Flask-Limiter
 *************
+.. currentmodule:: flask_limiter
 
-Quickstart
-==========
+Usage
+=====
+
+Quick start
+-----------
 .. code-block:: python
 
    from flask import Flask
@@ -37,15 +41,113 @@ The above Flask app will have the following rate limiting characteristics:
   rate limit and only allow 1 request per day.
 * The ``ping`` route will be exempt from any global rate limits.
 
-.. tip:: The built in flask static files routes are also exempt from rate limits.
+.. note:: The built in flask static files routes are also exempt from rate limits.
 
 Every time a request exceeds the rate limit, the view function will not get called and instead
 a `429 <http://tools.ietf.org/html/rfc6585#section-4>`_ http error will be raised.
 
+The Flask-Limiter extension
+---------------------------
+The extension can be initialized with the :class:`flask.Flask` application
+in the usual ways.
+
+Using the constructor
+
+   .. code-block:: python
+
+      from flask_limiter import Limiter
+      ....
+
+      limiter = Limiter(app)
+
+Using ``init_app``
+
+    .. code-block:: python
+
+        limiter = Limiter()
+        limiter.init_app(app)
+
+
+Decorators
+----------
+Each route can be decorated to override the global rate limits set in the extension.
+The two decorators made available as instance methods of the :class:`Limiter`
+instance are
+
+:meth:`Limiter.limit`
+  There are a few ways of using this decorator depending on your preference and use-case.
+
+  Single decorator
+    The limit string can be a single limit or a delimiter separated string
+
+      .. code-block:: python
+
+         @app.route("....")
+         @limiter.limit("100/day;10/hour;1/minute")
+         def my_route()
+           ...
+
+  Multiple decorators
+    The limit string can be a single limit or a delimiter separated string
+    or a combination of both.
+
+        .. code-block:: python
+
+           @app.route("....")
+           @limiter.limit("100/day")
+           @limiter.limit("10/hour")
+           @limiter.limit("1/minute")
+           def my_route():
+             ...
+
+  Custom keying function
+    By default rate limits are applied on per remote address basis. You can implement
+    your own function to retrieve the key to rate limit by. Take a look at :ref:`keyfunc-customization`
+    for some examples..
+
+        .. code-block:: python
+
+            def my_key_func():
+              ...
+
+            @app.route("...")
+            @limiter.limit("100/day", my_key_func)
+            def my_route():
+              ...
+
+        .. note:: The key function  is called from within a
+           :ref:`flask request context <flask:request-context>`.
+
+  Dynamically loaded limit string(s)
+    There may be situations where the rate limits need to be retrieved from
+    sources external to the code (database, remote api, etc...). This can be
+    achieved by providing a callable to the decorator.
+
+
+        .. code-block:: python
+
+               def rate_limit_from_config():
+                   return current_app.config.get("CUSTOM_LIMIT", "10/s")
+
+               @app.route("...")
+               @limiter.limit(rate_limit_from_config)
+               def my_route():
+                   ...
+
+        .. danger:: The provided callable will be called in the for every request
+           on the decorated route. For expensive retrievals, consider
+           caching the response.
+        .. note:: The callable is called from within a
+           :ref:`flask request context <flask:request-context>`.
+
+:meth:`Limiter.exempt`
+  This decorator simply marks a route as being exempt from any rate limits.
+
+
 Configuration
 =============
 The following flask configuration values are honored by
-:class:`flask_limiter.Limiter`
+:class:`Limiter`
 
 .. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
@@ -53,7 +155,7 @@ The following flask configuration values are honored by
 ``RATELIMIT_GLOBAL``           A comma (or some other delimiter) separated string
                                that will be used to apply a global limit on all
                                routes. If not provided, the global limits can be
-                               passed to the :class:`flask_limiter.Limiter` constructor
+                               passed to the :class:`Limiter` constructor
                                as well (the values passed to the constructor take precedence
                                over those in the config). :ref:`ratelimit-string` for details.
 ``RATELIMIT_STORE_URL``        One of ``memory://`` or ``redis://host:port``
@@ -123,7 +225,7 @@ circumvent bursts.
 
 Moving Window
 -------------
-.. attention:: The moving window strategy is only implemented for the ``redis`` and ``in-memory``
+.. warning:: The moving window strategy is only implemented for the ``redis`` and ``in-memory``
     storage backends. The strategy requires using a list with fast random access which
     is not very convenient to implement with a memcached storage.
 
@@ -133,13 +235,15 @@ rate limit as the window for each limit is not fixed at the start and end of eac
 however a higher memory cost associated with this strategy as it requires ``N`` items to
 be maintained in memory per resource and rate limit.
 
+.. _keyfunc-customization:
+
 Customization
 =============
 
 By default, all rate limits are applied on a per ``remote address`` basis.
 However, you can easily customize your rate limits to be based on any other
-characteristic of the incoming request. Both the :class:`flask_limiter.Limiter` constructor
-and the :meth:`flask_limiter.Limiter.limit` decorator accept a keyword argument
+characteristic of the incoming request. Both the :class:`Limiter` constructor
+and the :meth:`Limiter.limit` decorator accept a keyword argument
 ``key_func`` that should return a string (or an object that has a string representation).
 
 
@@ -200,11 +304,11 @@ API
 
 Core
 ----
-.. autoclass:: flask_limiter.Limiter
+.. autoclass:: Limiter
 
 
 Exceptions
 ----------
-.. autoexception:: flask_limiter.ConfigurationError
-.. autoexception:: flask_limiter.RateLimitExceeded
+.. autoexception:: ConfigurationError
+.. autoexception:: RateLimitExceeded
 
