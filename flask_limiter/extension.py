@@ -3,6 +3,7 @@ the flask extension
 """
 
 from functools import wraps
+import logging
 
 from flask import request, current_app
 
@@ -10,13 +11,14 @@ from .errors import RateLimitExceeded, ConfigurationError
 from .strategies import STRATEGIES
 from .util import storage_from_string, parse_many, get_ipaddr
 
-
 class Limiter(object):
     """
     :param app: :class:`flask.Flask` instance to initialize the extension
      with.
-    :param global_limits: a variable list of strings denoting global
+    :param list global_limits: a variable list of strings denoting global
      limits to apply to all routes. :ref:`ratelimit-string` for  more details.
+    :param function key_func: a callable that returns the domain to rate limit by.
+     Defaults to the remote address of the request.
     """
 
     def __init__(self, app=None, key_func=get_ipaddr, global_limits=[]):
@@ -34,6 +36,11 @@ class Limiter(object):
         self.dynamic_route_limits = {}
         self.storage = self.limiter = None
         self.key_func = key_func
+        self.logger = logging.getLogger("flask-limiter")
+        class BlackHoleHandler(logging.StreamHandler):
+            def emit(*_):
+                return
+        self.logger.addHandler(BlackHoleHandler())
         if app:
             self.init_app(app)
 
@@ -70,18 +77,24 @@ class Limiter(object):
             return
         limits = (
             name in self.route_limits and self.route_limits[name]
-            or [] if name in self.dynamic_route_limits else self.global_limits
+            or []
         )
-        d_limits = []
+        dynamic_limits = []
         if name in self.dynamic_route_limits:
             for key_func, limit_func in self.dynamic_route_limits[name]:
-                d_limits.extend(
-                    [key_func, limit] for limit in parse_many(limit_func())
-                )
+                try:
+                    dynamic_limits.extend(
+                        [key_func, limit] for limit in parse_many(limit_func())
+                    )
+                except ValueError as e:
+                    self.logger.error(
+                        "failed to load ratelimit for view function %s (%s)" % (name, e)
+                    )
+
         failed_limit = None
-        for key_func, limit in limits + d_limits:
+        for key_func, limit in (limits + dynamic_limits or self.global_limits):
             if not self.limiter.hit(limit, key_func(), endpoint):
-                current_app.logger.info(
+                self.logger.warn(
                     "ratelimit %s (%s) exceeded at endpoint: %s" % (
                     limit, key_func(), endpoint))
                 failed_limit = limit
@@ -104,16 +117,21 @@ class Limiter(object):
             @wraps(fn)
             def __inner(*a, **k):
                 return fn(*a, **k)
-            self.route_limits.setdefault(name, [])
-            self.dynamic_route_limits.setdefault(name, [])
             func = key_func or self.key_func
             if callable(limit_value):
-                self.dynamic_route_limits[name].append((func, limit_value))
-
+                self.dynamic_route_limits.setdefault(name, []).append(
+                    (func, limit_value)
+                )
             else:
-                self.route_limits[name].extend(
-                    [(func, limit) for limit in parse_many(limit_value)]
-            )
+                try:
+                    self.route_limits.setdefault(name, []).extend(
+                        [(func, limit) for limit in parse_many(limit_value)]
+                    )
+                except ValueError as e:
+                    self.logger.error(
+                        "failed to configure view function %s (%s)" % (name, e)
+                    )
+
             return __inner
         return _inner
 

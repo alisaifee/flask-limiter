@@ -73,13 +73,11 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(429, cli.get("/t1").status_code)
 
     def test_logging(self):
-        fake_logger = mock.Mock()
         app = Flask(__name__)
+        limiter = Limiter(app)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        app.logger.setLevel(logging.INFO)
-        app.logger.addHandler(mock_handler)
-        limiter = Limiter(app)
+        limiter.logger.addHandler(mock_handler)
         @app.route("/t1")
         @limiter.limit("1/minute")
         def t1():
@@ -88,6 +86,25 @@ class FlaskExtTests(unittest.TestCase):
             self.assertEqual(200,cli.get("/t1").status_code)
             self.assertEqual(429,cli.get("/t1").status_code)
         self.assertEqual(mock_handler.handle.call_count, 1)
+
+    def test_reuse_logging(self):
+        app = Flask(__name__)
+        app_handler = mock.Mock()
+        app_handler.level = logging.INFO
+        app.logger.addHandler(app_handler)
+        limiter = Limiter(app)
+        for handler in app.logger.handlers:
+            limiter.logger.addHandler(handler)
+        @app.route("/t1")
+        @limiter.limit("1/minute")
+        def t1():
+            return "42"
+
+        with app.test_client() as cli:
+            cli.get("/t1")
+            cli.get("/t1")
+
+        self.assertEqual(app_handler.handle.call_count, 1)
 
     def test_exempt_routes(self):
 
@@ -152,7 +169,7 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
 
-    def test_dynamic_limits(self):
+    def test_decorated_dynamic_limits(self):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per second")
         limiter = Limiter(app, global_limits=["1/second"])
@@ -196,6 +213,46 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 429)
                 timeline.forward(1)
                 self.assertEqual(cli.get("/t2").status_code, 200)
+
+    def test_invalid_decorated_dynamic_limits(self):
+        app = Flask(__name__)
+        app.config.setdefault("X", "2 per sec")
+        limiter = Limiter(app, global_limits=["1/second"])
+        mock_handler = mock.Mock()
+        mock_handler.level = logging.INFO
+        limiter.logger.addHandler(mock_handler)
+        @app.route("/t1")
+        @limiter.limit(lambda: current_app.config.get("X"))
+        def t1():
+            return "42"
+
+        with app.test_client() as cli:
+            with hiro.Timeline().freeze() as timeline:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+        # 2 for invalid limit, 1 for warning.
+        self.assertEqual(mock_handler.handle.call_count, 3)
+        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[1][0][0].msg)
+        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[2][0][0].msg)
+
+    def test_invalid_decorated_static_limits(self):
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["1/second"])
+        mock_handler = mock.Mock()
+        mock_handler.level = logging.INFO
+        limiter.logger.addHandler(mock_handler)
+        @app.route("/t1")
+        @limiter.limit("2/sec")
+        def t1():
+            return "42"
+
+        with app.test_client() as cli:
+            with hiro.Timeline().freeze() as timeline:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[1][0][0].msg)
 
 
     def test_multiple_apps(self):

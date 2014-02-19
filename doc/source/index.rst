@@ -188,6 +188,13 @@ Examples
 * 10/hour;100/day;2000 per year
 * 100/day, 500/7days
 
+.. warning:: If rate limit strings that are provided to the :meth:`Limiter.limit`
+   decorator are malformed and can't be parsed the decorated route will fall back
+   to the global rate limit(s) and an ``ERROR`` log message will be emitted. Refer
+   to :ref:`logging` for more details on capturing this information. Malformed
+   global rate limit strings will howere raise an exception as they are evaluated
+   early enough to not cause disruption to a running application.
+
 
 .. _ratelimit-strategy:
 
@@ -240,15 +247,15 @@ be maintained in memory per resource and rate limit.
 Customization
 =============
 
+
+Rate limit domains
+-------------------------
+
 By default, all rate limits are applied on a per ``remote address`` basis.
 However, you can easily customize your rate limits to be based on any other
 characteristic of the incoming request. Both the :class:`Limiter` constructor
 and the :meth:`Limiter.limit` decorator accept a keyword argument
 ``key_func`` that should return a string (or an object that has a string representation).
-
-
-Examples
---------
 
 Rate limiting a route by current user (using Flask-Login)::
 
@@ -275,8 +282,8 @@ Rate limiting all requests by country::
 
 
 
-Error Handling
-==============
+Rate limit exeeded responses
+----------------------------
 The default configuration results in an ``abort(409)`` being called everytime
 a ratelimit is exceeded for a particular route. The exceeded limit is added to
 the response and results in an response body that looks something like::
@@ -298,6 +305,27 @@ json response instead::
                 , 429
         )
 
+
+
+.. _logging:
+
+Logging
+-------
+Each :class:`Limiter` instance has a ``logger`` instance variable that is by
+default **not** configured with a handler. You can add your own handler to obtain
+log messages emitted by :mod:`flask_limiter`.
+
+Simple stdout handler::
+
+    limiter = Limiter(app)
+    limiter.logger.addHandler(StreamHandler())
+
+Reusing all the handlers of the ``logger`` instance of the :class:`flask.Flask` app::
+
+    app = Flask(__name__)
+    limiter = Limiter(app)
+    for handler in app.logger.handlers:
+        limiter.logger.addHandler(handler)
 
 API
 ===
