@@ -101,7 +101,6 @@ class Limiter(object):
 
         def _inner(fn):
             name = "%s.%s" % (fn.__module__, fn.__name__)
-            print name
             @wraps(fn)
             def __inner(*a, **k):
                 return fn(*a, **k)
