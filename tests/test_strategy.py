@@ -89,7 +89,7 @@ class WindowTests(unittest.TestCase):
             self.assertTrue(limiter.hit(limit))
             self.assertTrue(limiter.hit(limit))
             self.assertFalse(limiter.hit(limit))
-            self.assertTrue(len(storage.events[limit.key_for()]) == 10)
+            self.assertEqual(len(storage.events[limit.key_for()]), 10)
 
     def test_moving_window_redis(self):
         storage = RedisStorage("redis://localhost:6379")
