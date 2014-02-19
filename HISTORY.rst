@@ -4,6 +4,19 @@
 History
 *******
 
+0.3.0 2014-02-19
+================
+* improved logging support for multiple handlers 
+* allow callables to be passed to ``Limiter.limit`` decorator to dynamically
+  load rate limit strings.
+* add a global kill switch in flask config for all rate limits.
+* Bug fixes 
+
+  * default key function for rate limit domain wasn't accounting for 
+    X-Forwarded-For header.
+
+
+
 0.2.2 2014-02-18
 ================
 * add new decorator to exempt routes from limiting.
@@ -37,6 +50,7 @@ History
 0.1.0 2014-02-13
 ================
 * first release.
+
 
 
 
