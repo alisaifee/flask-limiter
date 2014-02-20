@@ -340,6 +340,9 @@ Exceptions
 .. autoexception:: ConfigurationError
 .. autoexception:: RateLimitExceeded
 
+
+.. include:: ../../HISTORY.rst
+
 References
 ==========
 * `Redis rate limiting pattern #2 <http://redis.io/commands/INCR>`_

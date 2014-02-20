@@ -1,11 +1,10 @@
 .. :changelog:
 
-*******
-History
-*******
+Changelog
+=========
 
 0.3.0 2014-02-19
-================
+----------------
 * improved logging support for multiple handlers 
 * allow callables to be passed to ``Limiter.limit`` decorator to dynamically
   load rate limit strings.
@@ -18,7 +17,7 @@ History
 
 
 0.2.2 2014-02-18
-================
+----------------
 * add new decorator to exempt routes from limiting.
 * Bug fixes 
     
@@ -26,12 +25,12 @@ History
   * configuration string for strategy was out of sync with docs.
 
 0.2.1 2014-02-15
-================
+----------------
 * python 2.6 support via counter backport
 * source docs.
 
 0.2 2014-02-15
-==============
+--------------
 * Implemented configurable strategies for rate limiting.
 * Bug fixes 
   
@@ -40,7 +39,7 @@ History
 
 
 0.1.1 2014-02-14
-================
+----------------
 * Bug fixes
 
   * fix initializing the extension without an app
@@ -48,7 +47,7 @@ History
 
 
 0.1.0 2014-02-13
-================
+----------------
 * first release.
 
 
