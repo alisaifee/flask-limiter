@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.3.1 2014-02-20
+----------------
+* Strict version requirement on six
+* documentation tweaks 
+
 0.3.0 2014-02-19
 ----------------
 * improved logging support for multiple handlers 
@@ -49,6 +54,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
