@@ -119,11 +119,12 @@ class MemoryStorage(Storage):
         """
         self.events.setdefault(key, [])
         self.__schedule_expiry()
+        timestamp = time.time()
         try:
             entry = self.events[key][limit - 1]
         except IndexError:
             entry = None
-        if entry and entry.atime >= time.time() - expiry:
+        if entry and entry.atime >= timestamp - expiry:
             with entry:
                 if entry in self.events[key]:
                     self.events[key].remove(entry)
@@ -177,15 +178,15 @@ class RedisStorage(Storage):
          serves as a 'check'
         :return: True/False
         """
+        timestamp = time.time()
         with self.storage.lock("%s/LOCK" % key):
             entry = self.storage.lindex(key, limit - 1)
-            now = time.time()
-            if entry and float(entry) >= now - expiry:
+            if entry and float(entry) >= timestamp - expiry:
                 return False
             else:
                 if not no_add:
                     with self.storage.pipeline() as pipeline:
-                        pipeline.lpush(key, now)
+                        pipeline.lpush(key, timestamp)
                         pipeline.ltrim(key, 0, limit - 1)
                         pipeline.expire(key, expiry)
                         pipeline.execute()
