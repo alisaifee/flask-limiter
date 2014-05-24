@@ -44,6 +44,16 @@ class Storage(object):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def get_expiry(self, key):
+        """
+        :param str key: the key to get the expiry for
+        """
+        raise NotImplementedError
+
+
+
+
 class LockableEntry(threading._RLock):
     __slots__ = ["atime", "expiry"]
     def __init__(self, expiry):
@@ -125,14 +135,33 @@ class MemoryStorage(Storage):
         except IndexError:
             entry = None
         if entry and entry.atime >= timestamp - expiry:
-            with entry:
-                if entry in self.events[key]:
-                    self.events[key].remove(entry)
             return False
         else:
             if not no_add:
                 self.events[key].insert(0, LockableEntry(expiry))
             return True
+
+    def get_expiry(self, key):
+        """
+        :param str key: the key to get the expiry for
+        """
+        return int(self.expirations.get(key, -1))
+
+    def get_acquirable(self, key, limit, expiry):
+        """
+        returns the number of acquirable entries
+
+        :param str key: rate limit key to acquire an entry in
+        :param int limit: amount of entries allowed
+        :param int expiry: expiry of the entry
+        """
+        timestamp = time.time()
+        if not self.events.get(key):
+            return limit
+        else:
+            return limit - len(
+                [k for k in self.events[key] if k.atime >= timestamp - expiry]
+            )
 
 class RedisStorage(Storage):
     """
@@ -149,6 +178,20 @@ class RedisStorage(Storage):
         self.storage = get_dependency("redis").from_url(redis_url)
         if not self.storage.ping():
             raise ConfigurationError("unable to connect to redis at %s" % redis_url) # pragma: no cover
+        script = """
+        local items = redis.call('lrange', KEYS[1], 0, tonumber(ARGV[2]))
+        local expiry = tonumber(ARGV[1])
+        local a = 0
+        for idx=1,#items do
+            if tonumber(items[idx]) >= expiry then
+                a = a + 1
+            else
+                break
+            end
+        end
+        return a
+        """
+        self.script_hash = self.storage.script_load(script)
         super(RedisStorage, self).__init__()
 
     def incr(self, key, expiry, elastic_expiry=False):
@@ -191,6 +234,25 @@ class RedisStorage(Storage):
                         pipeline.expire(key, expiry)
                         pipeline.execute()
                 return True
+
+    def get_acquirable(self, key, limit, expiry):
+        """
+        returns the number of acquirable entries
+
+        :param str key: rate limit key to acquire an entry in
+        :param int limit: amount of entries allowed
+        :param int expiry: expiry of the entry
+        """
+        timestamp = time.time()
+        return limit - self.storage.evalsha(
+            self.script_hash, 1, key, int(timestamp - expiry), limit
+        )
+
+    def get_expiry(self, key):
+        """
+        :param str key: the key to get the expiry for
+        """
+        return int(self.storage.ttl(key) + time.time())
 
 class MemcachedStorage(Storage):
     """
@@ -247,7 +309,16 @@ class MemcachedStorage(Storage):
                 ):
                     value, cas = self.storage.gets(key)
                     retry += 1
+                self.storage.set(key + "/expires", expiry + time.time(), expire=expiry, noreply=False)
                 return int(value) + 1
             else:
                 return self.storage.incr(key, 1)
+        self.storage.set(key + "/expires", expiry + time.time(), expire=expiry, noreply=False)
         return 1
+
+    def get_expiry(self, key):
+        """
+        :param str key: the key to get the expiry for
+        """
+        return int(float(self.storage.get(key + "/expires") or time.time()))
+

@@ -5,7 +5,8 @@ the flask extension
 from functools import wraps
 import logging
 
-from flask import request, current_app
+from flask import request, current_app, g
+import time
 
 from .errors import RateLimitExceeded, ConfigurationError
 from .strategies import STRATEGIES
@@ -19,13 +20,19 @@ class Limiter(object):
      limits to apply to all routes. :ref:`ratelimit-string` for  more details.
     :param function key_func: a callable that returns the domain to rate limit by.
      Defaults to the remote address of the request.
+    :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
     """
 
-    def __init__(self, app=None, key_func=get_ipaddr, global_limits=[]):
+    def __init__(self, app=None
+                 , key_func=get_ipaddr
+                 , global_limits=[]
+                 , headers_enabled=False
+    ):
         self.app = app
         self.enabled = True
         self.global_limits = []
         self.exempt_routes = []
+        self.headers_enabled = headers_enabled
         for limit in global_limits:
             self.global_limits.extend(
                 [
@@ -49,6 +56,10 @@ class Limiter(object):
         :param app: :class:`flask.Flask` instance to rate limit.
         """
         self.enabled = app.config.setdefault("RATELIMIT_ENABLED", True)
+        self.headers_enabled = (
+            self.headers_enabled
+            or app.config.setdefault("RATELIMIT_HEADERS_ENABLED", False)
+        )
         self.storage = storage_from_string(
             app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
@@ -62,6 +73,24 @@ class Limiter(object):
                 (self.key_func, limit) for limit in parse_many(conf_limits)
             ]
         app.before_request(self.__check_request_limit)
+        app.after_request(self.__inject_headers)
+
+    def __inject_headers(self, response):
+        current_limit = getattr(g, '_view_header_rate_limit', None)
+        if self.enabled and self.headers_enabled and current_limit:
+            response.headers.add(
+                'X-RateLimit-Limit',
+                str(current_limit[0].amount)
+            )
+            response.headers.add(
+                'X-RateLimit-Remaining',
+                str(self.limiter.get_remaining(*current_limit))
+            )
+            response.headers.add(
+                'X-RateLimit-Reset',
+                str(self.limiter.get_refresh(*current_limit))
+            )
+        return response
 
     def __check_request_limit(self):
         endpoint = request.endpoint or ""
@@ -92,12 +121,18 @@ class Limiter(object):
                     )
 
         failed_limit = None
+        limit_for_header = None
         for key_func, limit in (limits + dynamic_limits or self.global_limits):
+            if not limit_for_header or limit < limit_for_header[0]:
+                limit_for_header = (limit, key_func(), endpoint)
             if not self.limiter.hit(limit, key_func(), endpoint):
                 self.logger.warn(
                     "ratelimit %s (%s) exceeded at endpoint: %s" % (
                     limit, key_func(), endpoint))
                 failed_limit = limit
+                limit_for_header =  (limit, key_func(), endpoint)
+        g._view_header_rate_limit = limit_for_header
+
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
 

@@ -1,16 +1,23 @@
 """
 
 """
+import time
+
 import logging
 import unittest
 from flask import Flask, Blueprint, request, current_app
 import hiro
 import mock
 from flask.ext.limiter.extension import Limiter
-
+import redis
+import pymemcache.client
 
 
 class FlaskExtTests(unittest.TestCase):
+    def setUp(self):
+        redis.Redis().flushall()
+        pymemcache.client.Client(('localhost', 11211)).flush_all()
+
     def test_combined_rate_limits(self):
         app = Flask(__name__)
         app.config.setdefault("RATELIMIT_GLOBAL", "1 per hour;10 per day")
@@ -306,3 +313,131 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/slowping").status_code, 429)
                 timeline.forward(1)
                 self.assertEqual(cli.get("/slowping").status_code, 200)
+
+    def test_headers_no_breach(self):
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        @app.route("/t2")
+        @limiter.limit("2/second; 5 per minute; 10/hour")
+        def t2():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                resp = cli.get("/t1")
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'),
+                    '10'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'),
+                    '9'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 60))
+                )
+                resp = cli.get("/t2")
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'),
+                    '2'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'),
+                    '1'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 1))
+                )
+
+    def test_headers_breach(self):
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+
+        @app.route("/t1")
+        @limiter.limit("2/second; 10 per minute; 20/hour")
+        def t():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                for i in range(11):
+                    resp = cli.get("/t1")
+                    timeline.forward(1)
+
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'),
+                    '10'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'),
+                    '0'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 49))
+                )
+
+    def test_headers_moving_window_redis(self):
+
+        app = Flask(__name__)
+        app.config["RATELIMIT_STRATEGY"] = "moving-window"
+        app.config["RATELIMIT_STORAGE_URL"] = "redis://localhost:6379"
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+
+        @app.route("/t1")
+        @limiter.limit("10/second; 20per minute")
+        def t():
+            return "test"
+
+        with app.test_client() as cli:
+            for i in range(21):
+                resp = cli.get("/t1")
+                time.sleep(0.1)
+            self.assertEqual(
+                resp.headers.get('X-RateLimit-Limit'),
+                '20'
+            )
+            self.assertEqual(
+                resp.headers.get('X-RateLimit-Remaining'),
+                '0'
+            )
+            self.assertEqual(
+                resp.headers.get('X-RateLimit-Reset'),
+                str(int(time.time() + 1))
+            )
+
+    def test_headers_fixed_window_memcached(self):
+
+        app = Flask(__name__)
+        app.config["RATELIMIT_STRATEGY"] = "fixed-window"
+        app.config["RATELIMIT_STORAGE_URL"] = "memcached://localhost:11211"
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+
+        @app.route("/t1")
+        @limiter.limit("10/second; 20per minute")
+        def t():
+            return "test"
+
+        with app.test_client() as cli:
+            start = time.time()
+            for i in range(21):
+                resp = cli.get("/t1")
+                time.sleep(0.1)
+            self.assertEqual(
+                resp.headers.get('X-RateLimit-Limit'),
+                '20'
+            )
+            self.assertEqual(
+                resp.headers.get('X-RateLimit-Remaining'),
+                '0'
+            )
+            self.assertEqual(
+                resp.headers.get('X-RateLimit-Reset'),
+                str(int(start) + 60)
+            )

@@ -164,6 +164,7 @@ The following flask configuration values are honored by
                                while memcached relies on the `pymemcache`_ package.
 ``RATELIMIT_STRATEGY``         The rate limiting strategy to use.  :ref:`ratelimit-strategy`
                                for details.
+``RATELIMIT_HEADERS_ENABLED``  Enables returning :ref:`ratelimit-headers`. Defaults to ``False``
 ``RATELIMIT_ENABLED``          Overall killswitch for ratelimits. Defaults to ``True``
 ============================== ================================================
 
@@ -241,6 +242,39 @@ rate limit as the window for each limit is not fixed at the start and end of eac
 (i.e. N/second for a moving window means N in the last 1000 milliseconds). There is
 however a higher memory cost associated with this strategy as it requires ``N`` items to
 be maintained in memory per resource and rate limit.
+
+.. _ratelimit-headers:
+
+Rate-limiting Headers
+=====================
+
+If the configuration is enabled, information about the rate limit with respect to the
+route being requested will be written as part of the response. Since multiple rate limits
+can be active for a given route - the rate limit with the lowest time granularity will be
+used in the scenario when the request does not breach any rate limits.
+
+.. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
+
+============================== ================================================
+``X-RateLimit-Limit``          The total number of requests allowed for the
+                               active window
+``X-RateLimit-Remaining``      The number of requests remaining in the active
+                               window.
+``X-RateLimit-Reset``          UTC seconds since epoch when the window will be
+                               reset.
+============================== ================================================
+
+Depending on the :ref:`ratelimit-strategy` chosen, the meaning of the headers
+may differ. For example, with a moving window strategy there is no actual
+reset for the window, and therefore the value of ``X-RateLimit-Reset`` is always
+``now() + 1``.
+
+.. warning:: Enabling the headers has an additional with certain storage / strategy combinations.
+
+    * Memcached + Fixed Window: an extra key per rate limit is stored to calculate
+      ``X-RateLimit-Reset``
+    * Redis + Moving Window: an extra call to redis is involved during every request
+      to calculate ``X-RateLimit-Remaining``
 
 .. _keyfunc-customization:
 
