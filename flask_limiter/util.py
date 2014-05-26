@@ -4,6 +4,7 @@
 import re
 from six.moves import urllib
 from flask import request
+import sys
 from .limits import GRANULARITIES
 from .errors import ConfigurationError
 
@@ -18,7 +19,8 @@ def get_dependency(dep):
     :return: module or None (if not importable)
     """
     try:
-        return __import__(dep)
+        __import__(dep)
+        return sys.modules[dep]
     except ImportError: # pragma: no cover
         return None
 

@@ -279,7 +279,7 @@ class MemcachedStorage(Storage):
         if not (hasattr(self.local_storage, "storage") and self.local_storage.storage):
             self.local_storage.storage = get_dependency(
                 "pymemcache.client"
-            ).client.Client((self.host, self.port))
+            ).Client((self.host, self.port))
         return self.local_storage.storage
 
     def get(self, key):

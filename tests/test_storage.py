@@ -1,15 +1,14 @@
+import time
+
 import random
 import threading
 import unittest
-import time
 from uuid import uuid4
-
 import hiro
 import redis
 from flask.ext.limiter.strategies import FixedWindowRateLimiter, \
     MovingWindowRateLimiter
-
-from flask.ext.limiter.util import get_dependency, storage_from_string
+from flask.ext.limiter.util import storage_from_string
 from flask.ext.limiter.errors import ConfigurationError
 from flask.ext.limiter.limits import PER_MINUTE, PER_SECOND
 from flask.ext.limiter.storage import MemoryStorage, RedisStorage, MemcachedStorage
