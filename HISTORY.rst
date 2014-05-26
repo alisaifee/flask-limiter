@@ -3,6 +3,14 @@
 Changelog
 =========
 
+0.3.2 2014-05-26
+----------------
+* Bug fix 
+
+  * Memory leak when using ``Limiter.storage.MemoryStorage`` 
+    (`Issue 4 <https://github.com/alisaifee/flask-limiter/issues/4>`_.)
+* Improved test coverage 
+
 0.3.1 2014-02-20
 ----------------
 * Strict version requirement on six
@@ -54,6 +62,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
