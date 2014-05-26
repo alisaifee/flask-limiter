@@ -4,7 +4,7 @@
 from abc import abstractmethod, ABCMeta
 try:
     from collections import Counter
-except ImportError:
+except ImportError: # pragma: no cover
     from .backports.counter import Counter # pragma: no cover
 
 import threading
@@ -157,12 +157,9 @@ class MemoryStorage(Storage):
         :param int expiry: expiry of the entry
         """
         timestamp = time.time()
-        if not self.events.get(key):
-            return limit
-        else:
-            return limit - len(
-                [k for k in self.events[key] if k.atime >= timestamp - expiry]
-            )
+        return limit - len(
+            [k for k in self.events[key] if k.atime >= timestamp - expiry]
+        ) if self.events.get(key) else limit
 
 class RedisStorage(Storage):
     """
