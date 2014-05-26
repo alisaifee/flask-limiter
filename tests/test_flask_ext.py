@@ -245,8 +245,8 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t1").status_code, 429)
         # 2 for invalid limit, 1 for warning.
         self.assertEqual(mock_handler.handle.call_count, 3)
-        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[0][0][0].msg)
-        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[1][0][0].msg)
+        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[1][0][0].msg)
         self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[2][0][0].msg)
 
     def test_invalid_decorated_static_limits(self):
@@ -264,7 +264,7 @@ class FlaskExtTests(unittest.TestCase):
             with hiro.Timeline().freeze() as timeline:
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("failed to configure view function" in mock_handler.handle.call_args_list[0][0][0].msg)
         self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[1][0][0].msg)
 
 

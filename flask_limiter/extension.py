@@ -64,7 +64,7 @@ class Limiter(object):
             app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
         strategy = app.config.setdefault('RATELIMIT_STRATEGY', 'fixed-window')
-        if not strategy in STRATEGIES:
+        if strategy not in STRATEGIES:
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
         self.limiter = STRATEGIES[strategy](self.storage)
         conf_limits = app.config.get("RATELIMIT_GLOBAL", None)
@@ -76,7 +76,7 @@ class Limiter(object):
         app.after_request(self.__inject_headers)
 
     def __inject_headers(self, response):
-        current_limit = getattr(g, '_view_header_rate_limit', None)
+        current_limit = getattr(g, 'view_rate_limit', None)
         if self.enabled and self.headers_enabled and current_limit:
             response.headers.add(
                 'X-RateLimit-Limit',
@@ -117,7 +117,8 @@ class Limiter(object):
                     )
                 except ValueError as e:
                     self.logger.error(
-                        "failed to load ratelimit for view function %s (%s)" % (name, e)
+                        "failed to load ratelimit for view function %s (%s)"
+                        , name, e
                     )
 
         failed_limit = None
@@ -127,11 +128,12 @@ class Limiter(object):
                 limit_for_header = (limit, key_func(), endpoint)
             if not self.limiter.hit(limit, key_func(), endpoint):
                 self.logger.warn(
-                    "ratelimit %s (%s) exceeded at endpoint: %s" % (
-                    limit, key_func(), endpoint))
+                    "ratelimit %s (%s) exceeded at endpoint: %s"
+                    , limit, key_func(), endpoint
+                )
                 failed_limit = limit
                 limit_for_header =  (limit, key_func(), endpoint)
-        g._view_header_rate_limit = limit_for_header
+        g.view_rate_limit = limit_for_header
 
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
@@ -164,7 +166,7 @@ class Limiter(object):
                     )
                 except ValueError as e:
                     self.logger.error(
-                        "failed to configure view function %s (%s)" % (name, e)
+                        "failed to configure view function %s (%s)", name, e
                     )
 
             return __inner
