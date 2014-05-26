@@ -70,7 +70,7 @@ class MemoryStorage(Storage):
         for key in self.events:
             for event in list(self.events[key]):
                 with event:
-                    if event.expiry > time.time() and event in self.events[key]:
+                    if event.expiry <= time.time() and event in self.events[key]:
                         self.events[key].remove(event)
         for key in list(self.expirations.keys()):
             if self.expirations[key] <= time.time():
@@ -78,7 +78,7 @@ class MemoryStorage(Storage):
                 self.expirations.pop(key)
 
     def __schedule_expiry(self):
-        if not self.timer.is_alive:
+        if not self.timer.is_alive():
             self.timer = threading.Timer(0.01, self.__expire_events)
             self.timer.start()
 
@@ -92,6 +92,7 @@ class MemoryStorage(Storage):
          window every hit.
         """
         self.get(key)
+        self.__schedule_expiry()
         self.storage[key] += 1
         if elastic_expiry or self.storage[key] == 1:
             self.expirations[key] = time.time() + expiry
