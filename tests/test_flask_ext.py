@@ -6,7 +6,7 @@ import unittest
 from flask import Flask, Blueprint, request, current_app
 import hiro
 import mock
-from flask.ext.limiter import ConfigurationError
+from flask.ext.limiter.errors import ConfigurationError
 from flask.ext.limiter.extension import Limiter
 
 
