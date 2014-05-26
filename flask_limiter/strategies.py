@@ -26,18 +26,6 @@ class RateLimiter(object):
         raise NotImplementedError
 
     @abstractmethod
-    def check(self, item, *identifiers):
-        """
-        checks whether the rate limit has been exceeded or not
-
-        :param item: a :class:`RateLimitItem` instance
-        :param identifiers: variable list of strings to uniquely identify the
-         limit
-        :return: True/False
-        """
-        raise NotImplementedError
-
-    @abstractmethod
     def get_remaining(self, item, *identifiers):
         """
         returns the number of requests remaining within this limit.
@@ -80,16 +68,6 @@ class MovingWindowRateLimiter(RateLimiter):
         """
         return self.storage().acquire_entry(item.key_for(*identifiers), item.amount, item.expiry)
 
-    def check(self, item, *identifiers):
-        """
-        checks whether the rate limit has been exceeded or not
-
-        :param item: a :class:`RateLimitItem` instance
-        :param identifiers: variable list of strings to uniquely identify the
-         limit
-        :return: True/False
-        """
-        return self.storage().acquire_entry(item.key_for(*identifiers), item.amount, item.expiry, True)
 
     def get_remaining(self, item, *identifiers):
         """
@@ -127,16 +105,6 @@ class FixedWindowRateLimiter(RateLimiter):
             self.storage().incr(item.key_for(*identifiers), item.expiry)
             <= item.amount
         )
-    def check(self, item, *identifiers):
-        """
-        checks whether the rate limit has been exceeded or not
-
-        :param item: a :class:`RateLimitItem` instance
-        :param identifiers: variable list of strings to uniquely identify the
-         limit
-        :return: True/False
-        """
-        return self.storage().get(item.key_for(*identifiers)) <= item.amount
 
     def get_remaining(self, item, *identifiers):
         """

@@ -9,14 +9,9 @@ from flask import Flask, Blueprint, request, current_app
 import hiro
 import mock
 from flask.ext.limiter.extension import Limiter
-import redis
-import pymemcache.client
 
 
 class FlaskExtTests(unittest.TestCase):
-    def setUp(self):
-        redis.Redis().flushall()
-        pymemcache.client.Client(('localhost', 11211)).flush_all()
 
     def test_combined_rate_limits(self):
         app = Flask(__name__)
@@ -383,61 +378,3 @@ class FlaskExtTests(unittest.TestCase):
                     str(int(time.time() + 49))
                 )
 
-    def test_headers_moving_window_redis(self):
-
-        app = Flask(__name__)
-        app.config["RATELIMIT_STRATEGY"] = "moving-window"
-        app.config["RATELIMIT_STORAGE_URL"] = "redis://localhost:6379"
-        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
-
-        @app.route("/t1")
-        @limiter.limit("10/second; 20per minute")
-        def t():
-            return "test"
-
-        with app.test_client() as cli:
-            for i in range(21):
-                resp = cli.get("/t1")
-                time.sleep(0.1)
-            self.assertEqual(
-                resp.headers.get('X-RateLimit-Limit'),
-                '20'
-            )
-            self.assertEqual(
-                resp.headers.get('X-RateLimit-Remaining'),
-                '0'
-            )
-            self.assertEqual(
-                resp.headers.get('X-RateLimit-Reset'),
-                str(int(time.time() + 1))
-            )
-
-    def test_headers_fixed_window_memcached(self):
-
-        app = Flask(__name__)
-        app.config["RATELIMIT_STRATEGY"] = "fixed-window"
-        app.config["RATELIMIT_STORAGE_URL"] = "memcached://localhost:11211"
-        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
-
-        @app.route("/t1")
-        @limiter.limit("10/second; 20per minute")
-        def t():
-            return "test"
-
-        with app.test_client() as cli:
-            start = time.time()
-            for i in range(21):
-                resp = cli.get("/t1")
-                time.sleep(0.1)
-            self.assertEqual(
-                resp.headers.get('X-RateLimit-Limit'),
-                '20'
-            )
-            self.assertEqual(
-                resp.headers.get('X-RateLimit-Remaining'),
-                '0'
-            )
-            self.assertEqual(
-                resp.headers.get('X-RateLimit-Reset'),
-                str(int(start) + 60)
-            )
