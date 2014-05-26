@@ -22,8 +22,7 @@ class StorageTests(unittest.TestCase):
     def test_storage_string(self):
         self.assertTrue(isinstance(storage_from_string("memory://"), MemoryStorage))
         self.assertTrue(isinstance(storage_from_string("redis://localhost:6379"), RedisStorage))
-        if get_dependency("memcache"):
-            self.assertTrue(isinstance(storage_from_string("memcached://localhost:11211"), MemcachedStorage))
+        self.assertTrue(isinstance(storage_from_string("memcached://localhost:11211"), MemcachedStorage))
         self.assertRaises(ConfigurationError, storage_from_string, "blah://")
 
     def test_in_memory(self):
@@ -49,6 +48,21 @@ class StorageTests(unittest.TestCase):
             limiter.hit(PER_SECOND(1))
             time.sleep(0.1)
             self.assertTrue(per_min.key_for() not in storage.storage)
+
+    def test_in_memory_expiry_moving_window(self):
+        with hiro.Timeline().freeze() as timeline:
+            storage = MemoryStorage()
+            limiter = MovingWindowRateLimiter(storage)
+            per_min = PER_MINUTE(10)
+            per_sec = PER_SECOND(1)
+            for i in range(0,2):
+                for i in range(0,10):
+                    self.assertTrue(limiter.hit(per_min))
+                timeline.forward(60)
+                self.assertTrue(limiter.hit(per_sec))
+                time.sleep(1)
+                self.assertEqual([], storage.events[per_min.key_for()])
+
 
     def test_redis(self):
         storage = RedisStorage("redis://localhost:6379")
