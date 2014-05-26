@@ -79,7 +79,7 @@ class WindowTests(unittest.TestCase):
         t1.start(), t2.start()
         [t1.join(), t2.join()]
         self.assertEqual(limiter.get_remaining(limit), 0)
-        self.assertEqual(limiter.get_refresh(limit), start + 2)
+        self.assertTrue(start + 2 <= limiter.get_refresh(limit) <= start + 3)
         self.assertEqual(storage.get(limit.key_for()), 100)
 
     def test_fixed_window_with_elastic_expiry_redis(self):
