@@ -22,8 +22,7 @@ class StorageTests(unittest.TestCase):
     def test_storage_string(self):
         self.assertTrue(isinstance(storage_from_string("memory://"), MemoryStorage))
         self.assertTrue(isinstance(storage_from_string("redis://localhost:6379"), RedisStorage))
-        if get_dependency("memcache"):
-            self.assertTrue(isinstance(storage_from_string("memcached://localhost:11211"), MemcachedStorage))
+        self.assertTrue(isinstance(storage_from_string("memcached://localhost:11211"), MemcachedStorage))
         self.assertRaises(ConfigurationError, storage_from_string, "blah://")
 
     def test_in_memory(self):
