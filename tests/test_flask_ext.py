@@ -6,11 +6,23 @@ import unittest
 from flask import Flask, Blueprint, request, current_app
 import hiro
 import mock
+from flask.ext.limiter import ConfigurationError
 from flask.ext.limiter.extension import Limiter
 
 
 
 class FlaskExtTests(unittest.TestCase):
+
+    def test_invalid_strategy(self):
+        app = Flask(__name__)
+        app.config.setdefault("RATELIMIT_STRATEGY", "fubar")
+        self.assertRaises(ConfigurationError, Limiter, app)
+
+    def test_invalid_storage_string(self):
+        app = Flask(__name__)
+        app.config.setdefault("RATELIMIT_STORAGE_URL", "fubar://localhost:1234")
+        self.assertRaises(ConfigurationError, Limiter, app)
+
     def test_combined_rate_limits(self):
         app = Flask(__name__)
         app.config.setdefault("RATELIMIT_GLOBAL", "1 per hour;10 per day")
