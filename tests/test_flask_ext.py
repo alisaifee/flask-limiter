@@ -1,6 +1,8 @@
 """
 
 """
+import time
+
 import logging
 import unittest
 from flask import Flask, Blueprint, request, current_app
@@ -8,7 +10,6 @@ import hiro
 import mock
 from flask.ext.limiter.errors import ConfigurationError
 from flask.ext.limiter.extension import Limiter
-
 
 
 class FlaskExtTests(unittest.TestCase):
@@ -244,8 +245,8 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t1").status_code, 429)
         # 2 for invalid limit, 1 for warning.
         self.assertEqual(mock_handler.handle.call_count, 3)
-        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[0][0][0].msg)
-        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[1][0][0].msg)
+        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[1][0][0].msg)
         self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[2][0][0].msg)
 
     def test_invalid_decorated_static_limits(self):
@@ -263,7 +264,7 @@ class FlaskExtTests(unittest.TestCase):
             with hiro.Timeline().freeze() as timeline:
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertTrue("couldn't parse rate limit" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("failed to configure view function" in mock_handler.handle.call_args_list[0][0][0].msg)
         self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[1][0][0].msg)
 
 
@@ -318,3 +319,73 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/slowping").status_code, 429)
                 timeline.forward(1)
                 self.assertEqual(cli.get("/slowping").status_code, 200)
+
+    def test_headers_no_breach(self):
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        @app.route("/t2")
+        @limiter.limit("2/second; 5 per minute; 10/hour")
+        def t2():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                resp = cli.get("/t1")
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'),
+                    '10'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'),
+                    '9'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 60))
+                )
+                resp = cli.get("/t2")
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'),
+                    '2'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'),
+                    '1'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 1))
+                )
+
+    def test_headers_breach(self):
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+
+        @app.route("/t1")
+        @limiter.limit("2/second; 10 per minute; 20/hour")
+        def t():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                for i in range(11):
+                    resp = cli.get("/t1")
+                    timeline.forward(1)
+
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'),
+                    '10'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'),
+                    '0'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 49))
+                )
+

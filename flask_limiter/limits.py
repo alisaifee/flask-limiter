@@ -1,9 +1,11 @@
 """
 
 """
-
 from six import add_metaclass
-
+try:
+    from functools import total_ordering
+except ImportError: # pragma: no cover
+    from .backports.total_ordering import total_ordering # pragma: no cover
 
 TIME_TYPES = dict(
     DAY=(60 * 60 * 24, "day"),
@@ -28,6 +30,7 @@ class RateLimitItemMeta(type):
 
 #pylint: disable=no-member
 @add_metaclass(RateLimitItemMeta)
+@total_ordering
 class RateLimitItem(object):
     """
     defines a Rate limited resource which contains characteristics
@@ -80,6 +83,8 @@ class RateLimitItem(object):
             self.amount, self.multiples, self.granularity[1]
         )
 
+    def __lt__(self, other):
+        return self.granularity[0] < other.granularity[0]
 
 #pylint: disable=invalid-name
 class PER_YEAR(RateLimitItem):

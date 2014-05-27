@@ -5,6 +5,7 @@ rate limiting strategies
 from abc import ABCMeta, abstractmethod
 import weakref
 import six
+import time
 
 
 @six.add_metaclass(ABCMeta)
@@ -25,19 +26,32 @@ class RateLimiter(object):
         raise NotImplementedError
 
     @abstractmethod
-    def check(self, item, *identifiers):
+    def get_remaining(self, item, *identifiers):
         """
-        checks whether the rate limit has been exceeded or not
+        returns the number of requests remaining within this limit.
 
         :param item: a :class:`RateLimitItem` instance
         :param identifiers: variable list of strings to uniquely identify the
          limit
-        :return: True/False
+        :return: int
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_refresh(self, item, *identifiers):
+        """
+        returns the UTC time when the window will be refreshed
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: int
         """
         raise NotImplementedError
 
 
 class MovingWindowRateLimiter(RateLimiter):
+
     def __init__(self, storage):
         if not hasattr(storage, "acquire_entry"):
             raise NotImplementedError("MovingWindowRateLimiting is not implemented for storage of type %s" % storage.__class__)
@@ -54,17 +68,28 @@ class MovingWindowRateLimiter(RateLimiter):
         """
         return self.storage().acquire_entry(item.key_for(*identifiers), item.amount, item.expiry)
 
-    def check(self, item, *identifiers):
+
+    def get_remaining(self, item, *identifiers):
         """
-        checks whether the rate limit has been exceeded or not
+        returns the number of requests remaining within this limit.
 
         :param item: a :class:`RateLimitItem` instance
         :param identifiers: variable list of strings to uniquely identify the
          limit
-        :return: True/False
+        :return: int
         """
-        return self.storage().acquire_entry(item.key_for(*identifiers), item.amount, item.expiry, True)
+        return self.storage().get_acquirable(item.key_for(*identifiers), item.amount, item.expiry)
 
+    def get_refresh(self, item, *identifiers):
+        """
+        returns the UTC time when the window will be refreshed
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: int
+        """
+        return int(time.time() + 1)
 
 class FixedWindowRateLimiter(RateLimiter):
     def hit(self, item, *identifiers):
@@ -80,17 +105,28 @@ class FixedWindowRateLimiter(RateLimiter):
             self.storage().incr(item.key_for(*identifiers), item.expiry)
             <= item.amount
         )
-    def check(self, item, *identifiers):
+
+    def get_remaining(self, item, *identifiers):
         """
-        checks whether the rate limit has been exceeded or not
+        returns the number of requests remaining within this limit.
 
         :param item: a :class:`RateLimitItem` instance
         :param identifiers: variable list of strings to uniquely identify the
          limit
-        :return: True/False
+        :return: int
         """
-        return self.storage().get(item.key_for(*identifiers)) <= item.amount
+        return max(0, item.amount - self.storage().get(item.key_for(*identifiers)))
 
+    def get_refresh(self, item, *identifiers):
+        """
+        returns the UTC time when the window will be refreshed
+
+        :param item: a :class:`RateLimitItem` instance
+        :param identifiers: variable list of strings to uniquely identify the
+         limit
+        :return: int
+        """
+        return self.storage().get_expiry(item.key_for(*identifiers))
 
 class FixedWindowElasticExpiryRateLimiter(FixedWindowRateLimiter):
     def hit(self, item, *identifiers):
