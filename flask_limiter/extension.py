@@ -6,7 +6,6 @@ from functools import wraps
 import logging
 
 from flask import request, current_app, g
-import time
 
 from .errors import RateLimitExceeded, ConfigurationError
 from .strategies import STRATEGIES
