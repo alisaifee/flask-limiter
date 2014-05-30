@@ -148,18 +148,31 @@ class MemoryStorage(Storage):
         """
         return int(self.expirations.get(key, -1))
 
-    def get_acquirable(self, key, limit, expiry):
+    def get_num_acquired(self, key, expiry):
         """
-        returns the number of acquirable entries
+        returns the number of entries already acquired
 
         :param str key: rate limit key to acquire an entry in
-        :param int limit: amount of entries allowed
         :param int expiry: expiry of the entry
         """
         timestamp = time.time()
-        return limit - len(
+        return len(
             [k for k in self.events[key] if k.atime >= timestamp - expiry]
-        ) if self.events.get(key) else limit
+        ) if self.events.get(key) else 0
+
+    def get_moving_window(self, key, limit, expiry):
+        """
+        returns the starting point and the number of entries in the moving window
+
+        :param str key: rate limit key
+        :param int expiry: expiry of entry
+        """
+        timestamp = time.time()
+        acquired = self.get_num_acquired(key, expiry)
+        for item in self.events.get(key):
+            if item.atime >= timestamp - expiry:
+                return int(item.atime), acquired
+        return int(timestamp), acquired
 
 class RedisStorage(Storage):
     """
@@ -180,14 +193,18 @@ class RedisStorage(Storage):
         local items = redis.call('lrange', KEYS[1], 0, tonumber(ARGV[2]))
         local expiry = tonumber(ARGV[1])
         local a = 0
+        local oldest = nil
         for idx=1,#items do
             if tonumber(items[idx]) >= expiry then
                 a = a + 1
+                if oldest == nil then
+                    oldest = tonumber(items[idx])
+                end
             else
                 break
             end
         end
-        return a
+        return {oldest, a}
         """
         self.script_hash = self.storage.script_load(script)
         super(RedisStorage, self).__init__()
@@ -233,18 +250,17 @@ class RedisStorage(Storage):
                         pipeline.execute()
                 return True
 
-    def get_acquirable(self, key, limit, expiry):
+    def get_moving_window(self, key, limit, expiry):
         """
-        returns the number of acquirable entries
+        returns the starting point and the number of entries in the moving window
 
-        :param str key: rate limit key to acquire an entry in
-        :param int limit: amount of entries allowed
-        :param int expiry: expiry of the entry
+        :param str key: rate limit key
+        :param int expiry: expiry of entry
         """
         timestamp = time.time()
-        return limit - self.storage.evalsha(
+        return tuple(self.storage.evalsha(
             self.script_hash, 1, key, int(timestamp - expiry), limit
-        )
+        ))
 
     def get_expiry(self, key):
         """

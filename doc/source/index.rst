@@ -237,7 +237,7 @@ Moving Window
     storage backends. The strategy requires using a list with fast random access which
     is not very convenient to implement with a memcached storage.
 
-This strategy is the most effective in terms of not allowing bursts to by-pass the
+This strategy is the most effective for preventing bursts from by-passing the
 rate limit as the window for each limit is not fixed at the start and end of each time unit
 (i.e. N/second for a moving window means N in the last 1000 milliseconds). There is
 however a higher memory cost associated with this strategy as it requires ``N`` items to
@@ -250,7 +250,7 @@ Rate-limiting Headers
 .. versionadded:: 0.4.0
 
 If the configuration is enabled, information about the rate limit with respect to the
-route being requested will be written as part of the response. Since multiple rate limits
+route being requested will be added to the response headers. Since multiple rate limits
 can be active for a given route - the rate limit with the lowest time granularity will be
 used in the scenario when the request does not breach any rate limits.
 
@@ -265,17 +265,12 @@ used in the scenario when the request does not breach any rate limits.
                                reset.
 ============================== ================================================
 
-Depending on the :ref:`ratelimit-strategy` chosen, the meaning of the headers
-may differ. For example, with a moving window strategy there is no actual
-reset for the window, and therefore the value of ``X-RateLimit-Reset`` is always
-``now() + 1``.
-
-.. warning:: Enabling the headers has an additional with certain storage / strategy combinations.
+.. warning:: Enabling the headers has an additional cost with certain storage / strategy combinations.
 
     * Memcached + Fixed Window: an extra key per rate limit is stored to calculate
       ``X-RateLimit-Reset``
     * Redis + Moving Window: an extra call to redis is involved during every request
-      to calculate ``X-RateLimit-Remaining``
+      to calculate ``X-RateLimit-Remaining`` and ``X-RateLimit-Reset``
 
 .. _keyfunc-customization:
 

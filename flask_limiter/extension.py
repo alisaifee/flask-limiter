@@ -77,17 +77,18 @@ class Limiter(object):
     def __inject_headers(self, response):
         current_limit = getattr(g, 'view_rate_limit', None)
         if self.enabled and self.headers_enabled and current_limit:
+            window_stats = self.limiter.get_window_stats(*current_limit)
             response.headers.add(
                 'X-RateLimit-Limit',
                 str(current_limit[0].amount)
             )
             response.headers.add(
                 'X-RateLimit-Remaining',
-                str(self.limiter.get_remaining(*current_limit))
+                window_stats[1]
             )
             response.headers.add(
                 'X-RateLimit-Reset',
-                str(self.limiter.get_refresh(*current_limit))
+                window_stats[0]
             )
         return response
 
