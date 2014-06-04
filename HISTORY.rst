@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.4.1 2014-06-04
+----------------
+* Improved implementation of moving-window X-RateLimit-Reset value.
+
 0.4 2014-05-28
 --------------
 * `Rate limiting headers
@@ -67,6 +71,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
