@@ -20,18 +20,24 @@ class Limiter(object):
     :param function key_func: a callable that returns the domain to rate limit by.
      Defaults to the remote address of the request.
     :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
+    :param str strategy: the strategy to use. refer to :ref:`ratelimit-strategy`
+    :param str storage_uri: the storage location. refer to :ref:`ratelimit-conf`
     """
 
     def __init__(self, app=None
                  , key_func=get_ipaddr
                  , global_limits=[]
                  , headers_enabled=False
+                 , strategy=None
+                 , storage_uri=None
     ):
         self.app = app
         self.enabled = True
         self.global_limits = []
         self.exempt_routes = []
         self.headers_enabled = headers_enabled
+        self.strategy = strategy
+        self.storage_uri = storage_uri
         for limit in global_limits:
             self.global_limits.extend(
                 [
@@ -60,9 +66,13 @@ class Limiter(object):
             or app.config.setdefault("RATELIMIT_HEADERS_ENABLED", False)
         )
         self.storage = storage_from_string(
-            app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
+            self.storage_uri
+            or app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
         )
-        strategy = app.config.setdefault('RATELIMIT_STRATEGY', 'fixed-window')
+        strategy = (
+            self.strategy
+            or app.config.setdefault('RATELIMIT_STRATEGY', 'fixed-window')
+        )
         if strategy not in STRATEGIES:
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
         self.limiter = STRATEGIES[strategy](self.storage)

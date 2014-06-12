@@ -143,11 +143,13 @@ instance are
 :meth:`Limiter.exempt`
   This decorator simply marks a route as being exempt from any rate limits.
 
+.. _ratelimit-conf:
 
 Configuration
 =============
 The following flask configuration values are honored by
-:class:`Limiter`
+:class:`Limiter`. If the corresponding configuration is passed in to the
+:class:`Limiter` constructor, those will take precedence.
 
 .. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
@@ -204,7 +206,8 @@ Rate limiting strategies
 Flask-Limiter comes with three different rate limiting strategies built-in. Pick
 the one that works for your use-case by specifying it in your flask config as
 ``RATELIMIT_STRATEGY`` (one of ``fixed-window``, ``fixed-window-elastic-expiry``,
-or ``moving-window``). The default configuration is ``fixed-window``.
+or ``moving-window``), or as a constructor keyword argument. The default
+configuration is ``fixed-window``.
 
 
 Fixed Window

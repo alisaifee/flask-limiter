@@ -10,6 +10,8 @@ import hiro
 import mock
 from flask.ext.limiter.errors import ConfigurationError
 from flask.ext.limiter.extension import Limiter
+from flask.ext.limiter.storage import MemcachedStorage
+from flask.ext.limiter.strategies import MovingWindowRateLimiter
 
 
 class FlaskExtTests(unittest.TestCase):
@@ -23,6 +25,17 @@ class FlaskExtTests(unittest.TestCase):
         app = Flask(__name__)
         app.config.setdefault("RATELIMIT_STORAGE_URL", "fubar://localhost:1234")
         self.assertRaises(ConfigurationError, Limiter, app)
+
+    def test_constructor_arguments_over_config(self):
+        app = Flask(__name__)
+        app.config.setdefault("RATELIMIT_STRATEGY", "fixed-window-elastic-expiry")
+        limiter = Limiter(strategy='moving-window')
+        limiter.init_app(app)
+        app.config.setdefault("RATELIMIT_STORAGE_URL", "redis://localhost:6379")
+        self.assertEqual(type(limiter.limiter), MovingWindowRateLimiter)
+        limiter = Limiter(storage_uri='memcached://localhost:11211')
+        limiter.init_app(app)
+        self.assertEqual(type(limiter.storage), MemcachedStorage)
 
     def test_combined_rate_limits(self):
         app = Flask(__name__)
