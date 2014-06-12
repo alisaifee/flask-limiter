@@ -84,6 +84,10 @@ class Limiter(object):
         app.before_request(self.__check_request_limit)
         app.after_request(self.__inject_headers)
 
+        if not hasattr(app, 'extensions'):
+            app.extensions = {}
+        app.extensions['limiter'] = self
+
     def __inject_headers(self, response):
         current_limit = getattr(g, 'view_rate_limit', None)
         if self.enabled and self.headers_enabled and current_limit:
