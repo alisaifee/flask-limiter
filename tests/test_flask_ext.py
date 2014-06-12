@@ -1,11 +1,12 @@
 """
 
 """
+import json
 import time
 
 import logging
 import unittest
-from flask import Flask, Blueprint, request, current_app
+from flask import Flask, Blueprint, request, current_app, make_response
 import hiro
 import mock
 from flask.ext.limiter.errors import ConfigurationError
@@ -36,6 +37,22 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(storage_uri='memcached://localhost:11211')
         limiter.init_app(app)
         self.assertEqual(type(limiter.storage), MemcachedStorage)
+
+    def test_error_message(self):
+        app = Flask(__name__)
+        app.config.setdefault("RATELIMIT_GLOBAL", "1 per day")
+        limiter = Limiter(app)
+        @app.route("/")
+        def null():
+            return ""
+
+        with app.test_client() as cli:
+            cli.get("/")
+            self.assertIn("1 per 1 day", cli.get("/").data)
+            @app.errorhandler(429)
+            def ratelimit_handler(e):
+                return make_response('{"error" : "rate limit %s"}' % str(e.description), 429)
+            self.assertEqual({'error': 'rate limit 1 per 1 day'}, json.loads(cli.get("/").data))
 
     def test_combined_rate_limits(self):
         app = Flask(__name__)
