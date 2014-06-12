@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.4.2 2014-06-12
+----------------
+* Allow configuration overrides via extension constructor 
+
 0.4.1 2014-06-04
 ----------------
 * Improved implementation of moving-window X-RateLimit-Reset value.
@@ -71,6 +75,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
