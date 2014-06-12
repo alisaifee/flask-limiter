@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.4.3 2014-06-12
+----------------
+* Hotfix : use HTTPException instead of abort to play well with other
+  extensions.
+
 0.4.2 2014-06-12
 ----------------
 * Allow configuration overrides via extension constructor 
@@ -75,6 +80,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
