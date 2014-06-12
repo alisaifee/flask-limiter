@@ -48,11 +48,11 @@ class FlaskExtTests(unittest.TestCase):
 
         with app.test_client() as cli:
             cli.get("/")
-            self.assertIn("1 per 1 day", cli.get("/").data)
+            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
             @app.errorhandler(429)
             def ratelimit_handler(e):
                 return make_response('{"error" : "rate limit %s"}' % str(e.description), 429)
-            self.assertEqual({'error': 'rate limit 1 per 1 day'}, json.loads(cli.get("/").data))
+            self.assertEqual({'error': 'rate limit 1 per 1 day'}, json.loads(cli.get("/").data.decode()))
 
     def test_combined_rate_limits(self):
         app = Flask(__name__)
