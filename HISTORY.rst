@@ -3,6 +3,13 @@
 Changelog
 =========
 
+0.4.4 2014-06-13
+----------------
+* Bug fix 
+  
+  * Werkzeug < 0.9 Compatibility 
+    (`Issue 6 <https://github.com/alisaifee/flask-limiter/issues/6>`_.)
+
 0.4.3 2014-06-12
 ----------------
 * Hotfix : use HTTPException instead of abort to play well with other
@@ -80,6 +87,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
