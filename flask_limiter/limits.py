@@ -37,7 +37,7 @@ class RateLimitItem(object):
      namespace, amount and granularity of rate limiting window.
     """
     __metaclass__ = RateLimitItemMeta
-
+    __slots__ = ["namespace", "amount", "multiples", "granularity"]
     def __init__(self, amount, multiples=1, namespace='LIMITER'):
         self.namespace = namespace
         self.amount = int(amount)
@@ -53,8 +53,7 @@ class RateLimitItem(object):
         """
         return granularity_string.lower() in cls.granularity[1:]
 
-    @property
-    def expiry(self):
+    def get_expiry(self):
         """
         :return: the size of the window in seconds.
         """

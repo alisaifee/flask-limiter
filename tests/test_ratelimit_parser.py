@@ -36,9 +36,9 @@ class RatelimitParserTests(unittest.TestCase):
             )
 
     def test_multiples(self):
-        self.assertEqual(parse("1 per 3 hour").expiry, 3 * 60 * 60)
-        self.assertEqual(parse("1 per 2 hours").expiry, 2 * 60 * 60)
-        self.assertEqual(parse("1/2 day").expiry, 2 * 24 * 60 * 60)
+        self.assertEqual(parse("1 per 3 hour").get_expiry(), 3 * 60 * 60)
+        self.assertEqual(parse("1 per 2 hours").get_expiry(), 2 * 60 * 60)
+        self.assertEqual(parse("1/2 day").get_expiry(), 2 * 24 * 60 * 60)
 
     def test_invalid_string(self):
         self.assertRaises(ValueError, parse, "1 per millienium")
