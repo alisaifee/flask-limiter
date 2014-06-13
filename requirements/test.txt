@@ -5,4 +5,4 @@ coverage
 nose-cov
 git+https://github.com/alisaifee/pymemcache.git#egg=pymemcache
 redis
-hiro
+hiro>0.1.6
