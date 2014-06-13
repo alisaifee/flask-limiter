@@ -35,6 +35,7 @@ class Limiter(object):
         self.enabled = True
         self.global_limits = []
         self.exempt_routes = []
+        self.request_filters = []
         self.headers_enabled = headers_enabled
         self.strategy = strategy
         self.storage_uri = storage_uri
@@ -116,6 +117,7 @@ class Limiter(object):
         if (view_func == current_app.send_static_file
             or name in self.exempt_routes
             or not self.enabled
+            or any(fn() for fn in self.request_filters)
         ):
             return
         limits = (
@@ -196,3 +198,12 @@ class Limiter(object):
             return fn(*a, **k)
         self.exempt_routes.append(name)
         return __inner
+
+    def request_filter(self, fn):
+        """
+        decorator to mark a function as a filter to be executed
+        to check if the request is exempt from rate limiting.
+        """
+        self.request_filters.append(fn)
+        return fn
+

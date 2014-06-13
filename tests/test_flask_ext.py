@@ -419,3 +419,30 @@ class FlaskExtTests(unittest.TestCase):
                     str(int(time.time() + 49))
                 )
 
+    def test_whitelisting(self):
+
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["1/minute"], headers_enabled=True)
+
+        @app.route("/")
+        def t():
+            return "test"
+
+        @limiter.request_filter
+        def w():
+            if request.headers.get("internal", None) == "true":
+                return True
+            return False
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/").status_code, 200)
+                self.assertEqual(cli.get("/").status_code, 429)
+                timeline.forward(60)
+                self.assertEqual(cli.get("/").status_code, 200)
+
+                for i in range(0,10):
+                    self.assertEqual(
+                        cli.get("/", headers = {"internal": "true"}).status_code,
+                        200
+                    )
