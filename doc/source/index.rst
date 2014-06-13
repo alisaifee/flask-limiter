@@ -74,6 +74,8 @@ Each route can be decorated to override the global rate limits set in the extens
 The two decorators made available as instance methods of the :class:`Limiter`
 instance are
 
+.. _ratelimit-decorator-limit:
+
 :meth:`Limiter.limit`
   There are a few ways of using this decorator depending on your preference and use-case.
 
@@ -140,8 +142,33 @@ instance are
         .. note:: The callable is called from within a
            :ref:`flask request context <flask:request-context>`.
 
+.. _ratelimit-decorator-exempt:
+
 :meth:`Limiter.exempt`
   This decorator simply marks a route as being exempt from any rate limits.
+
+.. _ratelimit-decorator-request-filter:
+
+:meth:`Limiter.request_filter`
+  This decorator simply marks a function as a filter for requests that are going
+  to be tested for rate limits. If any of the request filters return ``True`` no
+  rate limiting will be performed for that request. This mechanism can be used to
+  create custom white lists.
+
+
+        .. code-block:: python
+
+            @limiter.request_filter
+            def header_whitelist():
+                return request.headers.get("X-Internal", "") == "true"
+
+            @limiter.request_filter
+            def ip_whitelist():
+                return request.remote_addr == "127.0.0.1"
+
+    In the above example, any request that contains the header ``X-Internal: true``
+    or originates from localhost will not be rate limited.
+
 
 .. _ratelimit-conf:
 
