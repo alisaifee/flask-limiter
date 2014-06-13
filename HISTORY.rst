@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.5 2014-06-13
+--------------
+* `Request Filters
+  <http://flask-limiter.readthedocs.org/en/latest/index.html#ratelimit-decorator-request-filter>`_
+
 0.4.4 2014-06-13
 ----------------
 * Bug fix 
@@ -87,6 +92,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
