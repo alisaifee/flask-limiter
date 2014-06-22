@@ -96,6 +96,7 @@ class StorageTests(unittest.TestCase):
         storage = RedisStorage("redis://localhost:6379")
         limiter = MovingWindowRateLimiter(storage)
         limit = PER_SECOND(1000)
+        keys_start = storage.storage.keys('%s/*' % limit.namespace)
         # 100 routes
         fake_routes = [uuid4().hex for _ in range(0,100)]
         # go as fast as possible in 2 seconds.
@@ -110,4 +111,4 @@ class StorageTests(unittest.TestCase):
             time.sleep(0.1)
         [k.set() for k in events]
         time.sleep(2)
-        self.assertTrue(storage.storage.keys("*") == [])
+        self.assertTrue(storage.storage.keys("%s/*" % limit.namespace) == [])
