@@ -419,6 +419,34 @@ class FlaskExtTests(unittest.TestCase):
                     str(int(time.time() + 49))
                 )
 
+    def test_scope(self):
+        app = Flask(__name__)
+        limiter = Limiter(app)
+        mock_handler = mock.Mock()
+        mock_handler.level = logging.INFO
+        limiter.logger.addHandler(mock_handler)
+
+        @app.route("/t1")
+        @limiter.limit("1/minute", scope="a")
+        def route1():
+            return "route1"
+
+        @app.route("/t2")
+        @limiter.limit("1/minute", scope="a")
+        def route2():
+            return "route2"
+
+        @app.route("/t3")
+        @limiter.limit("1/minute", scope="b")
+        def route3():
+            return "route3"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/t1").status_code)
+                self.assertEqual(200, cli.get("/t3").status_code)
+                self.assertEqual(429, cli.get("/t2").status_code)
+
     def test_whitelisting(self):
 
         app = Flask(__name__)
