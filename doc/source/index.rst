@@ -186,7 +186,7 @@ instance are
            ...
 
 
-    .. note:: Shared rate limits provide the same conveniences as individual rate limits,
+    .. note:: Shared rate limits provide the same conveniences as individual rate limits
 
         * They can be chained with other shared limits or other individual limits
         * They accept keying functions
