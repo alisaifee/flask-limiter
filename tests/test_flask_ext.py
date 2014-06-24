@@ -17,6 +17,18 @@ from flask.ext.limiter.strategies import MovingWindowRateLimiter
 
 class FlaskExtTests(unittest.TestCase):
 
+    def build_app(self, config={}, **limiter_args):
+        app = Flask(__name__)
+        for k,v in config.items():
+            app.config.setdefault(k,v)
+        limiter = Limiter(app, **limiter_args)
+        mock_handler = mock.Mock()
+        mock_handler.level = logging.INFO
+        limiter.logger.addHandler(mock_handler)
+        return app, limiter
+
+
+
     def test_invalid_strategy(self):
         app = Flask(__name__)
         app.config.setdefault("RATELIMIT_STRATEGY", "fubar")
@@ -39,9 +51,9 @@ class FlaskExtTests(unittest.TestCase):
         self.assertEqual(type(limiter.storage), MemcachedStorage)
 
     def test_error_message(self):
-        app = Flask(__name__)
-        app.config.setdefault("RATELIMIT_GLOBAL", "1 per day")
-        limiter = Limiter(app)
+        app, limiter = self.build_app({
+            "RATELIMIT_GLOBAL" : "1 per day"
+        })
         @app.route("/")
         def null():
             return ""
@@ -55,9 +67,9 @@ class FlaskExtTests(unittest.TestCase):
             self.assertEqual({'error': 'rate limit 1 per 1 day'}, json.loads(cli.get("/").data.decode()))
 
     def test_combined_rate_limits(self):
-        app = Flask(__name__)
-        app.config.setdefault("RATELIMIT_GLOBAL", "1 per hour;10 per day")
-        limiter = Limiter(app)
+        app, limiter = self.build_app({
+            "RATELIMIT_GLOBAL" : "1 per hour; 10 per day"
+        })
 
         @app.route("/t1")
         @limiter.limit("100 per hour;10/minute")
@@ -83,8 +95,7 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(429, cli.get("/t2").status_code)
 
     def test_key_func(self):
-        app = Flask(__name__)
-        limiter = Limiter(app)
+        app, limiter = self.build_app()
         @app.route("/t1")
         @limiter.limit("100 per minute", lambda:"test")
         def t1():
@@ -99,8 +110,7 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(429, cli.get("/t1").status_code)
 
     def test_multiple_decorators(self):
-        app = Flask(__name__)
-        limiter = Limiter(app)
+        app, limiter = self.build_app()
         @app.route("/t1")
         @limiter.limit("100 per minute", lambda:"test") # effectively becomes a limit for all users
         @limiter.limit("50/minute") # per ip as per default key_func
@@ -150,9 +160,7 @@ class FlaskExtTests(unittest.TestCase):
         self.assertEqual(app_handler.handle.call_count, 1)
 
     def test_exempt_routes(self):
-
-        app = Flask(__name__)
-        limiter = Limiter(app, global_limits=["1/minute"])
+        app, limiter = self.build_app(global_limits = ["1/minute"])
 
         @app.route("/t1")
         def t1():
@@ -171,9 +179,7 @@ class FlaskExtTests(unittest.TestCase):
 
 
     def test_blueprint(self):
-
-        app = Flask(__name__)
-        limiter = Limiter(app, global_limits=["1/minute"])
+        app, limiter = self.build_app(global_limits = ["1/minute"])
         bp = Blueprint("main", __name__)
         @bp.route("/t1")
         def t1():
@@ -193,9 +199,10 @@ class FlaskExtTests(unittest.TestCase):
             self.assertEqual(cli.get("/t2").status_code, 429)
 
     def test_disabled_flag(self):
-        app = Flask(__name__)
-        app.config.setdefault("RATELIMIT_ENABLED", False)
-        limiter = Limiter(app, global_limits=["1/minute"])
+        app, limiter = self.build_app(
+            config={"RATELIMIT_ENABLED": False},
+            global_limits=["1/minute"]
+        )
         @app.route("/t1")
         def t1():
             return "test"
@@ -213,10 +220,7 @@ class FlaskExtTests(unittest.TestCase):
             self.assertEqual(cli.get("/t2").status_code, 200)
 
     def test_decorated_dynamic_limits(self):
-        app = Flask(__name__)
-        app.config.setdefault("X", "2 per second")
-        limiter = Limiter(app, global_limits=["1/second"])
-
+        app, limiter = self.build_app({"X": "2 per second"}, global_limits=["1/second"])
         def request_context_limit():
             limits = {
                 "127.0.0.1": "10 per minute",
