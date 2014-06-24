@@ -222,7 +222,7 @@ Examples
    decorator are malformed and can't be parsed the decorated route will fall back
    to the global rate limit(s) and an ``ERROR`` log message will be emitted. Refer
    to :ref:`logging` for more details on capturing this information. Malformed
-   global rate limit strings will howere raise an exception as they are evaluated
+   global rate limit strings will however raise an exception as they are evaluated
    early enough to not cause disruption to a running application.
 
 
