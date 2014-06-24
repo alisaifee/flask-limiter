@@ -85,8 +85,9 @@ class Limiter(object):
         app.before_request(self.__check_request_limit)
         app.after_request(self.__inject_headers)
 
+        # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, 'extensions'):
-            app.extensions = {}
+            app.extensions = {} # pragma: no cover
         app.extensions['limiter'] = self
 
     def __inject_headers(self, response):
