@@ -423,31 +423,6 @@ class FlaskExtTests(unittest.TestCase):
                     str(int(time.time() + 49))
                 )
 
-    def test_unnamed_shared_limit(self):
-        app, limiter = self.build_app()
-        shared_limit_a = limiter.shared_limit("1/minute")
-        shared_limit_b = limiter.shared_limit("1/minute")
-        @app.route("/t1")
-        @shared_limit_a
-        def route1():
-            return "route1"
-
-        @app.route("/t2")
-        @shared_limit_a
-        def route2():
-            return "route2"
-
-        @app.route("/t3")
-        @shared_limit_b
-        def route3():
-            return "route3"
-
-        with hiro.Timeline().freeze() as timeline:
-            with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(200, cli.get("/t3").status_code)
-                self.assertEqual(429, cli.get("/t2").status_code)
-
     def test_named_shared_limit(self):
         app, limiter = self.build_app()
         shared_limit_a = limiter.shared_limit("1/minute", scope='a')

@@ -165,22 +165,6 @@ instance are
         def r2():
            ...
 
-    Anonymous shared limit: when no scope is provided a unique id will be used.
-
-      .. code-block:: python
-
-        shared_limit = limiter.shared_limit("100/hour")
-
-        @app.route("..")
-        @shared_limit
-        def r1():
-           ...
-
-        @app.route("..")
-        @shared_limit
-        def r2():
-           ...
-
 
     Dynamic shared limit: when a callable is passed as scope, the return value
     of the function will be used as the scope.

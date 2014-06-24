@@ -4,7 +4,6 @@ the flask extension
 
 from functools import wraps
 import logging
-import uuid
 
 from flask import request, current_app, g
 
@@ -161,7 +160,7 @@ class Limiter(object):
     def __limit_decorator(self, limit_value,
                           key_func=None, shared=False,
                           scope=None):
-        _scope = scope or uuid.uuid1().hex if shared else None
+        _scope = scope if shared else None
 
         def _inner(fn):
             name = "%s.%s" % (fn.__module__, fn.__name__)
@@ -200,16 +199,16 @@ class Limiter(object):
         return self.__limit_decorator(limit_value, key_func)
 
 
-    def shared_limit(self, limit_value, key_func=None, scope=None):
+    def shared_limit(self, limit_value, scope, key_func=None):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
         :param limit_value: rate limit string or a callable that returns a string.
          :ref:`ratelimit-string` for more details.
+        :param scope: a string or callable that returns a string
+         for defining the rate limiting scope.
         :param key_func: function/lambda to extract the unique identifier for
          the rate limit. defaults to remote address of the request.
-        :param scope: a string or callable that returns a string
-         for defining the rate limiting scope. Defaults to a :func:`uuid.uuid1` value.
         """
         return self.__limit_decorator(limit_value, key_func, True, scope)
 
