@@ -70,8 +70,7 @@ Using ``init_app``
 
 Decorators
 ----------
-Each route can be decorated to override the global rate limits set in the extension.
-The two decorators made available as instance methods of the :class:`Limiter`
+The decorators made available as instance methods of the :class:`Limiter`
 instance are
 
 .. _ratelimit-decorator-limit:
