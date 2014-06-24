@@ -153,7 +153,7 @@ instance are
 
       .. code-block:: python
 
-        mysql_limit = limiter.limit("100/hour", scope="mysql")
+        mysql_limit = limiter.shared_limit("100/hour", scope="mysql")
 
         @app.route("..")
         @mysql_limit
@@ -169,7 +169,7 @@ instance are
 
       .. code-block:: python
 
-        shared_limit = limiter.limit("100/hour")
+        shared_limit = limiter.shared_limit("100/hour")
 
         @app.route("..")
         @shared_limit
