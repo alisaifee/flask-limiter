@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.6 2014-06-24
+--------------
+* `Shared limits between routes
+  <http://flask-limiter.readthedocs.org/en/latest/index.html#ratelimit-decorator-shared-limit>`_
+
 0.5 2014-06-13
 --------------
 * `Request Filters
@@ -92,6 +97,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
