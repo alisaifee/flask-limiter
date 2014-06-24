@@ -42,7 +42,7 @@ class Limiter(object):
         for limit in global_limits:
             self.global_limits.extend(
                 [
-                    (key_func, limit) for limit in parse_many(limit)
+                    (key_func, limit, None) for limit in parse_many(limit)
                 ]
             )
         self.route_limits = {}
@@ -80,7 +80,7 @@ class Limiter(object):
         conf_limits = app.config.get("RATELIMIT_GLOBAL", None)
         if not self.global_limits and conf_limits:
             self.global_limits = [
-                (self.key_func, limit) for limit in parse_many(conf_limits)
+                (self.key_func, limit, None) for limit in parse_many(conf_limits)
             ]
         app.before_request(self.__check_request_limit)
         app.after_request(self.__inject_headers)
@@ -126,10 +126,10 @@ class Limiter(object):
         )
         dynamic_limits = []
         if name in self.dynamic_route_limits:
-            for key_func, limit_func in self.dynamic_route_limits[name]:
+            for key_func, limit_func, scope in self.dynamic_route_limits[name]:
                 try:
                     dynamic_limits.extend(
-                        [key_func, limit] for limit in parse_many(limit_func())
+                        [key_func, limit, scope] for limit in parse_many(limit_func())
                     )
                 except ValueError as e:
                     self.logger.error(
@@ -139,24 +139,56 @@ class Limiter(object):
 
         failed_limit = None
         limit_for_header = None
-        for key_func, limit in (limits + dynamic_limits or self.global_limits):
+        for key_func, limit, scope in (limits + dynamic_limits or self.global_limits):
+            limit_scope = (
+                              scope if not callable(scope) else scope(endpoint)
+                          ) or endpoint
             if not limit_for_header or limit < limit_for_header[0]:
-                limit_for_header = (limit, key_func(), endpoint)
-            if not self.limiter.hit(limit, key_func(), endpoint):
+                limit_for_header = (limit, key_func(), limit_scope)
+            if not self.limiter.hit(limit, key_func(), limit_scope):
                 self.logger.warn(
                     "ratelimit %s (%s) exceeded at endpoint: %s"
-                    , limit, key_func(), endpoint
+                    , limit, key_func(), limit_scope
                 )
                 failed_limit = limit
-                limit_for_header =  (limit, key_func(), endpoint)
+                limit_for_header = (limit, key_func(), limit_scope)
         g.view_rate_limit = limit_for_header
 
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
 
+    def __limit_decorator(self, limit_value,
+                          key_func=None, shared=False,
+                          scope=None):
+        _scope = scope if shared else None
+
+        def _inner(fn):
+            name = "%s.%s" % (fn.__module__, fn.__name__)
+
+            @wraps(fn)
+            def __inner(*a, **k):
+                return fn(*a, **k)
+            func = key_func or self.key_func
+            if callable(limit_value):
+                self.dynamic_route_limits.setdefault(name, []).append(
+                    (func, limit_value, _scope)
+                )
+            else:
+                try:
+                    self.route_limits.setdefault(name, []).extend(
+                        [(func, limit, _scope) for limit in parse_many(limit_value)]
+                    )
+                except ValueError as e:
+                    self.logger.error(
+                        "failed to configure view function %s (%s)", name, e
+                    )
+            return __inner
+        return _inner
+
+
     def limit(self, limit_value, key_func=None):
         """
-        decorator to be used for rate limiting specific routes.
+        decorator to be used for rate limiting individual routes.
 
         :param limit_value: rate limit string or a callable that returns a string.
          :ref:`ratelimit-string` for more details.
@@ -164,29 +196,23 @@ class Limiter(object):
          the rate limit. defaults to remote address of the request.
         :return:
         """
+        return self.__limit_decorator(limit_value, key_func)
 
-        def _inner(fn):
-            name = "%s.%s" % (fn.__module__, fn.__name__)
-            @wraps(fn)
-            def __inner(*a, **k):
-                return fn(*a, **k)
-            func = key_func or self.key_func
-            if callable(limit_value):
-                self.dynamic_route_limits.setdefault(name, []).append(
-                    (func, limit_value)
-                )
-            else:
-                try:
-                    self.route_limits.setdefault(name, []).extend(
-                        [(func, limit) for limit in parse_many(limit_value)]
-                    )
-                except ValueError as e:
-                    self.logger.error(
-                        "failed to configure view function %s (%s)", name, e
-                    )
 
-            return __inner
-        return _inner
+    def shared_limit(self, limit_value, scope, key_func=None):
+        """
+        decorator to be applied to multiple routes sharing the same rate limit.
+
+        :param limit_value: rate limit string or a callable that returns a string.
+         :ref:`ratelimit-string` for more details.
+        :param scope: a string or callable that returns a string
+         for defining the rate limiting scope.
+        :param key_func: function/lambda to extract the unique identifier for
+         the rate limit. defaults to remote address of the request.
+        """
+        return self.__limit_decorator(limit_value, key_func, True, scope)
+
+
 
     def exempt(self, fn):
         """

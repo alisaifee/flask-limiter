@@ -142,6 +142,58 @@ instance are
         .. note:: The callable is called from within a
            :ref:`flask request context <flask:request-context>`.
 
+.. _ratelimit-decorator-shared-limit:
+
+:meth:`Limiter.shared_limit`
+    For scenarios where a rate limit should be shared by multiple routes
+    (For example when you want to protect routes using the same resource
+    with an umbrella rate limit).
+
+    Named shared limit
+
+      .. code-block:: python
+
+        mysql_limit = limiter.shared_limit("100/hour", scope="mysql")
+
+        @app.route("..")
+        @mysql_limit
+        def r1():
+           ...
+
+        @app.route("..")
+        @mysql_limit
+        def r2():
+           ...
+
+
+    Dynamic shared limit: when a callable is passed as scope, the return value
+    of the function will be used as the scope.
+
+      .. code-block:: python
+
+        def host_scope():
+            return request.host
+        host_limit = limiter.shared_limit("100/hour", scope=host_scope)
+
+        @app.route("..")
+        @host_limit
+        def r1():
+           ...
+
+        @app.route("..")
+        @host_limit
+        def r2():
+           ...
+
+
+    .. note:: Shared rate limits provide the same conveniences as individual rate limits,
+
+        * They can be chained with other shared limits or other individual limits
+        * They accept keying functions
+        * accept callables to determine the rate limit value
+
+
+
 .. _ratelimit-decorator-exempt:
 
 :meth:`Limiter.exempt`
