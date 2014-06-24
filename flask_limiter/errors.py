@@ -8,8 +8,8 @@ def _patch_werkzeug():
     import pkg_resources
     if pkg_resources.get_distribution("werkzeug").version < "0.9":
         # sorry, for touching your internals :).
-        import werkzeug._internal
-        werkzeug._internal.HTTP_STATUS_CODES[429] = 'Too Many Requests'
+        import werkzeug._internal # pragma: no cover
+        werkzeug._internal.HTTP_STATUS_CODES[429] = 'Too Many Requests' # pragma: no cover
 
 _patch_werkzeug()
 del _patch_werkzeug
