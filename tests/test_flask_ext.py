@@ -423,25 +423,22 @@ class FlaskExtTests(unittest.TestCase):
                     str(int(time.time() + 49))
                 )
 
-    def test_scope(self):
-        app = Flask(__name__)
-        limiter = Limiter(app)
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
-
+    def test_unnamed_shared_limit(self):
+        app, limiter = self.build_app()
+        shared_limit_a = limiter.shared_limit("1/minute")
+        shared_limit_b = limiter.shared_limit("1/minute")
         @app.route("/t1")
-        @limiter.limit("1/minute", scope="a")
+        @shared_limit_a
         def route1():
             return "route1"
 
         @app.route("/t2")
-        @limiter.limit("1/minute", scope="a")
+        @shared_limit_a
         def route2():
             return "route2"
 
         @app.route("/t3")
-        @limiter.limit("1/minute", scope="b")
+        @shared_limit_b
         def route3():
             return "route3"
 
@@ -450,6 +447,70 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t3").status_code)
                 self.assertEqual(429, cli.get("/t2").status_code)
+
+    def test_named_shared_limit(self):
+        app, limiter = self.build_app()
+        shared_limit_a = limiter.shared_limit("1/minute", scope='a')
+        shared_limit_b = limiter.shared_limit("1/minute", scope='b')
+        @app.route("/t1")
+        @shared_limit_a
+        def route1():
+            return "route1"
+
+        @app.route("/t2")
+        @shared_limit_a
+        def route2():
+            return "route2"
+
+        @app.route("/t3")
+        @shared_limit_b
+        def route3():
+            return "route3"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/t1").status_code)
+                self.assertEqual(200, cli.get("/t3").status_code)
+                self.assertEqual(429, cli.get("/t2").status_code)
+
+    def test_dynamic_shared_limit(self):
+        app, limiter = self.build_app()
+        fn_a = mock.Mock()
+        fn_b = mock.Mock()
+        fn_a.return_value = "foo"
+        fn_b.return_value = "bar"
+
+
+        dy_limit_a = limiter.shared_limit("1/minute", scope=fn_a)
+        dy_limit_b = limiter.shared_limit("1/minute", scope=fn_b)
+
+
+        @app.route("/t1")
+        @dy_limit_a
+        def t1():
+            return "route1"
+
+        @app.route("/t2")
+        @dy_limit_a
+        def t2():
+            return "route2"
+
+        @app.route("/t3")
+        @dy_limit_b
+        def t3():
+            return "route3"
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/t1").status_code)
+                self.assertEqual(200, cli.get("/t3").status_code)
+                self.assertEqual(429, cli.get("/t2").status_code)
+                self.assertEqual(429, cli.get("/t3").status_code)
+                self.assertEqual(2, fn_a.call_count)
+                self.assertEqual(2, fn_b.call_count)
+                fn_b.assert_called_with("t3")
+                fn_a.assert_has_calls([mock.call("t1"), mock.call("t2")])
+
 
     def test_whitelisting(self):
 

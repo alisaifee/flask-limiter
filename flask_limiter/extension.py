@@ -4,6 +4,7 @@ the flask extension
 
 from functools import wraps
 import logging
+import uuid
 
 from flask import request, current_app, g
 
@@ -140,7 +141,9 @@ class Limiter(object):
         failed_limit = None
         limit_for_header = None
         for key_func, limit, scope in (limits + dynamic_limits or self.global_limits):
-            limit_scope = scope or endpoint
+            limit_scope = (
+                              scope if not callable(scope) else scope(endpoint)
+                          ) or endpoint
             if not limit_for_header or limit < limit_for_header[0]:
                 limit_for_header = (limit, key_func(), limit_scope)
             if not self.limiter.hit(limit, key_func(), limit_scope):
@@ -155,41 +158,62 @@ class Limiter(object):
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
 
-    def limit(self, limit_value, key_func=None, scope=None):
-        """
-        decorator to be used for rate limiting specific routes.
-
-        :param limit_value: rate limit string or a callable that returns a string.
-         :ref:`ratelimit-string` for more details.
-        :param key_func: function/lambda to extract the unique identifier for
-         the rate limit. defaults to remote address of the request.
-        :param scope: a string for defining the rate limiting scope.
-         defaults to the route's endpoint.
-        :return:
-        """
+    def __limit_decorator(self, limit_value,
+                          key_func=None, shared=False,
+                          scope=None):
+        _scope = scope or uuid.uuid1().hex if shared else None
 
         def _inner(fn):
             name = "%s.%s" % (fn.__module__, fn.__name__)
+
             @wraps(fn)
             def __inner(*a, **k):
                 return fn(*a, **k)
             func = key_func or self.key_func
             if callable(limit_value):
                 self.dynamic_route_limits.setdefault(name, []).append(
-                    (func, limit_value, scope)
+                    (func, limit_value, _scope)
                 )
             else:
                 try:
                     self.route_limits.setdefault(name, []).extend(
-                        [(func, limit, scope) for limit in parse_many(limit_value)]
+                        [(func, limit, _scope) for limit in parse_many(limit_value)]
                     )
                 except ValueError as e:
                     self.logger.error(
                         "failed to configure view function %s (%s)", name, e
                     )
-
             return __inner
         return _inner
+
+
+    def limit(self, limit_value, key_func=None):
+        """
+        decorator to be used for rate limiting individual routes.
+
+        :param limit_value: rate limit string or a callable that returns a string.
+         :ref:`ratelimit-string` for more details.
+        :param key_func: function/lambda to extract the unique identifier for
+         the rate limit. defaults to remote address of the request.
+        :return:
+        """
+        return self.__limit_decorator(limit_value, key_func)
+
+
+    def shared_limit(self, limit_value, key_func=None, scope=None):
+        """
+        decorator to be applied to multiple routes sharing the same rate limit.
+
+        :param limit_value: rate limit string or a callable that returns a string.
+         :ref:`ratelimit-string` for more details.
+        :param key_func: function/lambda to extract the unique identifier for
+         the rate limit. defaults to remote address of the request.
+        :param scope: a string or callable that returns a string
+         for defining the rate limiting scope. Defaults to a :func:`uuid.uuid1` value.
+        """
+        return self.__limit_decorator(limit_value, key_func, True, scope)
+
+
 
     def exempt(self, fn):
         """
