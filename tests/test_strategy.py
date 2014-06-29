@@ -100,7 +100,6 @@ class WindowTests(unittest.TestCase):
         limiter = MovingWindowRateLimiter(storage)
         with hiro.Timeline().freeze() as timeline:
             limit = PER_MINUTE(10)
-            start = time.time()
             for i in range(0,5):
                 self.assertTrue(limiter.hit(limit))
                 self.assertTrue(limiter.hit(limit))
@@ -121,7 +120,6 @@ class WindowTests(unittest.TestCase):
         storage = RedisStorage("redis://localhost:6379")
         limiter = MovingWindowRateLimiter(storage)
         limit = PER_SECOND(10, 2)
-        start = time.time()
         for i in range(0,10):
             self.assertTrue(limiter.hit(limit))
             self.assertEqual(limiter.get_window_stats(limit)[1], 10 - (i + 1))
