@@ -238,7 +238,7 @@ The following flask configuration values are honored by
                                passed to the :class:`Limiter` constructor
                                as well (the values passed to the constructor take precedence
                                over those in the config). :ref:`ratelimit-string` for details.
-``RATELIMIT_STORE_URL``        One of ``memory://`` or ``redis://host:port``
+``RATELIMIT_STORAGE_URL``      One of ``memory://`` or ``redis://host:port``
                                or ``memcached://host:port``. Using the redis storage
                                requires the installation of the `redis`_ package
                                while memcached relies on the `pymemcache`_ package.
