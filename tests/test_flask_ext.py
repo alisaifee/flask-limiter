@@ -303,8 +303,8 @@ class FlaskExtTests(unittest.TestCase):
 
 
     def test_multiple_apps(self):
-        app1 = Flask("app1")
-        app2 = Flask("app2")
+        app1 = Flask(__name__)
+        app2 = Flask(__name__)
 
         limiter = Limiter(global_limits = ["1/second"])
         limiter.init_app(app1)
