@@ -318,13 +318,13 @@ class MemcachedStorage(Storage):
                 value, cas = self.storage.gets(key)
                 retry = 0
                 while (
-                        not self.storage.cas(key, int(value)+1, cas, expiry)
+                        not self.storage.cas(key, int(value or 0)+1, cas, expiry)
                         and retry < self.MAX_CAS_RETRIES
                 ):
                     value, cas = self.storage.gets(key)
                     retry += 1
                 self.storage.set(key + "/expires", expiry + time.time(), expire=expiry, noreply=False)
-                return int(value) + 1
+                return int(value or 0) + 1
             else:
                 return self.storage.incr(key, 1)
         self.storage.set(key + "/expires", expiry + time.time(), expire=expiry, noreply=False)
