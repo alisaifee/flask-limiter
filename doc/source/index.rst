@@ -293,7 +293,7 @@ Fixed Window
 This is the most memory efficient strategy to use as it maintains one counter
 per resource and rate limit. It does however have its drawbacks as it allows
 bursts within each window - thus allowing an 'attacker' to by-pass the limits.
-The effects of these burts can be partially circumvented by enforcing multiple
+The effects of these bursts can be partially circumvented by enforcing multiple
 granularities of windows per resource.
 
 For example, if you specify a ``100/minute`` rate limit on a route, this strategy will
