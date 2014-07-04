@@ -14,6 +14,7 @@ from flask.ext.limiter.storage import MemoryStorage, RedisStorage, \
     MemcachedStorage
 from flask.ext.limiter.strategies import MovingWindowRateLimiter, \
     FixedWindowElasticExpiryRateLimiter, FixedWindowRateLimiter
+from tests import sleep_upto
 
 
 class WindowTests(unittest.TestCase):
@@ -116,16 +117,16 @@ class WindowTests(unittest.TestCase):
         storage = RedisStorage("redis://localhost:6379")
         limiter = MovingWindowRateLimiter(storage)
         limit = PER_SECOND(10, 2)
+        start = time.time()
         for i in range(0,10):
             self.assertTrue(limiter.hit(limit))
             self.assertEqual(limiter.get_window_stats(limit)[1], 10 - (i + 1))
-            time.sleep(0.095 * 2)
+            sleep_upto(0.095 * 2, start, 1.9)
         self.assertFalse(limiter.hit(limit))
-        time.sleep(0.4)
+        sleep_upto(0.4, start, 2.3)
         self.assertTrue(limiter.hit(limit))
         self.assertTrue(limiter.hit(limit))
-        self.assertFalse(limiter.hit(limit))
-        self.assertTrue(storage.storage.llen(limit.key_for()) == 10)
+        self.assertEqual(limiter.get_window_stats(limit)[1], 0)
 
     def test_moving_window_memcached(self):
         storage = MemcachedStorage('localhost', 11211)
