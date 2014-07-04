@@ -33,7 +33,7 @@ class RateLimiter(object):
         :param item: a :class:`RateLimitItem` instance
         :param identifiers: variable list of strings to uniquely identify the
          limit
-        :return: int
+        :return: tuple (reset time (int), remaining (int))
         """
         raise NotImplementedError
 
@@ -64,7 +64,7 @@ class MovingWindowRateLimiter(RateLimiter):
         :param item: a :class:`RateLimitItem` instance
         :param identifiers: variable list of strings to uniquely identify the
          limit
-        :return: int
+        :return: tuple (reset time (int), remaining (int))
         """
         window_start, window_items = self.storage().get_moving_window(
                 item.key_for(*identifiers), item.amount, item.get_expiry()
@@ -95,7 +95,7 @@ class FixedWindowRateLimiter(RateLimiter):
         :param item: a :class:`RateLimitItem` instance
         :param identifiers: variable list of strings to uniquely identify the
          limit
-        :return: int
+        :return: tuple (reset time (int), remaining (int))
         """
         remaining = max(0, item.amount - self.storage().get(item.key_for(*identifiers)))
         reset = self.storage().get_expiry(item.key_for(*identifiers))

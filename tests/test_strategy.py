@@ -61,7 +61,6 @@ class WindowTests(unittest.TestCase):
         limiter = FixedWindowElasticExpiryRateLimiter(storage)
         limit = PER_SECOND(10, 2)
         self.assertTrue(all([limiter.hit(limit) for _ in range(0,10)]))
-        self.assertEqual(limiter.get_window_stats(limit)[1], 0)
         time.sleep(1)
         self.assertFalse(limiter.hit(limit))
         time.sleep(1)
@@ -86,13 +85,10 @@ class WindowTests(unittest.TestCase):
         storage = RedisStorage('redis://localhost:6379')
         limiter = FixedWindowElasticExpiryRateLimiter(storage)
         limit = PER_SECOND(10, 2)
-        start = int(time.time())
         self.assertTrue(all([limiter.hit(limit) for _ in range(0,10)]))
-        self.assertEqual(limiter.get_window_stats(limit)[1], 0)
         time.sleep(1)
         self.assertFalse(limiter.hit(limit))
         time.sleep(1)
-        self.assertEqual(limiter.get_window_stats(limit)[0], start + 3)
         self.assertFalse(limiter.hit(limit))
 
     def test_moving_window_in_memory(self):
