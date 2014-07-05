@@ -84,8 +84,8 @@ class MemoryStorage(Storage):
                         self.events[key].remove(event)
         for key in list(self.expirations.keys()):
             if self.expirations[key] <= time.time():
-                self.storage.pop(key)
-                self.expirations.pop(key)
+                self.storage.pop(key, None)
+                self.expirations.pop(key, None)
 
     def __schedule_expiry(self):
         if not self.timer.is_alive():
@@ -113,10 +113,8 @@ class MemoryStorage(Storage):
         :param str key: the key to get the counter value for
         """
         if self.expirations.get(key, 0) <= time.time():
-            if key in self.storage:
-                self.storage.pop(key)
-            if key in self.expirations:
-                self.expirations.pop(key)
+            self.storage.pop(key, None)
+            self.expirations.pop(key, None)
         return self.storage.get(key, 0)
 
     def acquire_entry(self, key, limit, expiry, no_add=False):

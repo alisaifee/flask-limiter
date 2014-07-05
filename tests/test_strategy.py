@@ -10,11 +10,15 @@ import redis
 import pymemcache.client
 
 from flask.ext.limiter.limits import PER_SECOND, PER_MINUTE
-from flask.ext.limiter.storage import MemoryStorage, RedisStorage, \
-    MemcachedStorage
-from flask.ext.limiter.strategies import MovingWindowRateLimiter, \
-    FixedWindowElasticExpiryRateLimiter, FixedWindowRateLimiter
-from tests import sleep_upto
+from flask.ext.limiter.storage import (
+    MemoryStorage, RedisStorage,MemcachedStorage
+)
+from flask.ext.limiter.strategies import (
+    MovingWindowRateLimiter,
+    FixedWindowElasticExpiryRateLimiter,
+    FixedWindowRateLimiter
+)
+from tests import skip_if_pypy
 
 
 class WindowTests(unittest.TestCase):
@@ -113,6 +117,7 @@ class WindowTests(unittest.TestCase):
             timeline.forward(31)
             self.assertEqual(limiter.get_window_stats(limit)[1], 10)
 
+    @skip_if_pypy
     def test_moving_window_redis(self):
         storage = RedisStorage("redis://localhost:6379")
         limiter = MovingWindowRateLimiter(storage)
@@ -121,9 +126,9 @@ class WindowTests(unittest.TestCase):
         for i in range(0,10):
             self.assertTrue(limiter.hit(limit))
             self.assertEqual(limiter.get_window_stats(limit)[1], 10 - (i + 1))
-            sleep_upto(0.095 * 2, start, 1.9)
+            time.sleep(0.095)
         self.assertFalse(limiter.hit(limit))
-        sleep_upto(0.4, start, 2.3)
+        time.sleep(0.4)
         self.assertTrue(limiter.hit(limit))
         self.assertTrue(limiter.hit(limit))
         self.assertEqual(limiter.get_window_stats(limit)[1], 0)
