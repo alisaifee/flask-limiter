@@ -122,11 +122,10 @@ class WindowTests(unittest.TestCase):
         storage = RedisStorage("redis://localhost:6379")
         limiter = MovingWindowRateLimiter(storage)
         limit = PER_SECOND(10, 2)
-        start = time.time()
         for i in range(0,10):
             self.assertTrue(limiter.hit(limit))
             self.assertEqual(limiter.get_window_stats(limit)[1], 10 - (i + 1))
-            time.sleep(0.095)
+            time.sleep(2*0.095)
         self.assertFalse(limiter.hit(limit))
         time.sleep(0.4)
         self.assertTrue(limiter.hit(limit))
