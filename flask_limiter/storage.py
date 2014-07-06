@@ -204,7 +204,7 @@ class RedisStorage(Storage):
         end
         return {oldest, a}
         """
-        self.script_hash = self.storage.script_load(script)
+        self.lua_moving_window = self.storage.register_script(script)
         super(RedisStorage, self).__init__()
 
     def incr(self, key, expiry, elastic_expiry=False):
@@ -256,8 +256,8 @@ class RedisStorage(Storage):
         :param int expiry: expiry of entry
         """
         timestamp = time.time()
-        return tuple(self.storage.evalsha(
-            self.script_hash, 1, key, int(timestamp - expiry), limit
+        return tuple(self.lua_moving_window(
+            [key], [int(timestamp - expiry), limit]
         ))
 
     def get_expiry(self, key):
