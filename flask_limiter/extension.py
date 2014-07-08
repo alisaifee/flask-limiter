@@ -193,7 +193,7 @@ class Limiter(object):
 
         :param limit_value: rate limit string or a callable that returns a string.
          :ref:`ratelimit-string` for more details.
-        :param key_func: function/lambda to extract the unique identifier for
+        :param function key_func: function/lambda to extract the unique identifier for
          the rate limit. defaults to remote address of the request.
         :return:
         """
@@ -208,7 +208,7 @@ class Limiter(object):
          :ref:`ratelimit-string` for more details.
         :param scope: a string or callable that returns a string
          for defining the rate limiting scope.
-        :param key_func: function/lambda to extract the unique identifier for
+        :param function key_func: function/lambda to extract the unique identifier for
          the rate limit. defaults to remote address of the request.
         """
         return self.__limit_decorator(limit_value, key_func, True, scope)
