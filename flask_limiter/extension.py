@@ -11,6 +11,14 @@ from .errors import RateLimitExceeded, ConfigurationError
 from .strategies import STRATEGIES
 from .util import storage_from_string, parse_many, get_ipaddr
 
+class C:
+    ENABLED = "RATELIMIT_ENABLED"
+    HEADERS_ENABLED = "RATELIMIT_HEADERS_ENABLED"
+    STORAGE_URL = "RATELIMIT_STORAGE_URL"
+    STRATEGY = "RATELIMIT_STRATEGY"
+    GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
+
+
 class Limiter(object):
     """
     :param app: :class:`flask.Flask` instance to initialize the extension
@@ -61,23 +69,23 @@ class Limiter(object):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
-        self.enabled = app.config.setdefault("RATELIMIT_ENABLED", True)
+        self.enabled = app.config.setdefault(C.ENABLED, True)
         self.headers_enabled = (
             self.headers_enabled
-            or app.config.setdefault("RATELIMIT_HEADERS_ENABLED", False)
+            or app.config.setdefault(C.HEADERS_ENABLED, True)
         )
         self.storage = storage_from_string(
             self.storage_uri
-            or app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
+            or app.config.setdefault(C.STORAGE_URL, 'memory://')
         )
         strategy = (
             self.strategy
-            or app.config.setdefault('RATELIMIT_STRATEGY', 'fixed-window')
+            or app.config.setdefault(C.STRATEGY, 'fixed-window')
         )
         if strategy not in STRATEGIES:
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
         self.limiter = STRATEGIES[strategy](self.storage)
-        conf_limits = app.config.get("RATELIMIT_GLOBAL", None)
+        conf_limits = app.config.get(C.GLOBAL_LIMITS, None)
         if not self.global_limits and conf_limits:
             self.global_limits = [
                 (self.key_func, limit, None) for limit in parse_many(conf_limits)

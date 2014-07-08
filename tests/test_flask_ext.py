@@ -10,7 +10,7 @@ from flask import Flask, Blueprint, request, current_app, make_response
 import hiro
 import mock
 from flask.ext.limiter.errors import ConfigurationError
-from flask.ext.limiter.extension import Limiter
+from flask.ext.limiter.extension import Limiter, C
 from flask.ext.limiter.storage import MemcachedStorage
 from flask.ext.limiter.strategies import MovingWindowRateLimiter
 
@@ -31,20 +31,20 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_invalid_strategy(self):
         app = Flask(__name__)
-        app.config.setdefault("RATELIMIT_STRATEGY", "fubar")
+        app.config.setdefault(C.STRATEGY, "fubar")
         self.assertRaises(ConfigurationError, Limiter, app)
 
     def test_invalid_storage_string(self):
         app = Flask(__name__)
-        app.config.setdefault("RATELIMIT_STORAGE_URL", "fubar://localhost:1234")
+        app.config.setdefault(C.STORAGE_URL, "fubar://localhost:1234")
         self.assertRaises(ConfigurationError, Limiter, app)
 
     def test_constructor_arguments_over_config(self):
         app = Flask(__name__)
-        app.config.setdefault("RATELIMIT_STRATEGY", "fixed-window-elastic-expiry")
+        app.config.setdefault(C.STRATEGY, "fixed-window-elastic-expiry")
         limiter = Limiter(strategy='moving-window')
         limiter.init_app(app)
-        app.config.setdefault("RATELIMIT_STORAGE_URL", "redis://localhost:6379")
+        app.config.setdefault(C.STORAGE_URL, "redis://localhost:6379")
         self.assertEqual(type(limiter.limiter), MovingWindowRateLimiter)
         limiter = Limiter(storage_uri='memcached://localhost:11211')
         limiter.init_app(app)
@@ -52,7 +52,7 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_error_message(self):
         app, limiter = self.build_app({
-            "RATELIMIT_GLOBAL" : "1 per day"
+            C.GLOBAL_LIMITS : "1 per day"
         })
         @app.route("/")
         def null():
@@ -68,7 +68,7 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_combined_rate_limits(self):
         app, limiter = self.build_app({
-            "RATELIMIT_GLOBAL" : "1 per hour; 10 per day"
+            C.GLOBAL_LIMITS : "1 per hour; 10 per day"
         })
 
         @app.route("/t1")
@@ -200,7 +200,7 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_disabled_flag(self):
         app, limiter = self.build_app(
-            config={"RATELIMIT_ENABLED": False},
+            config={C.ENABLED: False},
             global_limits=["1/minute"]
         )
         @app.route("/t1")
