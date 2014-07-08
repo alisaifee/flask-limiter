@@ -19,6 +19,24 @@ class C:
     GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
 
 
+class ExtLimit(object):
+    """
+    simple wrapper to encapsulate limits and their context
+    """
+    def __init__(self, limit, key_func, scope, per_method):
+        self._limit = limit
+        self.key_func = key_func
+        self._scope = scope
+        self.per_method = per_method
+
+    @property
+    def limit(self):
+        return self._limit() if callable(self._limit) else self._limit
+
+    @property
+    def scope(self):
+        return self._scope(request.endpoint) if callable(self._scope) else self._scope
+
 class Limiter(object):
     """
     :param app: :class:`flask.Flask` instance to initialize the extension
@@ -50,7 +68,9 @@ class Limiter(object):
         for limit in global_limits:
             self.global_limits.extend(
                 [
-                    (key_func, limit, None) for limit in parse_many(limit)
+                    ExtLimit(
+                        limit, key_func, None, False
+                    ) for limit in parse_many(limit)
                 ]
             )
         self.route_limits = {}
@@ -88,7 +108,9 @@ class Limiter(object):
         conf_limits = app.config.get(C.GLOBAL_LIMITS, None)
         if not self.global_limits and conf_limits:
             self.global_limits = [
-                (self.key_func, limit, None) for limit in parse_many(conf_limits)
+                ExtLimit(
+                    limit, self.key_func, None, False
+                ) for limit in parse_many(conf_limits)
             ]
         app.before_request(self.__check_request_limit)
         app.after_request(self.__inject_headers)
@@ -135,10 +157,12 @@ class Limiter(object):
         )
         dynamic_limits = []
         if name in self.dynamic_route_limits:
-            for key_func, limit_func, scope in self.dynamic_route_limits[name]:
+            for lim in self.dynamic_route_limits[name]:
                 try:
                     dynamic_limits.extend(
-                        [key_func, limit, scope] for limit in parse_many(limit_func())
+                        ExtLimit(
+                            limit, lim.key_func, lim.scope, lim.per_method
+                        ) for limit in parse_many(lim.limit)
                     )
                 except ValueError as e:
                     self.logger.error(
@@ -148,19 +172,19 @@ class Limiter(object):
 
         failed_limit = None
         limit_for_header = None
-        for key_func, limit, scope in (limits + dynamic_limits or self.global_limits):
-            limit_scope = (
-                              scope if not callable(scope) else scope(endpoint)
-                          ) or endpoint
-            if not limit_for_header or limit < limit_for_header[0]:
-                limit_for_header = (limit, key_func(), limit_scope)
-            if not self.limiter.hit(limit, key_func(), limit_scope):
+        for lim in (limits + dynamic_limits or self.global_limits):
+            limit_scope = lim.scope or endpoint
+            if lim.per_method:
+                limit_scope += ":%s" % request.method
+            if not limit_for_header or lim.limit < limit_for_header[0]:
+                limit_for_header = (lim.limit, lim.key_func(), limit_scope)
+            if not self.limiter.hit(lim.limit, lim.key_func(), limit_scope):
                 self.logger.warn(
                     "ratelimit %s (%s) exceeded at endpoint: %s"
-                    , limit, key_func(), limit_scope
+                    , lim.limit, lim.key_func(), limit_scope
                 )
-                failed_limit = limit
-                limit_for_header = (limit, key_func(), limit_scope)
+                failed_limit = lim.limit
+                limit_for_header = (lim.limit, lim.key_func(), limit_scope)
         g.view_rate_limit = limit_for_header
 
         if failed_limit:
@@ -168,7 +192,8 @@ class Limiter(object):
 
     def __limit_decorator(self, limit_value,
                           key_func=None, shared=False,
-                          scope=None):
+                          scope=None,
+                          per_method=False):
         _scope = scope if shared else None
 
         def _inner(fn):
@@ -180,12 +205,14 @@ class Limiter(object):
             func = key_func or self.key_func
             if callable(limit_value):
                 self.dynamic_route_limits.setdefault(name, []).append(
-                    (func, limit_value, _scope)
+                    ExtLimit(limit_value, func, _scope, per_method)
                 )
             else:
                 try:
                     self.route_limits.setdefault(name, []).extend(
-                        [(func, limit, _scope) for limit in parse_many(limit_value)]
+                        [ExtLimit(
+                            limit, func, _scope, per_method
+                        ) for limit in parse_many(limit_value)]
                     )
                 except ValueError as e:
                     self.logger.error(
@@ -195,7 +222,7 @@ class Limiter(object):
         return _inner
 
 
-    def limit(self, limit_value, key_func=None):
+    def limit(self, limit_value, key_func=None, per_method=False):
         """
         decorator to be used for rate limiting individual routes.
 
@@ -203,9 +230,11 @@ class Limiter(object):
          :ref:`ratelimit-string` for more details.
         :param function key_func: function/lambda to extract the unique identifier for
          the rate limit. defaults to remote address of the request.
+        :param bool per_method: whether the limit is sub categorized into the http
+         method of the request.
         :return:
         """
-        return self.__limit_decorator(limit_value, key_func)
+        return self.__limit_decorator(limit_value, key_func, per_method=per_method)
 
 
     def shared_limit(self, limit_value, scope, key_func=None):
