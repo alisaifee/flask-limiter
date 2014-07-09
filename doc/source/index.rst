@@ -245,7 +245,7 @@ The following flask configuration values are honored by
 ``RATELIMIT_STRATEGY``         The rate limiting strategy to use.  :ref:`ratelimit-strategy`
                                for details.
 ``RATELIMIT_HEADERS_ENABLED``  Enables returning :ref:`ratelimit-headers`. Defaults to ``False``
-``RATELIMIT_ENABLED``          Overall killswitch for ratelimits. Defaults to ``True``
+``RATELIMIT_ENABLED``          Overall kill switch for rate limits. Defaults to ``True``
 ============================== ================================================
 
 
@@ -393,10 +393,10 @@ Rate limiting all requests by country::
 
 
 
-Rate limit exeeded responses
+Rate limit exceeded responses
 ----------------------------
-The default configuration results in an ``abort(429)`` being called everytime
-a ratelimit is exceeded for a particular route. The exceeded limit is added to
+The default configuration results in an ``abort(429)`` being called every time
+a rate limit is exceeded for a particular route. The exceeded limit is added to
 the response and results in an response body that looks something like::
 
     <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
