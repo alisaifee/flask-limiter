@@ -24,7 +24,7 @@ class ConfigurationError(Exception):
 class RateLimitExceeded(HTTPException):
     """
     exception raised when a rate limit is hit.
-    The exception results in ``abort(409)`` being called.
+    The exception results in ``abort(429)`` being called.
     """
     code = 429
     def __init__(self, limit):
