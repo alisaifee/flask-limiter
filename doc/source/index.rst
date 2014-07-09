@@ -395,7 +395,7 @@ Rate limiting all requests by country::
 
 Rate limit exeeded responses
 ----------------------------
-The default configuration results in an ``abort(409)`` being called everytime
+The default configuration results in an ``abort(429)`` being called everytime
 a ratelimit is exceeded for a particular route. The exceeded limit is added to
 the response and results in an response body that looks something like::
 
@@ -406,7 +406,7 @@ the response and results in an response body that looks something like::
 
 
 If you want to configure the response you can register an error handler for the
-``409`` error code in a manner similar to the following example, which returns a
+``429`` error code in a manner similar to the following example, which returns a
 json response instead::
 
     @app.errorhandler(429)
