@@ -355,11 +355,11 @@ used in the scenario when the request does not breach any rate limits.
 
 .. _keyfunc-customization:
 
-Customization
-=============
+Recipes
+=======
 
 
-Rate limit domains
+Custom Rate limit domains
 -------------------------
 
 By default, all rate limits are applied on a per ``remote address`` basis.
@@ -393,8 +393,8 @@ Rate limiting all requests by country::
 
 
 
-Rate limit exceeded responses
-----------------------------
+Custom Rate limit exceeded responses
+------------------------------------
 The default configuration results in an ``abort(429)`` being called every time
 a rate limit is exceeded for a particular route. The exceeded limit is added to
 the response and results in an response body that looks something like::
@@ -417,6 +417,37 @@ json response instead::
         )
 
 
+
+Using Flask Pluggable Views
+---------------------------
+
+If you are using a class based approach to defining view function, the regular
+method of decorating a view function to apply a per route rate limit will not
+work. You can add rate limits to your view classes using the following approach.
+
+
+.. code-block:: python
+
+    app = Flask(__name__)
+    limiter = Limiter(app)
+
+    class MyView(flask.views.MethodView):
+        decorators = [limiter.limit("10/second")]
+        def get(self):
+            return "get"
+
+        def put(self):
+            return "put"
+
+
+.. note:: This approach is limited to either sharing the same rate limit for
+ all http methods of a given :class:`flask.views.View` or applying the declared
+ rate limit independently for each http method (to accomplish this, pass in ``True`` to
+ the ``per_method`` keyword argument to :meth:`Limiter.limit`).
+
+
+The above approach has been tested with sub-classes of  :class:`flask.views.View`,
+:class:`flask.views.MethodView` and :class:`flask.ext.restful.Resource`.
 
 .. _logging:
 
