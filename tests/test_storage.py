@@ -1,17 +1,18 @@
 import time
-
 import random
 import threading
 import unittest
 from uuid import uuid4
+
 import hiro
 import redis
+
 from flask.ext.limiter.strategies import FixedWindowRateLimiter, \
     MovingWindowRateLimiter
-from flask.ext.limiter.util import storage_from_string
 from flask.ext.limiter.errors import ConfigurationError
 from flask.ext.limiter.limits import PER_MINUTE, PER_SECOND
-from flask.ext.limiter.storage import MemoryStorage, RedisStorage, MemcachedStorage
+from flask.ext.limiter.storage import MemoryStorage, RedisStorage, MemcachedStorage, \
+    Storage, storage_from_string
 
 
 class StorageTests(unittest.TestCase):
@@ -77,8 +78,47 @@ class StorageTests(unittest.TestCase):
             time.sleep(0.1)
         self.assertTrue(limiter.hit(per_min))
 
+    def test_pluggable_storage_no_moving_window(self):
+        class MyStorage(Storage):
+            STORAGE_SCHEME = "mystorage"
+            def incr(self, key, expiry, elastic_expiry=False):
+                return
+
+            def get(self, key):
+                return 0
+
+            def get_expiry(self, key):
+                return time.time()
+
+
+        storage = storage_from_string("mystorage://")
+        self.assertTrue(isinstance(storage, MyStorage))
+        self.assertRaises(NotImplementedError, MovingWindowRateLimiter, storage)
+
+    def test_pluggable_storage_moving_window(self):
+        class MyStorage(Storage):
+            STORAGE_SCHEME = "mystorage"
+            def incr(self, key, expiry, elastic_expiry=False):
+                return
+
+            def get(self, key):
+                return 0
+
+            def get_expiry(self, key):
+                return time.time()
+
+            def acquire_entry(self, *a, **k):
+                return True
+
+            def get_moving_window(self, *a, **k):
+                return (time.time(), 1)
+
+        storage = storage_from_string("mystorage://")
+        self.assertTrue(isinstance(storage, MyStorage))
+        MovingWindowRateLimiter(storage)
+
     def test_memcached(self):
-        storage = MemcachedStorage("localhost", 11211)
+        storage = MemcachedStorage("memcached://localhost:11211")
         limiter = FixedWindowRateLimiter(storage)
         per_min = PER_SECOND(10)
         start = time.time()

@@ -2,6 +2,9 @@
 
 """
 from abc import abstractmethod, ABCMeta
+from flask.ext.limiter import ConfigurationError
+from six.moves import urllib
+
 try:
     from collections import Counter
 except ImportError: # pragma: no cover
@@ -15,10 +18,33 @@ import six
 from .errors import ConfigurationError
 from .util import get_dependency
 
+SCHEMES = {}
 
+def storage_from_string(storage_string):
+    """
+
+    :param storage_string: a string of the form method://host:port
+    :return: a subclass of :class:`flask_limiter.storage.Storage`
+    """
+    scheme = urllib.parse.urlparse(storage_string).scheme
+    if not scheme in SCHEMES:
+        raise ConfigurationError("unknown storage scheme : %s" % storage_string)
+    return SCHEMES[scheme](storage_string)
+
+class StorageRegistry(type):
+    def __new__(mcs, name, bases, dct):
+        storage_scheme = dct.get('STORAGE_SCHEME', None)
+        if not bases == (object,) and not storage_scheme:
+            raise ConfigurationError("%s is not configured correctly, it must specify a STORAGE_SCHEME class attribute"  % name)
+        cls = super(StorageRegistry, mcs).__new__(mcs, name, bases, dct)
+        SCHEMES[storage_scheme] = cls
+        return cls
+
+
+@six.add_metaclass(StorageRegistry)
 @six.add_metaclass(ABCMeta)
 class Storage(object):
-    def __init__(self):
+    def __init__(self, uri=None):
         """
 
 
@@ -67,14 +93,15 @@ class MemoryStorage(Storage):
     as an in memory storage.
 
     """
+    STORAGE_SCHEME = "memory"
 
-    def __init__(self):
+    def __init__(self, uri=None):
         self.storage = Counter()
         self.expirations = {}
         self.events = {}
         self.timer = threading.Timer(0.01, self.__expire_events)
         self.timer.start()
-        super(MemoryStorage, self).__init__()
+        super(MemoryStorage, self).__init__(uri)
 
     def __expire_events(self):
         for key in self.events:
@@ -176,7 +203,10 @@ class RedisStorage(Storage):
     """
     rate limit storage with redis as backend
     """
-    def __init__(self, redis_url):
+
+    STORAGE_SCHEME = "redis"
+
+    def __init__(self, uri):
         """
         :param str redis_url: url of the form 'redis://host:port'
         :raise ConfigurationError: when the redis library is not available
@@ -184,9 +214,9 @@ class RedisStorage(Storage):
         """
         if not get_dependency("redis"):
             raise ConfigurationError("redis prerequisite not available") # pragma: no cover
-        self.storage = get_dependency("redis").from_url(redis_url)
+        self.storage = get_dependency("redis").from_url(uri)
         if not self.storage.ping():
-            raise ConfigurationError("unable to connect to redis at %s" % redis_url) # pragma: no cover
+            raise ConfigurationError("unable to connect to redis at %s" % uri) # pragma: no cover
         script = """
         local items = redis.call('lrange', KEYS[1], 0, tonumber(ARGV[2]))
         local expiry = tonumber(ARGV[1])
@@ -271,17 +301,23 @@ class MemcachedStorage(Storage):
     rate limit storage with memcached as backend
     """
     MAX_CAS_RETRIES = 10
+    STORAGE_SCHEME = "memcached"
 
-    def __init__(self, host, port):
+    def __init__(self, uri):
         """
         :param str host: memcached host
         :param int port: memcached port
         :raise ConfigurationError: when pymemcached is not available
         """
+        parsed = urllib.parse.urlparse(uri)
+        self.cluster = []
+        for loc in parsed.netloc.split(","):
+            host, port = loc.split(":")
+            self.cluster.append((host, int(port)))
+
         if not get_dependency("pymemcache"):
             raise ConfigurationError("memcached prerequisite not available."
                                      " please install pymemcache")  # pragma: no cover
-        self.host, self.port = host, port
         self.local_storage = threading.local()
         self.local_storage.storage = None
 
@@ -293,7 +329,7 @@ class MemcachedStorage(Storage):
         if not (hasattr(self.local_storage, "storage") and self.local_storage.storage):
             self.local_storage.storage = get_dependency(
                 "pymemcache.client"
-            ).Client((self.host, self.port))
+            ).Client(*self.cluster)
         return self.local_storage.storage
 
     def get(self, key):

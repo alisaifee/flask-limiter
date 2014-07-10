@@ -62,7 +62,7 @@ class WindowTests(unittest.TestCase):
             self.assertEqual(limiter.get_window_stats(limit)[0], start + 2)
 
     def test_fixed_window_with_elastic_expiry_memcache(self):
-        storage = MemcachedStorage('localhost', 11211)
+        storage = MemcachedStorage('memcached://localhost:11211')
         limiter = FixedWindowElasticExpiryRateLimiter(storage)
         limit = PER_SECOND(10, 2)
         self.assertTrue(all([limiter.hit(limit) for _ in range(0,10)]))
@@ -72,7 +72,7 @@ class WindowTests(unittest.TestCase):
         self.assertFalse(limiter.hit(limit))
 
     def test_fixed_window_with_elastic_expiry_memcache_concurrency(self):
-        storage = MemcachedStorage('localhost', 11211)
+        storage = MemcachedStorage('memcached://localhost:11211')
         limiter = FixedWindowElasticExpiryRateLimiter(storage)
         start = int(time.time())
         limit = PER_SECOND(100, 2)
@@ -133,5 +133,5 @@ class WindowTests(unittest.TestCase):
         self.assertEqual(limiter.get_window_stats(limit)[1], 0)
 
     def test_moving_window_memcached(self):
-        storage = MemcachedStorage('localhost', 11211)
+        storage = MemcachedStorage('memcacheD://localhost:11211')
         self.assertRaises(NotImplementedError, MovingWindowRateLimiter, storage)

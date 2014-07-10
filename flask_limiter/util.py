@@ -2,11 +2,12 @@
 
 """
 import re
-from six.moves import urllib
-from flask import request
 import sys
+
+from flask import request
+
 from .limits import GRANULARITIES
-from .errors import ConfigurationError
+
 
 EXPR = re.compile(
     r"\s*([0-9]+)\s*(/|\s*per\s*)\s*([0-9]+)*\s*(hour|minute|second|day|month|year)[s]*",
@@ -57,27 +58,6 @@ def granularity_from_string(granularity_string):
         if granularity.check_granularity_string(granularity_string):
             return granularity
     raise ValueError("no granularity matched for %s" % granularity_string)
-
-
-
-def storage_from_string(storage_string):
-    """
-
-    :param storage_string: a string of the form method://host:port
-    :return: a subclass of :class:`flask_limiter.storage.Storage`
-    """
-    from .storage import MemoryStorage, RedisStorage, MemcachedStorage
-    parsed = urllib.parse.urlparse(storage_string)
-    scheme = parsed.scheme
-    if scheme == 'memory':
-        return MemoryStorage()
-    elif scheme == 'redis':
-        return RedisStorage(storage_string)
-    elif scheme == 'memcached':
-        return MemcachedStorage(parsed.hostname, parsed.port or 11211)
-    else:
-        raise ConfigurationError("unknown storage scheme : %s" % storage_string)
-
 
 def get_ipaddr():
     """
