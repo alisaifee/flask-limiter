@@ -3,6 +3,12 @@
 Changelog
 =========
 
+0.6.1 2014-07-11
+----------------
+* per http method rate limit separation (`Recipe
+  <http://flask-limiter.readthedocs.org/en/latest/index.html#using-flask-pluggable-views>`_)
+* documentation improvements
+
 0.6 2014-06-24
 --------------
 * `Shared limits between routes
@@ -97,6 +103,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
