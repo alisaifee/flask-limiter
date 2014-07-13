@@ -5,7 +5,7 @@ the flask extension
 from functools import wraps
 import logging
 
-from flask import request, current_app, g
+from flask import request, current_app, g, Blueprint
 
 from .errors import RateLimitExceeded, ConfigurationError
 from flask.ext.limiter.storage import storage_from_string
@@ -61,7 +61,7 @@ class Limiter(object):
         self.app = app
         self.enabled = True
         self.global_limits = []
-        self.exempt_routes = []
+        self.exempt_routes = set()
         self.request_filters = []
         self.headers_enabled = headers_enabled
         self.strategy = strategy
@@ -76,6 +76,9 @@ class Limiter(object):
             )
         self.route_limits = {}
         self.dynamic_route_limits = {}
+        self.blueprint_limits = {}
+        self.blueprint_dynamic_limits = {}
+        self.blueprint_exempt = set()
         self.storage = self.limiter = None
         self.key_func = key_func
         self.logger = logging.getLogger("flask-limiter")
@@ -151,6 +154,7 @@ class Limiter(object):
             or name in self.exempt_routes
             or not self.enabled
             or any(fn() for fn in self.request_filters)
+            or request.blueprint in self.blueprint_exempt
         ):
             return
         limits = (
@@ -171,6 +175,26 @@ class Limiter(object):
                         "failed to load ratelimit for view function %s (%s)"
                         , name, e
                     )
+        if request.blueprint:
+            if (request.blueprint in self.blueprint_dynamic_limits
+                and not dynamic_limits
+            ):
+                for lim in self.blueprint_dynamic_limits[request.blueprint]:
+                    try:
+                        dynamic_limits.extend(
+                            ExtLimit(
+                                limit, lim.key_func, lim.scope, lim.per_method
+                            ) for limit in parse_many(lim.limit)
+                        )
+                    except ValueError as e:
+                        self.logger.error(
+                            "failed to load ratelimit for blueprint %s (%s)"
+                            , request.blueprint, e
+                        )
+            if (request.blueprint in self.blueprint_limits
+                and not limits
+            ):
+               limits.extend(self.blueprint_limits[request.blueprint])
 
         failed_limit = None
         limit_for_header = None
@@ -198,35 +222,52 @@ class Limiter(object):
                           per_method=False):
         _scope = scope if shared else None
 
-        def _inner(fn):
-            name = "%s.%s" % (fn.__module__, fn.__name__)
-
-            @wraps(fn)
-            def __inner(*a, **k):
-                return fn(*a, **k)
+        def _inner(obj):
             func = key_func or self.key_func
+            is_route = not isinstance(obj, Blueprint)
+            name = "%s.%s" % (obj.__module__, obj.__name__) if is_route else obj.name
+            dynamic_limit, static_limits = None, []
             if callable(limit_value):
-                self.dynamic_route_limits.setdefault(name, []).append(
-                    ExtLimit(limit_value, func, _scope, per_method)
-                )
+                dynamic_limit = ExtLimit(limit_value, func, _scope, per_method)
             else:
                 try:
-                    self.route_limits.setdefault(name, []).extend(
-                        [ExtLimit(
-                            limit, func, _scope, per_method
-                        ) for limit in parse_many(limit_value)]
-                    )
+                    static_limits = [ExtLimit(
+                        limit, func, _scope, per_method
+                    ) for limit in parse_many(limit_value)]
                 except ValueError as e:
                     self.logger.error(
-                        "failed to configure view function %s (%s)", name, e
+                        "failed to configure %s %s (%s)",
+                        "view function" if is_route else "blueprint", name, e
                     )
-            return __inner
+            if not isinstance(obj, Blueprint):
+                @wraps(obj)
+                def __inner(*a, **k):
+                    return obj(*a, **k)
+                if dynamic_limit:
+                    self.dynamic_route_limits.setdefault(name, []).append(
+                        dynamic_limit
+                    )
+                else:
+                    self.route_limits.setdefault(name, []).extend(
+                        static_limits
+                    )
+                return __inner
+            else:
+                if dynamic_limit:
+                    self.blueprint_dynamic_limits.setdefault(name, []).append(
+                        dynamic_limit
+                    )
+                else:
+                    self.blueprint_limits.setdefault(name, []).extend(
+                        static_limits
+                    )
+
         return _inner
 
 
     def limit(self, limit_value, key_func=None, per_method=False):
         """
-        decorator to be used for rate limiting individual routes.
+        decorator to be used for rate limiting individual routes or blueprints.
 
         :param limit_value: rate limit string or a callable that returns a string.
          :ref:`ratelimit-string` for more details.
@@ -254,16 +295,19 @@ class Limiter(object):
 
 
 
-    def exempt(self, fn):
+    def exempt(self, obj):
         """
-        decorator to mark a view as exempt from rate limits.
+        decorator to mark a view or all views in a route as exempt from rate limits.
         """
-        name = "%s.%s" % (fn.__module__, fn.__name__)
-        @wraps(fn)
-        def __inner(*a, **k):
-            return fn(*a, **k)
-        self.exempt_routes.append(name)
-        return __inner
+        if not isinstance(obj, Blueprint):
+            name = "%s.%s" % (obj.__module__, obj.__name__)
+            @wraps(obj)
+            def __inner(*a, **k):
+                return obj(*a, **k)
+            self.exempt_routes.add(name)
+            return __inner
+        else:
+            self.blueprint_exempt.add(obj.name)
 
     def request_filter(self, fn):
         """
