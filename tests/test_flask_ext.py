@@ -200,6 +200,56 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 429)
 
+
+    def test_register_blueprint(self):
+        app, limiter = self.build_app(global_limits = ["1/minute"])
+        bp_1 = Blueprint("bp1", __name__)
+        bp_2 = Blueprint("bp2", __name__)
+        bp_3 = Blueprint("bp3", __name__)
+
+        @bp_1.route("/t1")
+        def t1():
+            return "test"
+
+        @bp_1.route("/t2")
+        def t2():
+            return "test"
+
+        @bp_2.route("/t3")
+        def t3():
+            return "test"
+
+        @bp_3.route("/t4")
+        def t4():
+            return "test"
+
+        app.register_blueprint(bp_1)
+        app.register_blueprint(bp_2)
+        app.register_blueprint(bp_3)
+
+        limiter.limit("1/second")(bp_1)
+        limiter.exempt(bp_3)
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+
+                self.assertEqual(cli.get("/t3").status_code, 200)
+                for i in range(0,10):
+                    timeline.forward(1)
+                    self.assertEqual(cli.get("/t3").status_code, 429)
+
+                for i in range(0,10):
+                    self.assertEqual(cli.get("/t4").status_code, 200)
+
+
     def test_disabled_flag(self):
         app, limiter = self.build_app(
             config={C.ENABLED: False},
@@ -300,9 +350,53 @@ class FlaskExtTests(unittest.TestCase):
             with hiro.Timeline().freeze() as timeline:
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertTrue("failed to configure view function" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("failed to configure" in mock_handler.handle.call_args_list[0][0][0].msg)
         self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[1][0][0].msg)
 
+    def test_invalid_decorated_static_limit_blueprint(self):
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["1/second"])
+        mock_handler = mock.Mock()
+        mock_handler.level = logging.INFO
+        limiter.logger.addHandler(mock_handler)
+        bp = Blueprint("bp1", __name__)
+
+        @bp.route("/t1")
+        def t1():
+            return "42"
+        limiter.limit("2/sec")(bp)
+        app.register_blueprint(bp)
+
+        with app.test_client() as cli:
+            with hiro.Timeline().freeze() as timeline:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+        self.assertTrue("failed to configure" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[1][0][0].msg)
+
+    def test_invalid_decorated_dynamic_limits_blueprint(self):
+        app = Flask(__name__)
+        app.config.setdefault("X", "2 per sec")
+        limiter = Limiter(app, global_limits=["1/second"])
+        mock_handler = mock.Mock()
+        mock_handler.level = logging.INFO
+        limiter.logger.addHandler(mock_handler)
+        bp = Blueprint("bp1", __name__)
+        @bp.route("/t1")
+        def t1():
+            return "42"
+
+        limiter.limit(lambda: current_app.config.get("X"))(bp)
+        app.register_blueprint(bp)
+
+        with app.test_client() as cli:
+            with hiro.Timeline().freeze() as timeline:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+        self.assertEqual(mock_handler.handle.call_count, 3)
+        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[0][0][0].msg)
+        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[1][0][0].msg)
+        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[2][0][0].msg)
 
     def test_multiple_apps(self):
         app1 = Flask(__name__)
