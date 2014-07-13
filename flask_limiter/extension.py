@@ -297,7 +297,7 @@ class Limiter(object):
 
     def exempt(self, obj):
         """
-        decorator to mark a view or all views in a route as exempt from rate limits.
+        decorator to mark a view or all views in a blueprint as exempt from rate limits.
         """
         if not isinstance(obj, Blueprint):
             name = "%s.%s" % (obj.__module__, obj.__name__)
