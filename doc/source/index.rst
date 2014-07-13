@@ -449,6 +449,45 @@ work. You can add rate limits to your view classes using the following approach.
 The above approach has been tested with sub-classes of  :class:`flask.views.View`,
 :class:`flask.views.MethodView` and :class:`flask.ext.restful.Resource`.
 
+Rate limiting all routes in a :class:`flask.Blueprint`
+------------------------------------------------------
+:meth:`Limiter.limit`, :meth:`Limiter.shared_limit` & :meth:`Limiter.exempt` can
+all be applied to :class:`flask.Blueprint` instances as well. In the following example
+the **login** Blueprint has a special rate limit applied to all its routes, while the **help**
+Blueprint is exempt from all rate limits. The **regular** Blueprint follows the global rate limits.
+
+
+    .. code-block:: python
+
+
+        app = Flask(__name__)
+        login = Blueprint("login", __name__, url_prefix = "/login")
+        regular = Blueprint("regular", __name__, url_prefix = "/regular")
+        doc = Blueprint("doc", __name__, url_prefix = "/doc")
+
+        @doc.route("/")
+        def doc_index():
+            return "doc"
+
+        @regular.route("/")
+        def regular_index():
+            return "regular"
+
+        @login.route("/")
+        def login_index():
+            return "login"
+
+
+        limiter = Limiter(app, global_limits = ["1/second"])
+        limiter.limit("60/hour")(login)
+        limiter.exempt(doc)
+
+        app.register_blueprint(doc)
+        app.register_blueprint(login)
+        app.register_blueprint(regular)
+
+
+
 .. _logging:
 
 Logging
