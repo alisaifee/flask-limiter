@@ -233,7 +233,7 @@ class Limiter(object):
                     static_limits = [ExtLimit(
                         limit, func, _scope, per_method
                     ) for limit in parse_many(limit_value)]
-                except ValueError,e:
+                except ValueError as e:
                     self.logger.error(
                         "failed to configure %s %s (%s)",
                         "view function" if is_route else "blueprint", name, e
