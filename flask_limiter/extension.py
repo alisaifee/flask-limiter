@@ -146,7 +146,8 @@ class Limiter(object):
                 view_func.__module__, view_func.__name__
             ) if view_func else ""
         )
-        if (view_func == current_app.send_static_file
+        if (not request.endpoint
+            or view_func == current_app.send_static_file
             or name in self.exempt_routes
             or not self.enabled
             or any(fn() for fn in self.request_filters)

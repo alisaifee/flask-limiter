@@ -84,14 +84,6 @@ class FlaskExtTests(unittest.TestCase):
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(404, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
-                timeline.forward(60 * 60 + 1)
-                self.assertEqual(404, cli.get("/").status_code)
-                for i in range(0,100):
-                    self.assertEqual(200, cli.get("/t1").status_code)
-                    if not i % 10 == 0:
-                        timeline.forward(60)
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t2").status_code)
                 self.assertEqual(429, cli.get("/t2").status_code)
