@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.6.2 2014-07-13
+----------------
+* `Rate limiting for blueprints
+  <http://flask-limiter.readthedocs.org/en/latest/#rate-limiting-all-routes-in-a-flask-blueprint>`_
+
 0.6.1 2014-07-11
 ----------------
 * per http method rate limit separation (`Recipe
@@ -103,6 +108,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
