@@ -239,7 +239,16 @@ class Limiter(object):
                         "failed to configure %s %s (%s)",
                         "view function" if is_route else "blueprint", name, e
                     )
-            if not isinstance(obj, Blueprint):
+            if isinstance(obj, Blueprint):
+                if dynamic_limit:
+                    self.blueprint_dynamic_limits.setdefault(name, []).append(
+                        dynamic_limit
+                    )
+                else:
+                    self.blueprint_limits.setdefault(name, []).extend(
+                        static_limits
+                    )
+            else:
                 @wraps(obj)
                 def __inner(*a, **k):
                     return obj(*a, **k)
@@ -252,16 +261,6 @@ class Limiter(object):
                         static_limits
                     )
                 return __inner
-            else:
-                if dynamic_limit:
-                    self.blueprint_dynamic_limits.setdefault(name, []).append(
-                        dynamic_limit
-                    )
-                else:
-                    self.blueprint_limits.setdefault(name, []).extend(
-                        static_limits
-                    )
-
         return _inner
 
 
