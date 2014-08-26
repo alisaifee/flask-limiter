@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.6.3 2014-08-26
+----------------
+* Header name overrides 
+
 0.6.2 2014-07-13
 ----------------
 * `Rate limiting for blueprints
@@ -108,6 +112,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
