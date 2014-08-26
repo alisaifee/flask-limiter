@@ -18,7 +18,14 @@ class C:
     STORAGE_URL = "RATELIMIT_STORAGE_URL"
     STRATEGY = "RATELIMIT_STRATEGY"
     GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
+    HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
+    HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
+    HEADER_RESET = "RATELIMIT_HEADER_RESET"
 
+class HEADERS:
+    RESET = 1
+    REMAINING = 2
+    LIMIT = 3
 
 class ExtLimit(object):
     """
@@ -64,6 +71,7 @@ class Limiter(object):
         self.exempt_routes = set()
         self.request_filters = []
         self.headers_enabled = headers_enabled
+        self.header_mapping = {}
         self.strategy = strategy
         self.storage_uri = storage_uri
         for limit in global_limits:
@@ -109,6 +117,12 @@ class Limiter(object):
         if strategy not in STRATEGIES:
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
         self.limiter = STRATEGIES[strategy](self.storage)
+        self.header_mapping.update({
+           HEADERS.RESET : self.header_mapping.get(HEADERS.RESET,None) or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
+           HEADERS.REMAINING : self.header_mapping.get(HEADERS.REMAINING,None) or app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
+           HEADERS.LIMIT : self.header_mapping.get(HEADERS.LIMIT,None) or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
+        })
+
         conf_limits = app.config.get(C.GLOBAL_LIMITS, None)
         if not self.global_limits and conf_limits:
             self.global_limits = [
@@ -129,15 +143,15 @@ class Limiter(object):
         if self.enabled and self.headers_enabled and current_limit:
             window_stats = self.limiter.get_window_stats(*current_limit)
             response.headers.add(
-                'X-RateLimit-Limit',
+                self.header_mapping[HEADERS.LIMIT],
                 str(current_limit[0].amount)
             )
             response.headers.add(
-                'X-RateLimit-Remaining',
+                self.header_mapping[HEADERS.REMAINING],
                 window_stats[1]
             )
             response.headers.add(
-                'X-RateLimit-Reset',
+                self.header_mapping[HEADERS.RESET],
                 window_stats[0]
             )
         return response

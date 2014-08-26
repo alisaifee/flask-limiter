@@ -246,6 +246,9 @@ The following flask configuration values are honored by
                                for details.
 ``RATELIMIT_HEADERS_ENABLED``  Enables returning :ref:`ratelimit-headers`. Defaults to ``False``
 ``RATELIMIT_ENABLED``          Overall kill switch for rate limits. Defaults to ``True``
+``RATELIMIT_HEADER_LIMIT``     Header for the current rate limit. Defaults to ``X-RateLimit-Limit``
+``RATELIMIT_HEADER_RESET``     Header for the reset time of the current rate limit. Defaults to ``X-RateLimit-Reset``
+``RATELIMIT_HEADER_REMAINING`` Header for the number of requests remaining in the current rate limit. Defaults to ``X-RateLimit-Remaining``
 ============================== ================================================
 
 
@@ -352,6 +355,22 @@ used in the scenario when the request does not breach any rate limits.
       ``X-RateLimit-Reset``
     * Redis + Moving Window: an extra call to redis is involved during every request
       to calculate ``X-RateLimit-Remaining`` and ``X-RateLimit-Reset``
+
+The header names can be customised if required by either using the flask configuration (:ref:`ratelimit-conf`)
+values or by setting the ``header_mapping`` property of the :class:`Limiter` as follows::
+
+    from flask.ext.limiter import Limiter, HEADERS
+    limiter = Limiter()
+    limiter.header_mapping = {
+        HEADERS.LIMIT : "X-My-Limit",
+        HEADERS.RESET : "X-My-Reset",
+        HEADERS.REMAINING: "X-My-Remaining"
+    }
+    # or by only partially specifying the overrides
+    limiter.header_mapping[HEADERS.LIMIT] = 'X-My-Limit'
+
+
+
 
 .. _keyfunc-customization:
 

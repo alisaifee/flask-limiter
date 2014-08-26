@@ -6,4 +6,4 @@ __version__ = get_versions()['version']
 del get_versions
 
 from .errors import ConfigurationError, RateLimitExceeded
-from .extension import Limiter
+from .extension import Limiter, HEADERS

@@ -12,7 +12,8 @@ from flask.views import View, MethodView
 import hiro
 import mock
 from flask.ext.limiter.errors import ConfigurationError
-from flask.ext.limiter.extension import Limiter, C
+from flask.ext.limiter.extension import C
+from flask.ext.limiter import Limiter, HEADERS
 from flask.ext.limiter.storage import MemcachedStorage
 from flask.ext.limiter.strategies import MovingWindowRateLimiter
 from flask.ext import restful
@@ -508,6 +509,64 @@ class FlaskExtTests(unittest.TestCase):
                 )
                 self.assertEqual(
                     resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 49))
+                )
+    def test_custom_headers_from_setter(self):
+        app = Flask(__name__)
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+        limiter.header_mapping[HEADERS.RESET] = 'X-Reset'
+        limiter.header_mapping[HEADERS.LIMIT] = 'X-Limit'
+        limiter.header_mapping[HEADERS.REMAINING] = 'X-Remaining'
+        @app.route("/t1")
+        @limiter.limit("2/second; 10 per minute; 20/hour")
+        def t():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                for i in range(11):
+                    resp = cli.get("/t1")
+                    timeline.forward(1)
+
+                self.assertEqual(
+                    resp.headers.get('X-Limit'),
+                    '10'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-Remaining'),
+                    '0'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-Reset'),
+                    str(int(time.time() + 49))
+                )
+    def test_custom_headers_from_config(self):
+        app = Flask(__name__)
+        app.config.setdefault(C.HEADER_LIMIT, "X-Limit")
+        app.config.setdefault(C.HEADER_REMAINING, "X-Remaining")
+        app.config.setdefault(C.HEADER_RESET, "X-Reset")
+        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+        @app.route("/t1")
+        @limiter.limit("2/second; 10 per minute; 20/hour")
+        def t():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                for i in range(11):
+                    resp = cli.get("/t1")
+                    timeline.forward(1)
+
+                self.assertEqual(
+                    resp.headers.get('X-Limit'),
+                    '10'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-Remaining'),
+                    '0'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-Reset'),
                     str(int(time.time() + 49))
                 )
 
