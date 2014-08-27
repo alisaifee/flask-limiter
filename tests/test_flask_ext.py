@@ -12,8 +12,7 @@ from flask.views import View, MethodView
 import hiro
 import mock
 from flask.ext.limiter.errors import ConfigurationError
-from flask.ext.limiter.extension import C
-from flask.ext.limiter import Limiter, HEADERS
+from flask.ext.limiter.extension import C, Limiter, HEADERS
 from flask.ext.limiter.storage import MemcachedStorage
 from flask.ext.limiter.strategies import MovingWindowRateLimiter
 from flask.ext import restful
