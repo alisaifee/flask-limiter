@@ -56,6 +56,8 @@ class Limiter(object):
     :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
     :param str strategy: the strategy to use. refer to :ref:`ratelimit-strategy`
     :param str storage_uri: the storage location. refer to :ref:`ratelimit-conf`
+    :param bool auto_check: whether to automatically check the rate limit in the before_request
+     chain of the application. default ``True``
     """
 
     def __init__(self, app=None
@@ -64,6 +66,7 @@ class Limiter(object):
                  , headers_enabled=False
                  , strategy=None
                  , storage_uri=None
+                 , auto_check=True
     ):
         self.app = app
         self.enabled = True
@@ -74,6 +77,7 @@ class Limiter(object):
         self.header_mapping = {}
         self.strategy = strategy
         self.storage_uri = storage_uri
+        self.auto_check = auto_check
         for limit in global_limits:
             self.global_limits.extend(
                 [
@@ -130,13 +134,22 @@ class Limiter(object):
                     limit, self.key_func, None, False
                 ) for limit in parse_many(conf_limits)
             ]
-        app.before_request(self.__check_request_limit)
+        if self.auto_check:
+            app.before_request(self.__check_request_limit)
         app.after_request(self.__inject_headers)
 
         # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, 'extensions'):
             app.extensions = {} # pragma: no cover
         app.extensions['limiter'] = self
+
+    def check(self):
+        """
+        check the limits for the current request
+
+        :raises: RateLimitExceeded
+        """
+        self.__check_request_limit()
 
     def __inject_headers(self, response):
         current_limit = getattr(g, 'view_rate_limit', None)
