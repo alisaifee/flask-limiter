@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.6.4 2014-08-31
+----------------
+* Support for manually triggering rate limit check
+
 0.6.3 2014-08-26
 ----------------
 * Header name overrides 
@@ -112,6 +116,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
