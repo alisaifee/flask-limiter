@@ -3,13 +3,17 @@
 Changelog
 =========
 
+0.6.5 2014-10-01
+----------------
+* Bug fix: in memory storage thread safety
+
 0.6.4 2014-08-31
 ----------------
 * Support for manually triggering rate limit check
 
 0.6.3 2014-08-26
 ----------------
-* Header name overrides 
+* Header name overrides
 
 0.6.2 2014-07-13
 ----------------
@@ -34,9 +38,9 @@ Changelog
 
 0.4.4 2014-06-13
 ----------------
-* Bug fix 
-  
-  * Werkzeug < 0.9 Compatibility 
+* Bug fix
+
+  * Werkzeug < 0.9 Compatibility
     (`Issue 6 <https://github.com/alisaifee/flask-limiter/issues/6>`_.)
 
 0.4.3 2014-06-12
@@ -46,7 +50,7 @@ Changelog
 
 0.4.2 2014-06-12
 ----------------
-* Allow configuration overrides via extension constructor 
+* Allow configuration overrides via extension constructor
 
 0.4.1 2014-06-04
 ----------------
@@ -59,26 +63,26 @@ Changelog
 
 0.3.2 2014-05-26
 ----------------
-* Bug fix 
+* Bug fix
 
-  * Memory leak when using ``Limiter.storage.MemoryStorage`` 
+  * Memory leak when using ``Limiter.storage.MemoryStorage``
     (`Issue 4 <https://github.com/alisaifee/flask-limiter/issues/4>`_.)
-* Improved test coverage 
+* Improved test coverage
 
 0.3.1 2014-02-20
 ----------------
 * Strict version requirement on six
-* documentation tweaks 
+* documentation tweaks
 
 0.3.0 2014-02-19
 ----------------
-* improved logging support for multiple handlers 
+* improved logging support for multiple handlers
 * allow callables to be passed to ``Limiter.limit`` decorator to dynamically
   load rate limit strings.
 * add a global kill switch in flask config for all rate limits.
-* Bug fixes 
+* Bug fixes
 
-  * default key function for rate limit domain wasn't accounting for 
+  * default key function for rate limit domain wasn't accounting for
     X-Forwarded-For header.
 
 
@@ -86,9 +90,9 @@ Changelog
 0.2.2 2014-02-18
 ----------------
 * add new decorator to exempt routes from limiting.
-* Bug fixes 
-    
-  * versioneer.py wasn't included in manifest. 
+* Bug fixes
+
+  * versioneer.py wasn't included in manifest.
   * configuration string for strategy was out of sync with docs.
 
 0.2.1 2014-02-15
@@ -99,10 +103,10 @@ Changelog
 0.2 2014-02-15
 --------------
 * Implemented configurable strategies for rate limiting.
-* Bug fixes 
-  
-  * better locking for in-memory storage 
-  * multi threading support for memcached storage 
+* Bug fixes
+
+  * better locking for in-memory storage
+  * multi threading support for memcached storage
 
 
 0.1.1 2014-02-14
@@ -110,12 +114,13 @@ Changelog
 * Bug fixes
 
   * fix initializing the extension without an app
-  * don't rate limit static files 
+  * don't rate limit static files
 
 
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
