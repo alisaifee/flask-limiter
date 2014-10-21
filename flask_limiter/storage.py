@@ -253,7 +253,7 @@ class RedisStorage(Storage):
         """
         :param str key: the key to get the counter value for
         """
-        return int(self.storage.get(key))
+        return int(self.storage.get(key) or 0)
 
     def acquire_entry(self, key, limit, expiry, no_add=False):
         """
@@ -286,15 +286,16 @@ class RedisStorage(Storage):
         :param int expiry: expiry of entry
         """
         timestamp = time.time()
-        return tuple(self.lua_moving_window(
+        window = self.lua_moving_window(
             [key], [int(timestamp - expiry), limit]
-        ))
+        )
+        return window or (timestamp, 0)
 
     def get_expiry(self, key):
         """
         :param str key: the key to get the expiry for
         """
-        return int(self.storage.ttl(key) + time.time())
+        return int((self.storage.ttl(key) or 0) + time.time())
 
 class MemcachedStorage(Storage):
     """

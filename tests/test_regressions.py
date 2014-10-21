@@ -36,7 +36,11 @@ class RegressionTests(unittest.TestCase):
             return "t1"
 
         with app.test_client() as cli:
-            self.assertEqual(200, cli.get("/t1").status_code)
+            resp = cli.get("/t1")
+            self.assertEqual(
+                resp.headers["X-RateLimit-Remaining"],
+                5
+            )
 
     def test_redis_request_slower_than_moving_window(self):
         app, limiter = self.build_app({
@@ -51,4 +55,8 @@ class RegressionTests(unittest.TestCase):
             return "t1"
 
         with app.test_client() as cli:
-            self.assertEqual(200, cli.get("/t1").status_code)
+            resp = cli.get("/t1")
+            self.assertEqual(
+                resp.headers["X-RateLimit-Remaining"],
+                5
+            )
