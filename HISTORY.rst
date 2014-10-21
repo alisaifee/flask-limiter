@@ -3,6 +3,13 @@
 Changelog
 =========
 
+0.6.6 2014-10-21
+----------------
+* Bug fix
+
+  * Fix for responses slower than rate limiting window.
+    (`Issue 17 <https://github.com/alisaifee/flask-limiter/issues/17>`_.)
+
 0.6.5 2014-10-01
 ----------------
 * Bug fix: in memory storage thread safety
@@ -120,6 +127,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
