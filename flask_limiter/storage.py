@@ -2,8 +2,9 @@
 
 """
 from abc import abstractmethod, ABCMeta
-from flask.ext.limiter import ConfigurationError
+
 from six.moves import urllib
+
 
 try:
     from collections import Counter
@@ -205,19 +206,7 @@ class RedisStorage(Storage):
     """
 
     STORAGE_SCHEME = "redis"
-
-    def __init__(self, uri):
-        """
-        :param str redis_url: url of the form 'redis://host:port'
-        :raise ConfigurationError: when the redis library is not available
-         or if the redis host cannot be pinged.
-        """
-        if not get_dependency("redis"):
-            raise ConfigurationError("redis prerequisite not available") # pragma: no cover
-        self.storage = get_dependency("redis").from_url(uri)
-        if not self.storage.ping():
-            raise ConfigurationError("unable to connect to redis at %s" % uri) # pragma: no cover
-        script = """
+    SCRIPT_MOVING_WINDOW = """
         local items = redis.call('lrange', KEYS[1], 0, tonumber(ARGV[2]))
         local expiry = tonumber(ARGV[1])
         local a = 0
@@ -234,8 +223,26 @@ class RedisStorage(Storage):
         end
         return {oldest, a}
         """
-        self.lua_moving_window = self.storage.register_script(script)
+
+    def __init__(self, uri):
+        """
+        :param str redis_url: url of the form 'redis://host:port'
+        :raise ConfigurationError: when the redis library is not available
+         or if the redis host cannot be pinged.
+        """
+        if not get_dependency("redis"):
+            raise ConfigurationError("redis prerequisite not available") # pragma: no cover
+        self.storage = get_dependency("redis").from_url(uri)
+        self.initialize_storage(uri)
         super(RedisStorage, self).__init__()
+
+    def initialize_storage(self, uri):
+        if not self.storage.ping():
+            raise ConfigurationError("unable to connect to redis at %s" % uri) # pragma: no cover
+        self.lua_moving_window = self.storage.register_script(
+            RedisStorage.SCRIPT_MOVING_WINDOW
+        )
+        self.lock_impl = self.storage.lock
 
     def incr(self, key, expiry, elastic_expiry=False):
         """
@@ -265,13 +272,13 @@ class RedisStorage(Storage):
         :return: True/False
         """
         timestamp = time.time()
-        with self.storage.lock("%s/LOCK" % key):
+        with self.lock_impl("%s/LOCK" % key):
             entry = self.storage.lindex(key, limit - 1)
             if entry and float(entry) >= timestamp - expiry:
                 return False
             else:
                 if not no_add:
-                    with self.storage.pipeline() as pipeline:
+                    with self.storage.pipeline(transaction=False) as pipeline:
                         pipeline.lpush(key, timestamp)
                         pipeline.ltrim(key, 0, limit - 1)
                         pipeline.expire(key, expiry)
