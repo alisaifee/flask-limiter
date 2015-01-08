@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.7 2015-01-09
+--------------
+* Refactoring of RedisStorage for extensibility (`Issue 18 <https://github.com/alisaifee/flask-limiter/issues/18>`_)
+* Bug fix: Correct default setting for enabling rate limit headers. (`Issue 22 <https://github.com/alisaifee/flask-limiter/issues/22>`_)
+
 0.6.6 2014-10-21
 ----------------
 * Bug fix
@@ -127,6 +132,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
