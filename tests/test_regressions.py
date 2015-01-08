@@ -27,7 +27,8 @@ class RegressionTests(unittest.TestCase):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS : "5 per second",
             C.STORAGE_URL: "redis://localhost:6379",
-            C.STRATEGY: "fixed-window"
+            C.STRATEGY: "fixed-window",
+            C.HEADERS_ENABLED: True
         })
 
         @app.route("/t1")
@@ -46,7 +47,8 @@ class RegressionTests(unittest.TestCase):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS : "5 per second",
             C.STORAGE_URL: "redis://localhost:6379",
-            C.STRATEGY: "moving-window"
+            C.STRATEGY: "moving-window",
+            C.HEADERS_ENABLED: True
         })
 
         @app.route("/t1")
