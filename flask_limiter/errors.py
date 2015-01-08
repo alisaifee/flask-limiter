@@ -14,13 +14,6 @@ def _patch_werkzeug():
 _patch_werkzeug()
 del _patch_werkzeug
 
-class ConfigurationError(Exception):
-    """
-    exception raised when a configuration problem
-    is encountered
-    """
-    pass
-
 class RateLimitExceeded(HTTPException):
     """
     exception raised when a rate limit is hit.

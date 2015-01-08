@@ -7,10 +7,12 @@ import logging
 
 from flask import request, current_app, g, Blueprint
 
-from .errors import RateLimitExceeded, ConfigurationError
-from flask.ext.limiter.storage import storage_from_string
-from .strategies import STRATEGIES
-from .util import parse_many, get_ipaddr
+from limits.errors import ConfigurationError
+from limits.storage import storage_from_string
+from limits.strategies import STRATEGIES
+from limits.util import parse_many
+from .errors import RateLimitExceeded
+from .util import get_ipaddr
 
 class C:
     ENABLED = "RATELIMIT_ENABLED"
