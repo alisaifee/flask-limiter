@@ -108,7 +108,7 @@ class Limiter(object):
         self.enabled = app.config.setdefault(C.ENABLED, True)
         self.headers_enabled = (
             self.headers_enabled
-            or app.config.setdefault(C.HEADERS_ENABLED, True)
+            or app.config.setdefault(C.HEADERS_ENABLED, False)
         )
         self.storage = storage_from_string(
             self.storage_uri
