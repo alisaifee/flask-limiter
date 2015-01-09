@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.7.1 2015-01-09
+----------------
+* Refactor core storage & ratelimiting strategy out into the `limits <http://github.com/alisaifee/limits>`_ package.
+* Remove duplicate hits when stacked rate limits are in use and a rate limit is hit.
+
 0.7 2015-01-09
 --------------
 * Refactoring of RedisStorage for extensibility (`Issue 18 <https://github.com/alisaifee/flask-limiter/issues/18>`_)
@@ -132,6 +137,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
