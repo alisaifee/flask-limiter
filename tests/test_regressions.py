@@ -6,6 +6,7 @@ import logging
 import unittest
 
 from flask import Flask
+import hiro
 import mock
 
 from flask.ext.limiter.extension import C, Limiter
@@ -62,3 +63,25 @@ class RegressionTests(unittest.TestCase):
                 resp.headers["X-RateLimit-Remaining"],
                 '5'
             )
+
+    def test_dynamic_limits(self):
+        app, limiter = self.build_app({
+            C.STRATEGY: "moving-window",
+            C.HEADERS_ENABLED : True
+        })
+
+        def func(*a):
+            return "1/second; 2/minute"
+
+        @app.route("/t1")
+        @limiter.limit(func)
+        def t1():
+            return "t1"
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                timeline.forward(2)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+

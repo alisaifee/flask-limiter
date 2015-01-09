@@ -240,6 +240,8 @@ class Limiter(object):
                 )
                 failed_limit = lim.limit
                 limit_for_header = (lim.limit, lim.key_func(), limit_scope)
+                break
+
         g.view_rate_limit = limit_for_header
 
         if failed_limit:

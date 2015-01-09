@@ -117,7 +117,10 @@ class FlaskExtTests(unittest.TestCase):
                     self.assertEqual(200 if i < 50 else 429,
                                      cli.get("/t1", headers = {"X_FORWARDED_FOR":"127.0.0.2"}).status_code
                     )
+                for i in range(50):
+                    self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(429, cli.get("/t1").status_code)
+                self.assertEqual(429, cli.get("/t1", headers = {"X_FORWARDED_FOR": "127.0.0.3"}).status_code)
 
     def test_logging(self):
         app = Flask(__name__)
