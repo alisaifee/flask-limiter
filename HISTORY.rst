@@ -3,6 +3,13 @@
 Changelog
 =========
 
+0.7.2 2015-01-30
+----------------
+* Bug Fix
+
+  * Fix for version comparison when monkey patching Werkzeug
+        (`Issue 24 <https://github.com/alisaifee/flask-limiter/issues/24>`_)
+
 0.7.1 2015-01-09
 ----------------
 * Refactor core storage & ratelimiting strategy out into the `limits <http://github.com/alisaifee/limits>`_ package.
@@ -137,6 +144,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
