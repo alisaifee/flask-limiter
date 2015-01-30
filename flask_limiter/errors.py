@@ -2,11 +2,13 @@
 errors and exceptions
 """
 
+from distutils.version import LooseVersion
 from werkzeug.exceptions import HTTPException
 
 def _patch_werkzeug():
     import pkg_resources
-    if pkg_resources.get_distribution("werkzeug").version < "0.9":
+    werkzeug_version = pkg_resources.get_distribution("werkzeug").version
+    if LooseVersion(werkzeug_version) < LooseVersion("0.9"):
         # sorry, for touching your internals :).
         import werkzeug._internal # pragma: no cover
         werkzeug._internal.HTTP_STATUS_CODES[429] = 'Too Many Requests' # pragma: no cover
