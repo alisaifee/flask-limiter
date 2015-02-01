@@ -2,17 +2,10 @@
 errors and exceptions
 """
 
-import sys
 from distutils.version import LooseVersion
 from pkg_resources import get_distribution
 from werkzeug import exceptions
-
-PY2 = sys.version_info[0] == 2
-
-if PY2:
-    text_type = unicode
-else:
-    text_type = str
+from six import text_type
 
 
 werkzeug_version = get_distribution("werkzeug").version
