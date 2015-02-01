@@ -3,25 +3,28 @@ errors and exceptions
 """
 
 from distutils.version import LooseVersion
-from werkzeug.exceptions import HTTPException
+from pkg_resources import get_distribution
+from werkzeug import exceptions
 
-def _patch_werkzeug():
-    import pkg_resources
-    werkzeug_version = pkg_resources.get_distribution("werkzeug").version
-    if LooseVersion(werkzeug_version) < LooseVersion("0.9"):
-        # sorry, for touching your internals :).
-        import werkzeug._internal # pragma: no cover
-        werkzeug._internal.HTTP_STATUS_CODES[429] = 'Too Many Requests' # pragma: no cover
 
-_patch_werkzeug()
-del _patch_werkzeug
 
-class RateLimitExceeded(HTTPException):
-    """
-    exception raised when a rate limit is hit.
-    The exception results in ``abort(429)`` being called.
-    """
-    code = 429
-    def __init__(self, limit):
-        self.description = str(limit)
-        super(RateLimitExceeded, self).__init__()
+
+werkzeug_version = get_distribution("werkzeug").version
+if LooseVersion(werkzeug_version) < LooseVersion("0.9"):  # pragma: no cover
+    # sorry, for touching your internals :).
+    import werkzeug._internal
+    werkzeug._internal.HTTP_STATUS_CODES[429] = 'Too Many Requests'
+
+    class RateLimitExceeded(exceptions.HTTPException):
+        """
+        exception raised when a rate limit is hit.
+        The exception results in ``abort(429)`` being called.
+        """
+        code = 429
+
+        def __init__(self, limit):
+            self.description = str(limit)
+            super(RateLimitExceeded, self).__init__()
+else:
+    # Werkzeug 0.9 and up have an existing exception for 429
+    RateLimitExceeded = exceptions.TooManyRequests
