@@ -4,7 +4,6 @@ include =
 omit =
     /*/flask_limiter/_version*
     /*/flask_limiter/backports/*
-    /*/flask_limiter/errors.py
 
 [report]
 exclude_lines =
