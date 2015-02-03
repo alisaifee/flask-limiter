@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.7.4 2015-02-03
+----------------
+* Use Werkzeug TooManyRequests as the exception raised when available.
+
 0.7.3 2015-01-30
 ----------------
 * Bug Fix
@@ -144,6 +148,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
