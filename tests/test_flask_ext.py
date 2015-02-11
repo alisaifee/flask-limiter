@@ -289,6 +289,12 @@ class FlaskExtTests(unittest.TestCase):
         def t2():
             return "42"
 
+        @app.route("/t3")
+        @limiter.limit(lambda: current_app.config.get("X"),
+                       error_message='T3 ratelimit exceeded')
+        def t3():
+            return "42"
+
         R1 = {"X_FORWARDED_FOR": "127.0.0.1, 127.0.0.0"}
         R2 = {"X_FORWARDED_FOR": "127.0.0.2"}
 
@@ -307,6 +313,13 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 429)
                 timeline.forward(1)
                 self.assertEqual(cli.get("/t2").status_code, 200)
+
+                self.assertEqual(cli.get("/t3").status_code, 200)
+                self.assertEqual(cli.get("/t3").status_code, 200)
+                self.assertEqual(cli.get("/t3").status_code, 429)
+                self.assertIn('T3 ratelimit exceeded', cli.get("/t3").data)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/t3").status_code, 200)
 
     def test_invalid_decorated_dynamic_limits(self):
         app = Flask(__name__)
