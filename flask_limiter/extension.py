@@ -269,7 +269,8 @@ class Limiter(object):
             else:
                 try:
                     static_limits = [ExtLimit(
-                        limit, func, _scope, per_method, None
+                        limit, func, _scope, per_method,
+                        error_message
                     ) for limit in parse_many(limit_value)]
                 except ValueError as e:
                     self.logger.error(
