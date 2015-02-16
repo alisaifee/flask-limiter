@@ -318,6 +318,8 @@ class Limiter(object):
          the rate limit. defaults to remote address of the request.
         :param bool per_method: whether the limit is sub categorized into the http
          method of the request.
+        :param error_message: string (or callable that returns one) to override the
+         error message used in the response.
         :return:
         """
         return self.__limit_decorator(limit_value, key_func, per_method=per_method,
@@ -335,6 +337,8 @@ class Limiter(object):
          for defining the rate limiting scope.
         :param function key_func: function/lambda to extract the unique identifier for
          the rate limit. defaults to remote address of the request.
+        :param error_message: string (or callable that returns one) to override the
+         error message used in the response.
         """
         return self.__limit_decorator(
             limit_value, key_func, True, scope, error_message=error_message

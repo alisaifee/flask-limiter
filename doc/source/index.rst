@@ -527,6 +527,36 @@ Reusing all the handlers of the ``logger`` instance of the :class:`flask.Flask` 
     for handler in app.logger.handlers:
         limiter.logger.addHandler(handler)
 
+
+
+
+Custom error messages
+---------------------
+:meth:`Limiter.limit` & :meth:`Limiter.shared_limit` can be provided with an `error_message`
+argument to over ride the default `n per x` error message that is returned to the calling client.
+The `error_message` argument can either be a simple string or a callable that returns one.
+
+    .. code-block:: python
+
+
+        app = Flask(__name__)
+        limiter = Limiter(app)
+
+        def error_handler():
+            return app.config.get("DEFAULT_ERROR_MESSAGE")
+
+        @limiter.limit("1/second", error_message='chill!')
+        @app.route("/")
+        def index():
+            ....
+
+        @limiter.limit("10/second", error_message=error_handler)
+        @app.route("/ping")
+        def ping():
+            ....
+
+
+
 API
 ===
 
@@ -537,7 +567,6 @@ Core
 
 Exceptions
 ----------
-.. autoexception:: ConfigurationError
 .. autoexception:: RateLimitExceeded
 
 
