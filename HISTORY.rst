@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.7.5 2015-02-16
+----------------
+* `Custom error messages <http://flask-limiter.readthedocs.org/en/stable/#custom-error-messages>`_.
+
 0.7.4 2015-02-03
 ----------------
 * Use Werkzeug TooManyRequests as the exception raised when available.
@@ -148,6 +152,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
