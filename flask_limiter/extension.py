@@ -248,7 +248,12 @@ class Limiter(object):
         g.view_rate_limit = limit_for_header
 
         if failed_limit:
-            exc_description = failed_limit.error_message or failed_limit.limit
+            if failed_limit.error_message:
+                exc_description = failed_limit.error_message if not callable(
+                    failed_limit.error_message
+                ) else failed_limit.error_message()
+            else:
+                exc_description = failed_limit.limit
             raise RateLimitExceeded(exc_description)
 
     def __limit_decorator(self, limit_value,
@@ -331,8 +336,9 @@ class Limiter(object):
         :param function key_func: function/lambda to extract the unique identifier for
          the rate limit. defaults to remote address of the request.
         """
-        return self.__limit_decorator(limit_value, key_func, True, scope)
-
+        return self.__limit_decorator(
+            limit_value, key_func, True, scope, error_message=error_message
+        )
 
 
     def exempt(self, obj):

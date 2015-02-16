@@ -289,12 +289,6 @@ class FlaskExtTests(unittest.TestCase):
         def t2():
             return "42"
 
-        @app.route("/t3")
-        @limiter.limit(lambda: current_app.config.get("X"),
-                       error_message='T3 ratelimit exceeded')
-        def t3():
-            return "42"
-
         R1 = {"X_FORWARDED_FOR": "127.0.0.1, 127.0.0.0"}
         R2 = {"X_FORWARDED_FOR": "127.0.0.2"}
 
@@ -313,13 +307,6 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 429)
                 timeline.forward(1)
                 self.assertEqual(cli.get("/t2").status_code, 200)
-
-                self.assertEqual(cli.get("/t3").status_code, 200)
-                self.assertEqual(cli.get("/t3").status_code, 200)
-                self.assertEqual(cli.get("/t3").status_code, 429)
-                self.assertIn('T3 ratelimit exceeded', cli.get("/t3").data)
-                timeline.forward(1)
-                self.assertEqual(cli.get("/t3").status_code, 200)
 
     def test_invalid_decorated_dynamic_limits(self):
         app = Flask(__name__)
@@ -832,3 +819,47 @@ class FlaskExtTests(unittest.TestCase):
             with app.test_client() as cli:
                 self.assertEqual(200,cli.get("/").status_code)
                 self.assertEqual(429,cli.get("/").status_code)
+
+
+    def test_custom_error_message(self):
+        app, limiter = self.build_app()
+        @app.errorhandler(429)
+        def ratelimit_handler(e):
+            return make_response(
+                e.description
+                , 429
+            )
+
+        l1 = lambda: "1/second"
+        e1 = lambda: "dos"
+
+        @limiter.limit("1/second", error_message="uno")
+        @app.route("/t1")
+        def t1():
+            return "1"
+
+        @limiter.limit(l1, error_message=e1)
+        @app.route("/t2")
+        def t2():
+            return "2"
+        s1 = limiter.shared_limit("1/second", scope='error_message', error_message="tres")
+
+        @app.route("/t3")
+        @s1
+        def t3():
+            return "3"
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                cli.get("/t1")
+                resp = cli.get("/t1")
+                self.assertEqual(429, resp.status_code)
+                self.assertEqual(resp.data, 'uno')
+                cli.get("/t2")
+                resp = cli.get("/t2")
+                self.assertEqual(429, resp.status_code)
+                self.assertEqual(resp.data, 'dos')
+                cli.get("/t3")
+                resp = cli.get("/t3")
+                self.assertEqual(429, resp.status_code)
+                self.assertEqual(resp.data, 'tres')
