@@ -237,7 +237,7 @@ class Limiter(object):
             if not limit_for_header or lim.limit < limit_for_header[0]:
                 limit_for_header = (lim.limit, lim.key_func(), limit_scope)
             if not self.limiter.hit(lim.limit, lim.key_func(), limit_scope):
-                self.logger.warn(
+                self.logger.warning(
                     "ratelimit %s (%s) exceeded at endpoint: %s"
                     , lim.limit, lim.key_func(), limit_scope
                 )
