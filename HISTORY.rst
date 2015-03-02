@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.7.6 2015-03-02
+----------------
+* `methods` keyword argument for `limits` decorator to specify specific http 
+  methods to apply the rate limit to.
+
 0.7.5 2015-02-16
 ----------------
 * `Custom error messages <http://flask-limiter.readthedocs.org/en/stable/#custom-error-messages>`_.
@@ -152,6 +157,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
