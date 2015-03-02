@@ -33,11 +33,12 @@ class ExtLimit(object):
     """
     simple wrapper to encapsulate limits and their context
     """
-    def __init__(self, limit, key_func, scope, per_method, error_message):
+    def __init__(self, limit, key_func, scope, per_method, methods, error_message):
         self._limit = limit
         self.key_func = key_func
         self._scope = scope
         self.per_method = per_method
+        self.methods = methods
         self.error_message = error_message
 
     @property
@@ -85,7 +86,7 @@ class Limiter(object):
             self.global_limits.extend(
                 [
                     ExtLimit(
-                        limit, key_func, None, False, None
+                        limit, key_func, None, False, None, None
                     ) for limit in parse_many(limit)
                 ]
             )
@@ -134,7 +135,7 @@ class Limiter(object):
         if not self.global_limits and conf_limits:
             self.global_limits = [
                 ExtLimit(
-                    limit, self.key_func, None, False, None
+                    limit, self.key_func, None, False, None, None
                 ) for limit in parse_many(conf_limits)
             ]
         if self.auto_check:
@@ -198,7 +199,7 @@ class Limiter(object):
                     dynamic_limits.extend(
                         ExtLimit(
                             limit, lim.key_func, lim.scope, lim.per_method,
-                            lim.error_message
+                            lim.methods, lim.error_message
                         ) for limit in parse_many(lim.limit)
                     )
                 except ValueError as e:
@@ -232,6 +233,8 @@ class Limiter(object):
         limit_for_header = None
         for lim in (limits + dynamic_limits or self.global_limits):
             limit_scope = lim.scope or endpoint
+            if lim.methods is not None and request.method not in lim.methods:
+                return
             if lim.per_method:
                 limit_scope += ":%s" % request.method
             if not limit_for_header or lim.limit < limit_for_header[0]:
@@ -260,6 +263,7 @@ class Limiter(object):
                           key_func=None, shared=False,
                           scope=None,
                           per_method=False,
+                          methods=None,
                           error_message=None):
         _scope = scope if shared else None
 
@@ -270,12 +274,12 @@ class Limiter(object):
             dynamic_limit, static_limits = None, []
             if callable(limit_value):
                 dynamic_limit = ExtLimit(limit_value, func, _scope, per_method,
-                                         error_message)
+                                         methods, error_message)
             else:
                 try:
                     static_limits = [ExtLimit(
                         limit, func, _scope, per_method,
-                        error_message
+                        methods, error_message
                     ) for limit in parse_many(limit_value)]
                 except ValueError as e:
                     self.logger.error(
@@ -308,7 +312,7 @@ class Limiter(object):
 
 
     def limit(self, limit_value, key_func=None, per_method=False,
-              error_message=None):
+              methods=None, error_message=None):
         """
         decorator to be used for rate limiting individual routes or blueprints.
 
@@ -318,12 +322,14 @@ class Limiter(object):
          the rate limit. defaults to remote address of the request.
         :param bool per_method: whether the limit is sub categorized into the http
          method of the request.
+        :param list methods: if specified, only the methods in this list will be rate
+         limited (default: None).
         :param error_message: string (or callable that returns one) to override the
          error message used in the response.
         :return:
         """
         return self.__limit_decorator(limit_value, key_func, per_method=per_method,
-                                      error_message=error_message)
+                                      methods=methods, error_message=error_message)
 
 
     def shared_limit(self, limit_value, scope, key_func=None,

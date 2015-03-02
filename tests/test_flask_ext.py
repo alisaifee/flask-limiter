@@ -798,6 +798,21 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(200,cli.post("/").status_code)
                 self.assertEqual(429,cli.post("/").status_code)
 
+    def test_explicit_method_limits(self):
+        app, limiter = self.build_app()
+
+        @limiter.limit("1/second", methods=["GET"])
+        @app.route("/", methods =["GET", "POST"])
+        def root():
+            return "root"
+
+        with hiro.Timeline():
+            with app.test_client() as cli:
+                self.assertEqual(200,cli.get("/").status_code)
+                self.assertEqual(429,cli.get("/").status_code)
+                self.assertEqual(200,cli.post("/").status_code)
+                self.assertEqual(200,cli.post("/").status_code)
+
     def test_no_auto_check(self):
         app, limiter = self.build_app(auto_check=False)
 

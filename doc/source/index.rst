@@ -462,7 +462,9 @@ work. You can add rate limits to your view classes using the following approach.
 .. note:: This approach is limited to either sharing the same rate limit for
  all http methods of a given :class:`flask.views.View` or applying the declared
  rate limit independently for each http method (to accomplish this, pass in ``True`` to
- the ``per_method`` keyword argument to :meth:`Limiter.limit`).
+ the ``per_method`` keyword argument to :meth:`Limiter.limit`). Alternatively, the limit
+ can be restricted to only certain http methods by passing them as a list to the `methods`
+ keyword argument.
 
 
 The above approach has been tested with sub-classes of  :class:`flask.views.View`,
