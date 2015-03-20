@@ -216,7 +216,7 @@ class Limiter(object):
                         dynamic_limits.extend(
                             ExtLimit(
                                 limit, lim.key_func, lim.scope, lim.per_method,
-                                lim.error_message
+                                lim.methods, lim.error_message
                             ) for limit in parse_many(lim.limit)
                         )
                     except ValueError as e:
