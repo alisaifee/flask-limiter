@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.7.7 2015-03-20
+----------------
+* Hotfix for dynamic limits with blueprints
+* Undocumented feature to pass storage options to underlying storage backend.
+
 0.7.6 2015-03-02
 ----------------
 * `methods` keyword argument for `limits` decorator to specify specific http 
@@ -157,6 +162,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
