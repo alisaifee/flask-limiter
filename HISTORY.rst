@@ -3,7 +3,7 @@
 Changelog
 =========
 
-0.7.7 2015-03-20
+0.7.8 2015-03-20
 ----------------
 * Hotfix for dynamic limits with blueprints
 * Undocumented feature to pass storage options to underlying storage backend.
@@ -162,6 +162,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
