@@ -195,12 +195,12 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 429)
 
-
     def test_register_blueprint(self):
         app, limiter = self.build_app(global_limits = ["1/minute"])
         bp_1 = Blueprint("bp1", __name__)
         bp_2 = Blueprint("bp2", __name__)
         bp_3 = Blueprint("bp3", __name__)
+        bp_4 = Blueprint("bp4", __name__)
 
         @bp_1.route("/t1")
         def t1():
@@ -218,12 +218,21 @@ class FlaskExtTests(unittest.TestCase):
         def t4():
             return "test"
 
+        @bp_4.route("/t5")
+        def t4():
+            return "test"
+
+        def dy_limit():
+            return "1/second"
+
         app.register_blueprint(bp_1)
         app.register_blueprint(bp_2)
         app.register_blueprint(bp_3)
+        app.register_blueprint(bp_4)
 
         limiter.limit("1/second")(bp_1)
         limiter.exempt(bp_3)
+        limiter.limit(dy_limit)(bp_4)
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
@@ -244,6 +253,8 @@ class FlaskExtTests(unittest.TestCase):
                 for i in range(0,10):
                     self.assertEqual(cli.get("/t4").status_code, 200)
 
+                self.assertEqual(cli.get("/t5").status_code, 200)
+                self.assertEqual(cli.get("/t5").status_code, 429)
 
     def test_disabled_flag(self):
         app, limiter = self.build_app(
