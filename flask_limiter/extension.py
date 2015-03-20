@@ -18,6 +18,7 @@ class C:
     ENABLED = "RATELIMIT_ENABLED"
     HEADERS_ENABLED = "RATELIMIT_HEADERS_ENABLED"
     STORAGE_URL = "RATELIMIT_STORAGE_URL"
+    STORAGE_OPTIONS = "RATELIMIT_STORAGE_OPTIONS"
     STRATEGY = "RATELIMIT_STRATEGY"
     GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
     HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
@@ -70,6 +71,7 @@ class Limiter(object):
                  , headers_enabled=False
                  , strategy=None
                  , storage_uri=None
+                 , storage_options={}
                  , auto_check=True
     ):
         self.app = app
@@ -81,6 +83,7 @@ class Limiter(object):
         self.header_mapping = {}
         self.strategy = strategy
         self.storage_uri = storage_uri
+        self.storage_options = storage_options
         self.auto_check = auto_check
         for limit in global_limits:
             self.global_limits.extend(
@@ -114,9 +117,13 @@ class Limiter(object):
             self.headers_enabled
             or app.config.setdefault(C.HEADERS_ENABLED, False)
         )
+        self.storage_options.update(
+            app.config.get(C.STORAGE_OPTIONS, {})
+        )
         self.storage = storage_from_string(
             self.storage_uri
-            or app.config.setdefault(C.STORAGE_URL, 'memory://')
+            or app.config.setdefault(C.STORAGE_URL, 'memory://'),
+            ** self.storage_options
         )
         strategy = (
             self.strategy
