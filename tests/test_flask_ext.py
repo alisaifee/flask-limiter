@@ -731,10 +731,17 @@ class FlaskExtTests(unittest.TestCase):
         class Vc(MethodView):
             def get(self):
                 return request.method.lower()
+        class Vd(MethodView):
+            decorators = [limiter.limit("1/minute", methods=['get'])]
+            def get(self):
+                return request.method.lower()
+            def post(self):
+                return request.method.lower()
 
         app.add_url_rule("/a", view_func=Va.as_view("a"))
         app.add_url_rule("/b", view_func=Vb.as_view("b"))
         app.add_url_rule("/c", view_func=Vc.as_view("c"))
+        app.add_url_rule("/d", view_func=Vd.as_view("d"))
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
@@ -751,6 +758,10 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(429, cli.get("/b").status_code)
                 self.assertEqual(200, cli.get("/c").status_code)
                 self.assertEqual(429, cli.get("/c").status_code)
+                self.assertEqual(200, cli.get("/d").status_code)
+                self.assertEqual(429, cli.get("/d").status_code)
+                self.assertEqual(200, cli.post("/d").status_code)
+                self.assertEqual(200, cli.post("/d").status_code)
 
     def test_flask_restful_resource(self):
         app, limiter = self.build_app(
