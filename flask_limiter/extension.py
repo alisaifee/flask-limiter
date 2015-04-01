@@ -39,7 +39,7 @@ class ExtLimit(object):
         self.key_func = key_func
         self._scope = scope
         self.per_method = per_method
-        self.methods = methods
+        self.methods = methods and [m.lower() for m in methods] or methods
         self.error_message = error_message
 
     @property
@@ -240,7 +240,7 @@ class Limiter(object):
         limit_for_header = None
         for lim in (limits + dynamic_limits or self.global_limits):
             limit_scope = lim.scope or endpoint
-            if lim.methods is not None and request.method not in lim.methods:
+            if lim.methods is not None and request.method.lower() not in lim.methods:
                 return
             if lim.per_method:
                 limit_scope += ":%s" % request.method
