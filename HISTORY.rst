@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.7.9 2015-04-02
+----------------
+* Bug fix for case sensitive `methods` whitelist for `limits` decorator
+
 0.7.8 2015-03-20
 ----------------
 * Hotfix for dynamic limits with blueprints
@@ -10,7 +14,7 @@ Changelog
 
 0.7.6 2015-03-02
 ----------------
-* `methods` keyword argument for `limits` decorator to specify specific http 
+* `methods` keyword argument for `limits` decorator to specify specific http
   methods to apply the rate limit to.
 
 0.7.5 2015-02-16
@@ -162,6 +166,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
