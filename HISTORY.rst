@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.8 2015-06-07
+--------------
+* No functional change 
+
 0.7.9 2015-04-02
 ----------------
 * Bug fix for case sensitive `methods` whitelist for `limits` decorator
@@ -166,6 +170,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
