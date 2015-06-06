@@ -25,7 +25,7 @@ setup(
     name='Flask-Limiter',
     author=__author__,
     author_email=__email__,
-    license=open("LICENSE.txt").read(),
+    license="MIT",
     url="https://flask-limiter.readthedocs.org",
     zip_safe=False,
     version=versioneer.get_version(),
