@@ -11,6 +11,8 @@ from limits.errors import ConfigurationError
 from limits.storage import storage_from_string
 from limits.strategies import STRATEGIES
 from limits.util import parse_many
+import six
+import sys
 from .errors import RateLimitExceeded
 from .util import get_ipaddr
 
@@ -24,6 +26,7 @@ class C:
     HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
     HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
     HEADER_RESET = "RATELIMIT_HEADER_RESET"
+    SWALLOW_ERRORS = "RATELIMIT_SWALLOW_ERRORS"
 
 class HEADERS:
     RESET = 1
@@ -63,6 +66,8 @@ class Limiter(object):
     :param str storage_uri: the storage location. refer to :ref:`ratelimit-conf`
     :param bool auto_check: whether to automatically check the rate limit in the before_request
      chain of the application. default ``True``
+    :param bool swallow_errors: whether to swallow errors when hitting a rate limit.
+     An exception will still be logged. default ``False``
     """
 
     def __init__(self, app=None
@@ -73,6 +78,7 @@ class Limiter(object):
                  , storage_uri=None
                  , storage_options={}
                  , auto_check=True
+                 , swallow_errors=False
     ):
         self.app = app
         self.enabled = True
@@ -85,6 +91,7 @@ class Limiter(object):
         self.storage_uri = storage_uri
         self.storage_options = storage_options
         self.auto_check = auto_check
+        self.swallow_errors = swallow_errors
         for limit in global_limits:
             self.global_limits.extend(
                 [
@@ -101,6 +108,7 @@ class Limiter(object):
         self.storage = self.limiter = None
         self.key_func = key_func
         self.logger = logging.getLogger("flask-limiter")
+
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
                 return
@@ -113,6 +121,9 @@ class Limiter(object):
         :param app: :class:`flask.Flask` instance to rate limit.
         """
         self.enabled = app.config.setdefault(C.ENABLED, True)
+        self.swallow_errors = app.config.setdefault(
+            C.SWALLOW_ERRORS, self.swallow_errors
+        )
         self.headers_enabled = (
             self.headers_enabled
             or app.config.setdefault(C.HEADERS_ENABLED, False)
@@ -238,33 +249,41 @@ class Limiter(object):
 
         failed_limit = None
         limit_for_header = None
-        for lim in (limits + dynamic_limits or self.global_limits):
-            limit_scope = lim.scope or endpoint
-            if lim.methods is not None and request.method.lower() not in lim.methods:
-                return
-            if lim.per_method:
-                limit_scope += ":%s" % request.method
-            if not limit_for_header or lim.limit < limit_for_header[0]:
-                limit_for_header = (lim.limit, lim.key_func(), limit_scope)
-            if not self.limiter.hit(lim.limit, lim.key_func(), limit_scope):
-                self.logger.warning(
-                    "ratelimit %s (%s) exceeded at endpoint: %s"
-                    , lim.limit, lim.key_func(), limit_scope
+        try:
+            for lim in (limits + dynamic_limits or self.global_limits):
+                limit_scope = lim.scope or endpoint
+                if lim.methods is not None and request.method.lower() not in lim.methods:
+                    return
+                if lim.per_method:
+                    limit_scope += ":%s" % request.method
+                if not limit_for_header or lim.limit < limit_for_header[0]:
+                    limit_for_header = (lim.limit, lim.key_func(), limit_scope)
+                if not self.limiter.hit(lim.limit, lim.key_func(), limit_scope):
+                    self.logger.warning(
+                        "ratelimit %s (%s) exceeded at endpoint: %s"
+                        , lim.limit, lim.key_func(), limit_scope
+                    )
+                    failed_limit = lim
+                    limit_for_header = (lim.limit, lim.key_func(), limit_scope)
+                    break
+
+            g.view_rate_limit = limit_for_header
+
+            if failed_limit:
+                if failed_limit.error_message:
+                    exc_description = failed_limit.error_message if not callable(
+                        failed_limit.error_message
+                    ) else failed_limit.error_message()
+                else:
+                    exc_description = failed_limit.limit
+                raise RateLimitExceeded(exc_description)
+        except Exception: # no qa
+            if self.swallow_errors:
+                self.logger.exception(
+                    "Failed to rate limit. Swallowing error"
                 )
-                failed_limit = lim
-                limit_for_header = (lim.limit, lim.key_func(), limit_scope)
-                break
-
-        g.view_rate_limit = limit_for_header
-
-        if failed_limit:
-            if failed_limit.error_message:
-                exc_description = failed_limit.error_message if not callable(
-                    failed_limit.error_message
-                ) else failed_limit.error_message()
             else:
-                exc_description = failed_limit.limit
-            raise RateLimitExceeded(exc_description)
+                six.reraise(*sys.exc_info())
 
     def __limit_decorator(self, limit_value,
                           key_func=None, shared=False,

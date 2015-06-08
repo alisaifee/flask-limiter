@@ -68,6 +68,22 @@ class FlaskExtTests(unittest.TestCase):
                 return make_response('{"error" : "rate limit %s"}' % str(e.description), 429)
             self.assertEqual({'error': 'rate limit 1 per 1 day'}, json.loads(cli.get("/").data.decode()))
 
+    def test_swallow_error(self):
+        app, limiter = self.build_app({
+            C.GLOBAL_LIMITS : "1 per day",
+            C.SWALLOW_ERRORS: True
+        })
+        @app.route("/")
+        def null():
+            return "ok"
+
+        with app.test_client() as cli:
+            with mock.patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
+                def raiser(*a, **k):
+                    raise Exception
+                hit.side_effect = raiser
+                self.assertTrue("ok" in cli.get("/").data.decode())
+
     def test_combined_rate_limits(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS : "1 per hour; 10 per day"

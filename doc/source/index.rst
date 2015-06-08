@@ -249,6 +249,10 @@ The following flask configuration values are honored by
 ``RATELIMIT_HEADER_LIMIT``     Header for the current rate limit. Defaults to ``X-RateLimit-Limit``
 ``RATELIMIT_HEADER_RESET``     Header for the reset time of the current rate limit. Defaults to ``X-RateLimit-Reset``
 ``RATELIMIT_HEADER_REMAINING`` Header for the number of requests remaining in the current rate limit. Defaults to ``X-RateLimit-Remaining``
+``RATELIMIT_SWALLOW_ERRORS``   Whether to allow failures while attempting to perform a rate limit
+                               such as errors with downstream storage. Setting this value to ``True``
+                               will effectively disable rate limiting for requests where an error has
+                               occurred.
 ============================== ================================================
 
 
