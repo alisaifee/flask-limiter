@@ -1,0 +1,14 @@
+doc-warnings: no
+test-warnings: no
+strictness: veryhigh
+max-line-length: 80
+autodetect: yes
+requirements:
+    - requirements/main.txt
+ignore-paths:
+    - tests
+    - doc
+ignore-patterns:
+    - versioneer.py
+    - flask_limiter/_versions.py
+
