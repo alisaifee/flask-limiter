@@ -1,0 +1,4 @@
+exclude_paths:
+  - versioneer.py
+  - flask_limiter/_version.py
+  - tests/*
