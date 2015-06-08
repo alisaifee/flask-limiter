@@ -6,8 +6,8 @@
     :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |license| image:: https://img.shields.io/pypi/l/Flask-Limiter.svg?style=flat-square
     :target: https://pypi.python.org/pypi/Flask-Limiter
-.. |landscape| image:: https://landscape.io/github/alisaifee/flask_limiter.svg?style=flat
-    :target: https://landscape.io/github/alisaifee/flask_limiter/master
+.. |landscape| image:: https://landscape.io/github/alisaifee/flask-limiter.svg?style=flat
+    :target: https://landscape.io/github/alisaifee/flask-limiter/master
 *************
 Flask-Limiter
 *************
