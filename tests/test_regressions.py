@@ -8,11 +8,14 @@ import unittest
 from flask import Flask
 import hiro
 import mock
+import redis
 
 from flask.ext.limiter.extension import C, Limiter
 
 
 class RegressionTests(unittest.TestCase):
+    def setUp(self):
+        redis.Redis().flushall()
 
     def build_app(self, config={}, **limiter_args):
         app = Flask(__name__)
@@ -21,7 +24,7 @@ class RegressionTests(unittest.TestCase):
         limiter = Limiter(app, **limiter_args)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
+        limiter._logger.addHandler(mock_handler)
         return app, limiter
 
     def test_redis_request_slower_than_fixed_window(self):

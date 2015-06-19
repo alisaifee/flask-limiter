@@ -11,13 +11,17 @@ from flask.ext.restful import Resource
 from flask.views import View, MethodView
 import hiro
 import mock
+import redis
 from flask.ext.limiter.extension import C, Limiter, HEADERS
 from limits.errors import ConfigurationError
-from limits.storage import MemcachedStorage
+from limits.storage import MemcachedStorage, MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
 from flask.ext import restful
 
 class FlaskExtTests(unittest.TestCase):
+
+    def setUp(self):
+        redis.Redis().flushall()
 
     def build_app(self, config={}, **limiter_args):
         app = Flask(__name__)
@@ -26,7 +30,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, **limiter_args)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
+        limiter._logger.addHandler(mock_handler)
         return app, limiter
 
 
@@ -47,10 +51,10 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(strategy='moving-window')
         limiter.init_app(app)
         app.config.setdefault(C.STORAGE_URL, "redis://localhost:6379")
-        self.assertEqual(type(limiter.limiter), MovingWindowRateLimiter)
+        self.assertEqual(type(limiter._limiter), MovingWindowRateLimiter)
         limiter = Limiter(storage_uri='memcached://localhost:11211')
         limiter.init_app(app)
-        self.assertEqual(type(limiter.storage), MemcachedStorage)
+        self.assertEqual(type(limiter._storage), MemcachedStorage)
 
     def test_error_message(self):
         app, limiter = self.build_app({
@@ -143,7 +147,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
+        limiter._logger.addHandler(mock_handler)
         @app.route("/t1")
         @limiter.limit("1/minute")
         def t1():
@@ -160,7 +164,7 @@ class FlaskExtTests(unittest.TestCase):
         app.logger.addHandler(app_handler)
         limiter = Limiter(app)
         for handler in app.logger.handlers:
-            limiter.logger.addHandler(handler)
+            limiter._logger.addHandler(handler)
         @app.route("/t1")
         @limiter.limit("1/minute")
         def t1():
@@ -293,6 +297,54 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
 
+    def test_fallback_to_memory(self):
+        app, limiter = self.build_app(
+            config={C.ENABLED: True},
+            global_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback=["1/minute"]
+        )
+
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        @app.route("/t2")
+        @limiter.limit("3 per minute")
+        def t2():
+            return "test"
+
+        with app.test_client() as cli:
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 429)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 429)
+
+            def raiser(*a):
+                raise Exception("redis dead")
+
+            with mock.patch(
+                    "redis.client.Redis.execute_command"
+            ) as exec_command:
+                exec_command.side_effect = raiser
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 429)
+            # redis back to normal, go back to regular limits
+            limiter._storage.storage.flushall()
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 429)
+
+
     def test_decorated_dynamic_limits(self):
         app, limiter = self.build_app({"X": "2 per second"}, global_limits=["1/second"])
         def request_context_limit():
@@ -341,7 +393,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
+        limiter._logger.addHandler(mock_handler)
         @app.route("/t1")
         @limiter.limit(lambda: current_app.config.get("X"))
         def t1():
@@ -362,7 +414,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
+        limiter._logger.addHandler(mock_handler)
         @app.route("/t1")
         @limiter.limit("2/sec")
         def t1():
@@ -380,7 +432,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
+        limiter._logger.addHandler(mock_handler)
         bp = Blueprint("bp1", __name__)
 
         @bp.route("/t1")
@@ -402,7 +454,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
+        limiter._logger.addHandler(mock_handler)
         bp = Blueprint("bp1", __name__)
         @bp.route("/t1")
         def t1():
@@ -543,9 +595,9 @@ class FlaskExtTests(unittest.TestCase):
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
         limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
-        limiter.header_mapping[HEADERS.RESET] = 'X-Reset'
-        limiter.header_mapping[HEADERS.LIMIT] = 'X-Limit'
-        limiter.header_mapping[HEADERS.REMAINING] = 'X-Remaining'
+        limiter._header_mapping[HEADERS.RESET] = 'X-Reset'
+        limiter._header_mapping[HEADERS.LIMIT] = 'X-Limit'
+        limiter._header_mapping[HEADERS.REMAINING] = 'X-Remaining'
         @app.route("/t1")
         @limiter.limit("2/second; 10 per minute; 20/hour")
         def t():
