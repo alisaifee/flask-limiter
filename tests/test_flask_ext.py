@@ -338,11 +338,13 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 200)
                 self.assertEqual(cli.get("/t2").status_code, 429)
             # redis back to normal, go back to regular limits
-            limiter._storage.storage.flushall()
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 429)
+            with hiro.Timeline() as timeline:
+                timeline.forward(1)
+                limiter._storage.storage.flushall()
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 429)
 
 
     def test_decorated_dynamic_limits(self):

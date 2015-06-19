@@ -13,6 +13,7 @@ from limits.strategies import STRATEGIES
 from limits.util import parse_many
 import six
 import sys
+import time
 from .errors import RateLimitExceeded
 from .util import get_ipaddr
 
@@ -33,6 +34,8 @@ class HEADERS:
     RESET = 1
     REMAINING = 2
     LIMIT = 3
+
+MAX_BACKEND_CHECKS = 5
 
 class ExtLimit(object):
     """
@@ -123,6 +126,8 @@ class Limiter(object):
         self._logger = logging.getLogger("flask-limiter")
         self._storage_dead = False
         self._fallback_limiter = None
+        self.__check_backend_count = 0
+        self.__last_check_backend = time.time()
 
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
@@ -190,6 +195,15 @@ class Limiter(object):
         if not hasattr(app, 'extensions'):
             app.extensions = {} # pragma: no cover
         app.extensions['limiter'] = self
+
+    def __should_check_backend(self):
+        if self.__check_backend_count > MAX_BACKEND_CHECKS:
+            self.__check_backend_count = 0
+        if time.time() - self.__last_check_backend > pow(2, self.__check_backend_count):
+            self.__last_check_backend = time.time()
+            self.__check_backend_count += 1
+            return True
+        return False
 
     def check(self):
         """
@@ -285,7 +299,7 @@ class Limiter(object):
         try:
             all_limits = []
             if self._storage_dead and self._fallback_limiter:
-                if self._storage.check():
+                if self.__should_check_backend() and self._storage.check():
                     self._storage_dead = False
                 else:
                     all_limits = self._in_memory_fallback
