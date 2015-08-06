@@ -275,7 +275,7 @@ class Limiter(object):
                         failed_limit.error_message
                     ) else failed_limit.error_message()
                 else:
-                    exc_description = failed_limit.limit
+                    exc_description = six.text_type(failed_limit.limit)
                 raise RateLimitExceeded(exc_description)
         except Exception: # no qa
             if self.swallow_errors:
