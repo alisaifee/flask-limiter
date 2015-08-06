@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.8.1 2015-08-06
+----------------
+* Fixed compatibility with latest version of **Flask-Restful**
+
 0.8 2015-06-07
 --------------
 * No functional change 
@@ -170,6 +174,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
