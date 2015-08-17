@@ -9,10 +9,6 @@
 .. |landscape| image:: https://landscape.io/github/alisaifee/flask-limiter/master/landscape.svg?style=flat-square
     :target: https://landscape.io/github/alisaifee/flask-limiter/master
 
-**ADOPT ME: The author of this project is unable to continue maintaining it 
-and is looking for volunteers to adopt it. Please email me at ali@indydevs.org
-if you feel you could give this project a new home**
- 
 *************
 Flask-Limiter
 *************
