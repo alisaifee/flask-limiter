@@ -335,7 +335,6 @@ be maintained in memory per resource and rate limit.
 
 Rate-limiting Headers
 =====================
-.. versionadded:: 0.4.0
 
 If the configuration is enabled, information about the rate limit with respect to the
 route being requested will be added to the response headers. Since multiple rate limits
