@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.8.2 2015-09-17
+----------------
+* Remove outdated files from egg
+
 0.8.1 2015-08-06
 ----------------
 * Fixed compatibility with latest version of **Flask-Restful**
@@ -174,6 +178,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
