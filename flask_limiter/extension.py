@@ -64,6 +64,8 @@ class Limiter(object):
     :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
     :param str strategy: the strategy to use. refer to :ref:`ratelimit-strategy`
     :param str storage_uri: the storage location. refer to :ref:`ratelimit-conf`
+    :param dict storage_options: kwargs to pass to the storage implementation upon
+      instantiation.
     :param bool auto_check: whether to automatically check the rate limit in the before_request
      chain of the application. default ``True``
     :param bool swallow_errors: whether to swallow errors when hitting a rate limit.
