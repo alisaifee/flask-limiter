@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.8.3 2015-10-03
+----------------
+* Documentation tweaks.
+
 0.8.2 2015-09-17
 ----------------
 * Remove outdated files from egg
@@ -178,6 +182,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
