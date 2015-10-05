@@ -30,7 +30,7 @@ setup(
     zip_safe=False,
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    install_requires=REQUIREMENTS,
+    install_requires=list(REQUIREMENTS),
     classifiers=[k for k in open('CLASSIFIERS').read().split('\n') if k],
     description='Rate limiting for flask applications',
     long_description=open('README.rst').read() + open('HISTORY.rst').read(),
