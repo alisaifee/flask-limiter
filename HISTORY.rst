@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.8.5 2015-10-05
+----------------
+* Bug fix for reported issues of missing (limits) dependency upon installation.
+
 0.8.4 2015-10-03
 ----------------
 * Documentation tweaks.
@@ -182,6 +186,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
