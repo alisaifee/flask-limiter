@@ -242,9 +242,10 @@ The following flask configuration values are honored by
                                or ``memcached://host:port``. Using the redis storage
                                requires the installation of the `redis`_ package
                                while memcached relies on the `pymemcache`_ package.
+                               (For details refer to :ref:`storage-scheme`)
 ``RATELIMIT_STORAGE_OPTIONS``  A dictionary to set extra options to be passed to the
                                storage implementation upon initialization. (Useful if you're
-                               subclassing :class:`limits.Storage` to create a
+                               subclassing :class:`limits.storage.Storage` to create a
                                custom Storage backend.)
 ``RATELIMIT_STRATEGY``         The rate limiting strategy to use.  :ref:`ratelimit-strategy`
                                for details.

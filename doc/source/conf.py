@@ -58,6 +58,7 @@ texinfo_documents = [
 
 intersphinx_mapping = {'python': ('http://docs.python.org/', None)
     , 'flask': ("http://flask.pocoo.org/docs/", None)
+    , 'limits': ("http://limits.readthedocs.org/en/latest/", None)
     , 'flaskrestful': ('http://flask-restful.readthedocs.org/en/latest/', None)
 }
 
