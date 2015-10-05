@@ -8,7 +8,7 @@ import logging
 from flask import request, current_app, g, Blueprint
 
 from limits.errors import ConfigurationError
-from limits.storage import storage_from_string
+from limits.storage import storage_from_string, Storage
 from limits.strategies import STRATEGIES
 from limits.util import parse_many
 import six
@@ -77,6 +77,7 @@ class Limiter(object):
                  , global_limits=[]
                  , headers_enabled=False
                  , strategy=None
+                 , storage=None
                  , storage_uri=None
                  , storage_options={}
                  , auto_check=True
@@ -90,6 +91,7 @@ class Limiter(object):
         self.headers_enabled = headers_enabled
         self.header_mapping = {}
         self.strategy = strategy
+        self.storage = storage
         self.storage_uri = storage_uri
         self.storage_options = storage_options
         self.auto_check = auto_check
@@ -107,7 +109,7 @@ class Limiter(object):
         self.blueprint_limits = {}
         self.blueprint_dynamic_limits = {}
         self.blueprint_exempt = set()
-        self.storage = self.limiter = None
+        self.limiter = None
         self.key_func = key_func
         self.logger = logging.getLogger("flask-limiter")
 
@@ -133,11 +135,16 @@ class Limiter(object):
         self.storage_options.update(
             app.config.get(C.STORAGE_OPTIONS, {})
         )
-        self.storage = storage_from_string(
-            self.storage_uri
-            or app.config.setdefault(C.STORAGE_URL, 'memory://'),
-            ** self.storage_options
-        )
+        if not self.storage:
+            self.storage = storage_from_string(
+                self.storage_uri
+                or app.config.setdefault(C.STORAGE_URL, 'memory://'),
+                ** self.storage_options
+            )
+
+        if not isinstance(self.storage, Storage):
+            raise ConfigurationError("Storage object must extent or implement limits.storage.Storage")
+
         strategy = (
             self.strategy
             or app.config.setdefault(C.STRATEGY, 'fixed-window')
