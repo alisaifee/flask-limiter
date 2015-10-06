@@ -8,11 +8,13 @@
     :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |landscape| image:: https://landscape.io/github/alisaifee/flask-limiter/master/landscape.svg?style=flat-square
     :target: https://landscape.io/github/alisaifee/flask-limiter/master
-
+.. |gitter| image:: https://img.shields.io/badge/gitter-join%20chat-blue.svg?style=flat-square
+   :alt: Join the chat at https://gitter.im/alisaifee/flask-limiter
+   :target: https://gitter.im/alisaifee/flask-limiter?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 *************
 Flask-Limiter
 *************
-|travis-ci| |coveralls| |landscape| |pypi| |license|
+|travis-ci| |coveralls| |landscape| |pypi| |gitter| |license| 
 
 Flask-Limiter provides rate limiting features to flask routes.
 It has support for a configurable backend for storage
@@ -90,6 +92,3 @@ with it.
 
 
 
-.. image:: https://badges.gitter.im/Join%20Chat.svg
-   :alt: Join the chat at https://gitter.im/alisaifee/flask-limiter
-   :target: https://gitter.im/alisaifee/flask-limiter?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
