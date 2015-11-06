@@ -41,13 +41,15 @@ class ExtLimit(object):
     """
     simple wrapper to encapsulate limits and their context
     """
-    def __init__(self, limit, key_func, scope, per_method, methods, error_message):
+    def __init__(self, limit, key_func, scope, per_method, methods, error_message,
+                 exempt_when):
         self._limit = limit
         self.key_func = key_func
         self._scope = scope
         self.per_method = per_method
         self.methods = methods and [m.lower() for m in methods] or methods
         self.error_message = error_message
+        self.exempt_when = exempt_when
 
     @property
     def limit(self):
@@ -56,6 +58,11 @@ class ExtLimit(object):
     @property
     def scope(self):
         return self._scope(request.endpoint) if callable(self._scope) else self._scope
+
+    @property
+    def is_exempt(self):
+        """Check if the limit is exempt."""
+        return self.exempt_when and self.exempt_when()
 
 class Limiter(object):
     """
@@ -108,7 +115,7 @@ class Limiter(object):
             self._global_limits.extend(
                 [
                     ExtLimit(
-                        limit, key_func, None, False, None, None
+                        limit, key_func, None, False, None, None, None
                     ) for limit in parse_many(limit)
                 ]
             )
@@ -116,7 +123,7 @@ class Limiter(object):
             self._in_memory_fallback.extend(
                 [
                     ExtLimit(
-                        limit, key_func, None, False, None, None
+                        limit, key_func, None, False, None, None, None
                     ) for limit in parse_many(limit)
                     ]
             )
@@ -176,14 +183,14 @@ class Limiter(object):
         if not self._global_limits and conf_limits:
             self._global_limits = [
                 ExtLimit(
-                    limit, self._key_func, None, False, None, None
+                    limit, self._key_func, None, False, None, None, None
                 ) for limit in parse_many(conf_limits)
             ]
         fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
                 ExtLimit(
-                    limit, self._key_func, None, False, None, None
+                    limit, self._key_func, None, False, None, None, None
                 ) for limit in parse_many(fallback_limits)
                 ]
         if self._auto_check:
@@ -267,7 +274,7 @@ class Limiter(object):
                     dynamic_limits.extend(
                         ExtLimit(
                             limit, lim.key_func, lim.scope, lim.per_method,
-                            lim.methods, lim.error_message
+                            lim.methods, lim.error_message, lim.exempt_when
                         ) for limit in parse_many(lim.limit)
                     )
                 except ValueError as e:
@@ -284,7 +291,7 @@ class Limiter(object):
                         dynamic_limits.extend(
                             ExtLimit(
                                 limit, lim.key_func, lim.scope, lim.per_method,
-                                lim.methods, lim.error_message
+                                lim.methods, lim.error_message, lim.exempt_when
                             ) for limit in parse_many(lim.limit)
                         )
                     except ValueError as e:
@@ -314,6 +321,8 @@ class Limiter(object):
                 all_limits = (limits + dynamic_limits or self._global_limits)
             for lim in all_limits:
                 limit_scope = lim.scope or endpoint
+                if lim.is_exempt:
+                    return 
                 if lim.methods is not None and request.method.lower() not in lim.methods:
                     return
                 if lim.per_method:
@@ -362,7 +371,8 @@ class Limiter(object):
                           scope=None,
                           per_method=False,
                           methods=None,
-                          error_message=None):
+                          error_message=None,
+                          exempt_when=None):
         _scope = scope if shared else None
 
         def _inner(obj):
@@ -372,12 +382,12 @@ class Limiter(object):
             dynamic_limit, static_limits = None, []
             if callable(limit_value):
                 dynamic_limit = ExtLimit(limit_value, func, _scope, per_method,
-                                         methods, error_message)
+                                         methods, error_message, exempt_when)
             else:
                 try:
                     static_limits = [ExtLimit(
                         limit, func, _scope, per_method,
-                        methods, error_message
+                        methods, error_message, exempt_when
                     ) for limit in parse_many(limit_value)]
                 except ValueError as e:
                     self.logger.error(
@@ -410,7 +420,7 @@ class Limiter(object):
 
 
     def limit(self, limit_value, key_func=None, per_method=False,
-              methods=None, error_message=None):
+              methods=None, error_message=None, exempt_when=None):
         """
         decorator to be used for rate limiting individual routes or blueprints.
 
@@ -427,11 +437,12 @@ class Limiter(object):
         :return:
         """
         return self.__limit_decorator(limit_value, key_func, per_method=per_method,
-                                      methods=methods, error_message=error_message)
+                                      methods=methods, error_message=error_message,
+                                      exempt_when=exempt_when)
 
 
     def shared_limit(self, limit_value, scope, key_func=None,
-                     error_message=None):
+                     error_message=None, exempt_when=None):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
@@ -445,7 +456,8 @@ class Limiter(object):
          error message used in the response.
         """
         return self.__limit_decorator(
-            limit_value, key_func, True, scope, error_message=error_message
+            limit_value, key_func, True, scope, error_message=error_message,
+            exempt_when=exempt_when
         )
 
 
