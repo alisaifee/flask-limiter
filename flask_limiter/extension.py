@@ -300,7 +300,11 @@ class Limiter(object):
             all_limits = []
             if self._storage_dead and self._fallback_limiter:
                 if self.__should_check_backend() and self._storage.check():
+                    self._logger.info(
+                        "Rate limit storage recovered"
+                    )
                     self._storage_dead = False
+                    self.__check_backend_count = 0
                 else:
                     all_limits = self._in_memory_fallback
             if not all_limits:
@@ -336,6 +340,10 @@ class Limiter(object):
             if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
             if self._in_memory_fallback and not self._storage_dead:
+                self._logger.warn(
+                    "Rate limit storage unreachable - falling back to"
+                    " in-memory storage"
+                )
                 self._storage_dead = True
                 self.__check_request_limit()
             else:
