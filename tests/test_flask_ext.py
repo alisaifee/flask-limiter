@@ -30,7 +30,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, **limiter_args)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter._logger.addHandler(mock_handler)
+        limiter.logger.addHandler(mock_handler)
         return app, limiter
 
 
@@ -147,7 +147,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter._logger.addHandler(mock_handler)
+        limiter.logger.addHandler(mock_handler)
         @app.route("/t1")
         @limiter.limit("1/minute")
         def t1():
@@ -164,7 +164,7 @@ class FlaskExtTests(unittest.TestCase):
         app.logger.addHandler(app_handler)
         limiter = Limiter(app)
         for handler in app.logger.handlers:
-            limiter._logger.addHandler(handler)
+            limiter.logger.addHandler(handler)
         @app.route("/t1")
         @limiter.limit("1/minute")
         def t1():
@@ -395,7 +395,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter._logger.addHandler(mock_handler)
+        limiter.logger.addHandler(mock_handler)
         @app.route("/t1")
         @limiter.limit(lambda: current_app.config.get("X"))
         def t1():
@@ -416,7 +416,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter._logger.addHandler(mock_handler)
+        limiter.logger.addHandler(mock_handler)
         @app.route("/t1")
         @limiter.limit("2/sec")
         def t1():
@@ -434,7 +434,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter._logger.addHandler(mock_handler)
+        limiter.logger.addHandler(mock_handler)
         bp = Blueprint("bp1", __name__)
 
         @bp.route("/t1")
@@ -456,7 +456,7 @@ class FlaskExtTests(unittest.TestCase):
         limiter = Limiter(app, global_limits=["1/second"])
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter._logger.addHandler(mock_handler)
+        limiter.logger.addHandler(mock_handler)
         bp = Blueprint("bp1", __name__)
         @bp.route("/t1")
         def t1():

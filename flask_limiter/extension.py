@@ -90,6 +90,8 @@ class Limiter(object):
                  , in_memory_fallback=[]
     ):
         self.app = app
+        self.logger = logging.getLogger("flask-limiter")
+
         self._enabled = True
         self._global_limits = []
         self._in_memory_fallback = []
@@ -125,7 +127,6 @@ class Limiter(object):
         self._blueprint_exempt = set()
         self._storage = self._limiter = None
         self._key_func = key_func
-        self._logger = logging.getLogger("flask-limiter")
         self._storage_dead = False
         self._fallback_limiter = None
         self.__check_backend_count = 0
@@ -134,7 +135,7 @@ class Limiter(object):
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
                 return
-        self._logger.addHandler(BlackHoleHandler())
+        self.logger.addHandler(BlackHoleHandler())
         if app:
             self.init_app(app)
 
@@ -270,7 +271,7 @@ class Limiter(object):
                         ) for limit in parse_many(lim.limit)
                     )
                 except ValueError as e:
-                    self._logger.error(
+                    self.logger.error(
                         "failed to load ratelimit for view function %s (%s)"
                         , name, e
                     )
@@ -287,7 +288,7 @@ class Limiter(object):
                             ) for limit in parse_many(lim.limit)
                         )
                     except ValueError as e:
-                        self._logger.error(
+                        self.logger.error(
                             "failed to load ratelimit for blueprint %s (%s)"
                             , request.blueprint, e
                         )
@@ -302,7 +303,7 @@ class Limiter(object):
             all_limits = []
             if self._storage_dead and self._fallback_limiter:
                 if self.__should_check_backend() and self._storage.check():
-                    self._logger.info(
+                    self.logger.info(
                         "Rate limit storage recovered"
                     )
                     self._storage_dead = False
@@ -320,7 +321,7 @@ class Limiter(object):
                 if not limit_for_header or lim.limit < limit_for_header[0]:
                     limit_for_header = (lim.limit, lim.key_func(), limit_scope)
                 if not self.limiter.hit(lim.limit, lim.key_func(), limit_scope):
-                    self._logger.warning(
+                    self.logger.warning(
                         "ratelimit %s (%s) exceeded at endpoint: %s"
                         , lim.limit, lim.key_func(), limit_scope
                     )
@@ -342,7 +343,7 @@ class Limiter(object):
             if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
             if self._in_memory_fallback and not self._storage_dead:
-                self._logger.warn(
+                self.logger.warn(
                     "Rate limit storage unreachable - falling back to"
                     " in-memory storage"
                 )
@@ -350,7 +351,7 @@ class Limiter(object):
                 self.__check_request_limit()
             else:
                 if self._swallow_errors:
-                    self._logger.exception(
+                    self.logger.exception(
                         "Failed to rate limit. Swallowing error"
                     )
                 else:
@@ -379,7 +380,7 @@ class Limiter(object):
                         methods, error_message
                     ) for limit in parse_many(limit_value)]
                 except ValueError as e:
-                    self._logger.error(
+                    self.logger.error(
                         "failed to configure %s %s (%s)",
                         "view function" if is_route else "blueprint", name, e
                     )

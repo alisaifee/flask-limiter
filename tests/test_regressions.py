@@ -24,7 +24,7 @@ class RegressionTests(unittest.TestCase):
         limiter = Limiter(app, **limiter_args)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
-        limiter._logger.addHandler(mock_handler)
+        limiter.logger.addHandler(mock_handler)
         return app, limiter
 
     def test_redis_request_slower_than_fixed_window(self):
