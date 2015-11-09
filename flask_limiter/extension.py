@@ -74,6 +74,8 @@ class Limiter(object):
      chain of the application. default ``True``
     :param bool swallow_errors: whether to swallow errors when hitting a rate limit.
      An exception will still be logged. default ``False``
+    :param list in_memory_fallback: a variable list of strings denoting fallback
+     limits to apply when the storage is down.
     """
 
     def __init__(self, app=None
