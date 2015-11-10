@@ -331,6 +331,54 @@ class FlaskExtTests(unittest.TestCase):
         )
         self.assertEqual(len(limiter._in_memory_fallback), 1)
 
+    def test_fallback_to_memory_backoff_check(self):
+        app, limiter = self.build_app(
+            config={C.ENABLED: True},
+            global_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback=["1/minute"]
+        )
+
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        with app.test_client() as cli:
+
+            def raiser(*a):
+                raise Exception("redis dead")
+
+            with hiro.Timeline() as timeline:
+                with mock.patch(
+                        "redis.client.Redis.execute_command"
+                ) as exec_command:
+                    exec_command.side_effect = raiser
+                    self.assertEqual(cli.get("/t1").status_code, 200)
+                    self.assertEqual(cli.get("/t1").status_code, 429)
+                    timeline.forward(1)
+                    self.assertEqual(cli.get("/t1").status_code, 429)
+                    timeline.forward(2)
+                    self.assertEqual(cli.get("/t1").status_code, 429)
+                    timeline.forward(4)
+                    self.assertEqual(cli.get("/t1").status_code, 429)
+                    timeline.forward(8)
+                    self.assertEqual(cli.get("/t1").status_code, 429)
+                    timeline.forward(16)
+                    self.assertEqual(cli.get("/t1").status_code, 429)
+                    timeline.forward(32)
+                    self.assertEqual(cli.get("/t1").status_code, 200)
+                # redis back to normal, but exponential backoff will only
+                # result in it being marked after pow(2,0) seconds and next
+                # check
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+
     def test_fallback_to_memory(self):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
