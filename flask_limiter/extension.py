@@ -8,11 +8,12 @@ import logging
 from flask import request, current_app, g, Blueprint
 
 from limits.errors import ConfigurationError
-from limits.storage import storage_from_string
+from limits.storage import storage_from_string, MemoryStorage
 from limits.strategies import STRATEGIES
 from limits.util import parse_many
 import six
 import sys
+import time
 from .errors import RateLimitExceeded
 from .util import get_ipaddr
 
@@ -27,11 +28,14 @@ class C:
     HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
     HEADER_RESET = "RATELIMIT_HEADER_RESET"
     SWALLOW_ERRORS = "RATELIMIT_SWALLOW_ERRORS"
+    IN_MEMORY_FALLBACK = "RATELIMIT_IN_MEMORY_FALLBACK"
 
 class HEADERS:
     RESET = 1
     REMAINING = 2
     LIMIT = 3
+
+MAX_BACKEND_CHECKS = 5
 
 class ExtLimit(object):
     """
@@ -70,6 +74,8 @@ class Limiter(object):
      chain of the application. default ``True``
     :param bool swallow_errors: whether to swallow errors when hitting a rate limit.
      An exception will still be logged. default ``False``
+    :param list in_memory_fallback: a variable list of strings denoting fallback
+     limits to apply when the storage is down.
     """
 
     def __init__(self, app=None
@@ -81,35 +87,50 @@ class Limiter(object):
                  , storage_options={}
                  , auto_check=True
                  , swallow_errors=False
+                 , in_memory_fallback=[]
     ):
         self.app = app
-        self.enabled = True
-        self.global_limits = []
-        self.exempt_routes = set()
-        self.request_filters = []
-        self.headers_enabled = headers_enabled
-        self.header_mapping = {}
-        self.strategy = strategy
-        self.storage_uri = storage_uri
-        self.storage_options = storage_options
-        self.auto_check = auto_check
-        self.swallow_errors = swallow_errors
+        self.logger = logging.getLogger("flask-limiter")
+
+        self._enabled = True
+        self._global_limits = []
+        self._in_memory_fallback = []
+        self._exempt_routes = set()
+        self._request_filters = []
+        self._headers_enabled = headers_enabled
+        self._header_mapping = {}
+        self._strategy = strategy
+        self._storage_uri = storage_uri
+        self._storage_options = storage_options
+        self._auto_check = auto_check
+        self._swallow_errors = swallow_errors
         for limit in global_limits:
-            self.global_limits.extend(
+            self._global_limits.extend(
                 [
                     ExtLimit(
                         limit, key_func, None, False, None, None
                     ) for limit in parse_many(limit)
                 ]
             )
-        self.route_limits = {}
-        self.dynamic_route_limits = {}
-        self.blueprint_limits = {}
-        self.blueprint_dynamic_limits = {}
-        self.blueprint_exempt = set()
-        self.storage = self.limiter = None
-        self.key_func = key_func
-        self.logger = logging.getLogger("flask-limiter")
+        for limit in in_memory_fallback:
+            self._in_memory_fallback.extend(
+                [
+                    ExtLimit(
+                        limit, key_func, None, False, None, None
+                    ) for limit in parse_many(limit)
+                    ]
+            )
+        self._route_limits = {}
+        self._dynamic_route_limits = {}
+        self._blueprint_limits = {}
+        self._blueprint_dynamic_limits = {}
+        self._blueprint_exempt = set()
+        self._storage = self._limiter = None
+        self._key_func = key_func
+        self._storage_dead = False
+        self._fallback_limiter = None
+        self.__check_backend_count = 0
+        self.__last_check_backend = time.time()
 
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
@@ -122,50 +143,70 @@ class Limiter(object):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
-        self.enabled = app.config.setdefault(C.ENABLED, True)
-        self.swallow_errors = app.config.setdefault(
-            C.SWALLOW_ERRORS, self.swallow_errors
+        self._enabled = app.config.setdefault(C.ENABLED, True)
+        self._swallow_errors = app.config.setdefault(
+            C.SWALLOW_ERRORS, self._swallow_errors
         )
-        self.headers_enabled = (
-            self.headers_enabled
+        self._headers_enabled = (
+            self._headers_enabled
             or app.config.setdefault(C.HEADERS_ENABLED, False)
         )
-        self.storage_options.update(
+        self._storage_options.update(
             app.config.get(C.STORAGE_OPTIONS, {})
         )
-        self.storage = storage_from_string(
-            self.storage_uri
+        self._storage = storage_from_string(
+            self._storage_uri
             or app.config.setdefault(C.STORAGE_URL, 'memory://'),
-            ** self.storage_options
+            ** self._storage_options
         )
         strategy = (
-            self.strategy
+            self._strategy
             or app.config.setdefault(C.STRATEGY, 'fixed-window')
         )
         if strategy not in STRATEGIES:
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
-        self.limiter = STRATEGIES[strategy](self.storage)
-        self.header_mapping.update({
-           HEADERS.RESET : self.header_mapping.get(HEADERS.RESET,None) or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
-           HEADERS.REMAINING : self.header_mapping.get(HEADERS.REMAINING,None) or app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
-           HEADERS.LIMIT : self.header_mapping.get(HEADERS.LIMIT,None) or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
+        self._limiter = STRATEGIES[strategy](self._storage)
+        self._header_mapping.update({
+           HEADERS.RESET : self._header_mapping.get(HEADERS.RESET,None) or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
+           HEADERS.REMAINING : self._header_mapping.get(HEADERS.REMAINING,None) or app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
+           HEADERS.LIMIT : self._header_mapping.get(HEADERS.LIMIT,None) or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
         })
 
         conf_limits = app.config.get(C.GLOBAL_LIMITS, None)
-        if not self.global_limits and conf_limits:
-            self.global_limits = [
+        if not self._global_limits and conf_limits:
+            self._global_limits = [
                 ExtLimit(
-                    limit, self.key_func, None, False, None, None
+                    limit, self._key_func, None, False, None, None
                 ) for limit in parse_many(conf_limits)
             ]
-        if self.auto_check:
+        fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)
+        if not self._in_memory_fallback and fallback_limits:
+            self._in_memory_fallback = [
+                ExtLimit(
+                    limit, self._key_func, None, False, None, None
+                ) for limit in parse_many(fallback_limits)
+                ]
+        if self._auto_check:
             app.before_request(self.__check_request_limit)
         app.after_request(self.__inject_headers)
+
+        if self._in_memory_fallback:
+            self._fallback_storage = MemoryStorage()
+            self._fallback_limiter = STRATEGIES[strategy](self._fallback_storage)
 
         # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, 'extensions'):
             app.extensions = {} # pragma: no cover
         app.extensions['limiter'] = self
+
+    def __should_check_backend(self):
+        if self.__check_backend_count > MAX_BACKEND_CHECKS:
+            self.__check_backend_count = 0
+        if time.time() - self.__last_check_backend > pow(2, self.__check_backend_count):
+            self.__last_check_backend = time.time()
+            self.__check_backend_count += 1
+            return True
+        return False
 
     def check(self):
         """
@@ -175,20 +216,27 @@ class Limiter(object):
         """
         self.__check_request_limit()
 
+    @property
+    def limiter(self):
+        if self._storage_dead and self._in_memory_fallback:
+            return self._fallback_limiter
+        else:
+            return self._limiter
+
     def __inject_headers(self, response):
         current_limit = getattr(g, 'view_rate_limit', None)
-        if self.enabled and self.headers_enabled and current_limit:
+        if self._enabled and self._headers_enabled and current_limit:
             window_stats = self.limiter.get_window_stats(*current_limit)
             response.headers.add(
-                self.header_mapping[HEADERS.LIMIT],
+                self._header_mapping[HEADERS.LIMIT],
                 str(current_limit[0].amount)
             )
             response.headers.add(
-                self.header_mapping[HEADERS.REMAINING],
+                self._header_mapping[HEADERS.REMAINING],
                 window_stats[1]
             )
             response.headers.add(
-                self.header_mapping[HEADERS.RESET],
+                self._header_mapping[HEADERS.RESET],
                 window_stats[0]
             )
         return response
@@ -201,20 +249,20 @@ class Limiter(object):
             ) if view_func else ""
         )
         if (not request.endpoint
-            or not self.enabled
+            or not self._enabled
             or view_func == current_app.send_static_file
-            or name in self.exempt_routes
-            or request.blueprint in self.blueprint_exempt
-            or any(fn() for fn in self.request_filters)
+            or name in self._exempt_routes
+            or request.blueprint in self._blueprint_exempt
+            or any(fn() for fn in self._request_filters)
         ):
             return
         limits = (
-            name in self.route_limits and self.route_limits[name]
+            name in self._route_limits and self._route_limits[name]
             or []
         )
         dynamic_limits = []
-        if name in self.dynamic_route_limits:
-            for lim in self.dynamic_route_limits[name]:
+        if name in self._dynamic_route_limits:
+            for lim in self._dynamic_route_limits[name]:
                 try:
                     dynamic_limits.extend(
                         ExtLimit(
@@ -228,10 +276,10 @@ class Limiter(object):
                         , name, e
                     )
         if request.blueprint:
-            if (request.blueprint in self.blueprint_dynamic_limits
+            if (request.blueprint in self._blueprint_dynamic_limits
                 and not dynamic_limits
             ):
-                for lim in self.blueprint_dynamic_limits[request.blueprint]:
+                for lim in self._blueprint_dynamic_limits[request.blueprint]:
                     try:
                         dynamic_limits.extend(
                             ExtLimit(
@@ -244,15 +292,27 @@ class Limiter(object):
                             "failed to load ratelimit for blueprint %s (%s)"
                             , request.blueprint, e
                         )
-            if (request.blueprint in self.blueprint_limits
+            if (request.blueprint in self._blueprint_limits
                 and not limits
             ):
-               limits.extend(self.blueprint_limits[request.blueprint])
+               limits.extend(self._blueprint_limits[request.blueprint])
 
         failed_limit = None
         limit_for_header = None
         try:
-            for lim in (limits + dynamic_limits or self.global_limits):
+            all_limits = []
+            if self._storage_dead and self._fallback_limiter:
+                if self.__should_check_backend() and self._storage.check():
+                    self.logger.info(
+                        "Rate limit storage recovered"
+                    )
+                    self._storage_dead = False
+                    self.__check_backend_count = 0
+                else:
+                    all_limits = self._in_memory_fallback
+            if not all_limits:
+                all_limits = (limits + dynamic_limits or self._global_limits)
+            for lim in all_limits:
                 limit_scope = lim.scope or endpoint
                 if lim.methods is not None and request.method.lower() not in lim.methods:
                     return
@@ -279,13 +339,23 @@ class Limiter(object):
                 else:
                     exc_description = six.text_type(failed_limit.limit)
                 raise RateLimitExceeded(exc_description)
-        except Exception: # no qa
-            if self.swallow_errors:
-                self.logger.exception(
-                    "Failed to rate limit. Swallowing error"
-                )
-            else:
+        except Exception as e: # no qa
+            if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
+            if self._in_memory_fallback and not self._storage_dead:
+                self.logger.warn(
+                    "Rate limit storage unreachable - falling back to"
+                    " in-memory storage"
+                )
+                self._storage_dead = True
+                self.__check_request_limit()
+            else:
+                if self._swallow_errors:
+                    self.logger.exception(
+                        "Failed to rate limit. Swallowing error"
+                    )
+                else:
+                    six.reraise(*sys.exc_info())
 
     def __limit_decorator(self, limit_value,
                           key_func=None, shared=False,
@@ -296,7 +366,7 @@ class Limiter(object):
         _scope = scope if shared else None
 
         def _inner(obj):
-            func = key_func or self.key_func
+            func = key_func or self._key_func
             is_route = not isinstance(obj, Blueprint)
             name = "%s.%s" % (obj.__module__, obj.__name__) if is_route else obj.name
             dynamic_limit, static_limits = None, []
@@ -316,11 +386,11 @@ class Limiter(object):
                     )
             if isinstance(obj, Blueprint):
                 if dynamic_limit:
-                    self.blueprint_dynamic_limits.setdefault(name, []).append(
+                    self._blueprint_dynamic_limits.setdefault(name, []).append(
                         dynamic_limit
                     )
                 else:
-                    self.blueprint_limits.setdefault(name, []).extend(
+                    self._blueprint_limits.setdefault(name, []).extend(
                         static_limits
                     )
             else:
@@ -328,11 +398,11 @@ class Limiter(object):
                 def __inner(*a, **k):
                     return obj(*a, **k)
                 if dynamic_limit:
-                    self.dynamic_route_limits.setdefault(name, []).append(
+                    self._dynamic_route_limits.setdefault(name, []).append(
                         dynamic_limit
                     )
                 else:
-                    self.route_limits.setdefault(name, []).extend(
+                    self._route_limits.setdefault(name, []).extend(
                         static_limits
                     )
                 return __inner
@@ -388,16 +458,16 @@ class Limiter(object):
             @wraps(obj)
             def __inner(*a, **k):
                 return obj(*a, **k)
-            self.exempt_routes.add(name)
+            self._exempt_routes.add(name)
             return __inner
         else:
-            self.blueprint_exempt.add(obj.name)
+            self._blueprint_exempt.add(obj.name)
 
     def request_filter(self, fn):
         """
         decorator to mark a function as a filter to be executed
         to check if the request is exempt from rate limiting.
         """
-        self.request_filters.append(fn)
+        self._request_filters.append(fn)
         return fn
 

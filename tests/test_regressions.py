@@ -8,11 +8,14 @@ import unittest
 from flask import Flask
 import hiro
 import mock
+import redis
 
 from flask.ext.limiter.extension import C, Limiter
 
 
 class RegressionTests(unittest.TestCase):
+    def setUp(self):
+        redis.Redis().flushall()
 
     def build_app(self, config={}, **limiter_args):
         app = Flask(__name__)
