@@ -88,6 +88,24 @@ class FlaskExtTests(unittest.TestCase):
                 hit.side_effect = raiser
                 self.assertTrue("ok" in cli.get("/").data.decode())
 
+    def test_no_swallow_error(self):
+        app, limiter = self.build_app({
+            C.GLOBAL_LIMITS : "1 per day",
+        })
+        @app.route("/")
+        def null():
+            return "ok"
+        @app.errorhandler(500)
+        def e500(e):
+            return str(e), 500
+        with app.test_client() as cli:
+            with mock.patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
+                def raiser(*a, **k):
+                    raise Exception("underlying")
+                hit.side_effect = raiser
+                self.assertEqual(500, cli.get("/").status_code)
+                self.assertEqual("underlying", cli.get("/").data.decode())
+
     def test_combined_rate_limits(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS : "1 per hour; 10 per day"
