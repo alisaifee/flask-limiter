@@ -180,7 +180,7 @@ class Limiter(object):
                 ) for limit in parse_many(conf_limits)
             ]
         fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)
-        if not self._global_limits and fallback_limits:
+        if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
                 ExtLimit(
                     limit, self._key_func, None, False, None, None

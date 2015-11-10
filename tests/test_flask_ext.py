@@ -297,6 +297,22 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
 
+    def test_fallback_to_memory_config(self):
+        _, limiter = self.build_app(
+            config={C.ENABLED: True},
+            global_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback=["1/minute"]
+        )
+        self.assertEqual(len(limiter._in_memory_fallback), 1)
+
+        _, limiter = self.build_app(
+            config={C.ENABLED: True, C.IN_MEMORY_FALLBACK: "1/minute"},
+            global_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+        )
+        self.assertEqual(len(limiter._in_memory_fallback), 1)
+
     def test_fallback_to_memory(self):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
