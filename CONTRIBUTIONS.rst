@@ -6,3 +6,4 @@ Contributions
 * `Guilherme Polo <https://github.com/g-p-g>`_
 * `Mattias Granlund <https://github.com/mtsgrd>`_
 * `Josh Friend <https://github.com/joshfriend>`_
+* `Sami Hiltunen <https://github.com/samihiltunen>`_

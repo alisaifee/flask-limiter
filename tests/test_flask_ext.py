@@ -798,6 +798,77 @@ class FlaskExtTests(unittest.TestCase):
                 fn_b.assert_called_with("t3")
                 fn_a.assert_has_calls([mock.call("t1"), mock.call("t2")])
 
+    def test_conditional_limits(self):
+        """Test that the conditional activation of the limits work."""
+        app = Flask(__name__)
+        limiter = Limiter(app)
+
+        @app.route("/limited")
+        @limiter.limit("1 per day")
+        def limited_route():
+            return "passed"
+
+        @app.route("/unlimited")
+        @limiter.limit("1 per day", exempt_when=lambda: True)
+        def never_limited_route():
+            return "should always pass"
+
+        is_exempt = False
+
+        @app.route("/conditional")
+        @limiter.limit("1 per day", exempt_when=lambda: is_exempt)
+        def conditionally_limited_route():
+            return "conditional"
+
+        with app.test_client() as cli:
+            self.assertEqual(cli.get("/limited").status_code, 200)
+            self.assertEqual(cli.get("/limited").status_code, 429)
+
+            self.assertEqual(cli.get("/unlimited").status_code, 200)
+            self.assertEqual(cli.get("/unlimited").status_code, 200)
+
+            self.assertEqual(cli.get("/conditional").status_code, 200)
+            self.assertEqual(cli.get("/conditional").status_code, 429)
+            is_exempt = True
+            self.assertEqual(cli.get("/conditional").status_code, 200)
+            is_exempt = False
+            self.assertEqual(cli.get("/conditional").status_code, 429)
+
+    def test_conditional_shared_limits(self):
+        """Test that conditional shared limits work."""
+        app = Flask(__name__)
+        limiter = Limiter(app)
+
+        @app.route("/limited")
+        @limiter.shared_limit("1 per day", "test_scope")
+        def limited_route():
+            return "passed"
+
+        @app.route("/unlimited")
+        @limiter.shared_limit("1 per day", "test_scope", exempt_when=lambda: True)
+        def never_limited_route():
+            return "should always pass"
+
+        is_exempt = False
+
+        @app.route("/conditional")
+        @limiter.shared_limit("1 per day", "test_scope", exempt_when=lambda: is_exempt)
+        def conditionally_limited_route():
+            return "conditional"
+
+        with app.test_client() as cli:
+            self.assertEqual(cli.get("/unlimited").status_code, 200)
+            self.assertEqual(cli.get("/unlimited").status_code, 200)
+
+            self.assertEqual(cli.get("/limited").status_code, 200)
+            self.assertEqual(cli.get("/limited").status_code, 429)
+
+            self.assertEqual(cli.get("/conditional").status_code, 429)
+            is_exempt = True
+            self.assertEqual(cli.get("/conditional").status_code, 200)
+            is_exempt = False
+            self.assertEqual(cli.get("/conditional").status_code, 429)
+
 
     def test_whitelisting(self):
 

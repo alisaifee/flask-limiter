@@ -140,6 +140,18 @@ instance are
            caching the response.
         .. note:: The callable is called from within a
            :ref:`flask request context <flask:request-context>`.
+  
+  Exemption conditions
+    Each limit can be exempted when given conditions are fulfilled. These
+    conditions can be specified by supplying a callable as an 
+    ```exempt_when``` argument when defining the limit.
+
+        .. code-block:: python
+
+           @app.route("/expensive")
+           @limiter.limit("100/day", exempt_when=lambda: current_user.is_admin)
+           def expensive_route():
+             ...
 
 .. _ratelimit-decorator-shared-limit:
 
