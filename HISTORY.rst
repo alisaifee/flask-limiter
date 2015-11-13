@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.9 2015-11-13
+--------------
+* In-memory fallback option for unresponsive storage
+* Rate limit exemption option per limit
+
 0.8.5 2015-10-05
 ----------------
 * Bug fix for reported issues of missing (limits) dependency upon installation.
@@ -21,7 +26,7 @@ Changelog
 
 0.8 2015-06-07
 --------------
-* No functional change 
+* No functional change
 
 0.7.9 2015-04-02
 ----------------
@@ -186,6 +191,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
