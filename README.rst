@@ -11,6 +11,7 @@
 .. |gitter| image:: https://img.shields.io/badge/gitter-join%20chat-blue.svg?style=flat-square
    :alt: Join the chat at https://gitter.im/alisaifee/flask-limiter
    :target: https://gitter.im/alisaifee/flask-limiter?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
 *************
 Flask-Limiter
 *************
