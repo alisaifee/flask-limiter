@@ -7,8 +7,8 @@ python:
     - "pypy"
 
 install:
-    - pip install -r requirements/ci.txt --use-mirrors
-    
+    - pip install -r requirements/ci.txt
+
 services:
     - redis-server
     - memcached
