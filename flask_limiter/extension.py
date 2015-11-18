@@ -99,7 +99,7 @@ class Limiter(object):
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
 
-        self._enabled = True
+        self.enabled = True
         self._global_limits = []
         self._in_memory_fallback = []
         self._exempt_routes = set()
@@ -150,7 +150,7 @@ class Limiter(object):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
-        self._enabled = app.config.setdefault(C.ENABLED, True)
+        self.enabled = app.config.setdefault(C.ENABLED, True)
         self._swallow_errors = app.config.setdefault(
             C.SWALLOW_ERRORS, self._swallow_errors
         )
@@ -232,7 +232,7 @@ class Limiter(object):
 
     def __inject_headers(self, response):
         current_limit = getattr(g, 'view_rate_limit', None)
-        if self._enabled and self._headers_enabled and current_limit:
+        if self.enabled and self._headers_enabled and current_limit:
             window_stats = self.limiter.get_window_stats(*current_limit)
             response.headers.add(
                 self._header_mapping[HEADERS.LIMIT],
@@ -256,7 +256,7 @@ class Limiter(object):
             ) if view_func else ""
         )
         if (not request.endpoint
-            or not self._enabled
+            or not self.enabled
             or view_func == current_app.send_static_file
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
@@ -322,7 +322,7 @@ class Limiter(object):
             for lim in all_limits:
                 limit_scope = lim.scope or endpoint
                 if lim.is_exempt:
-                    return 
+                    return
                 if lim.methods is not None and request.method.lower() not in lim.methods:
                     return
                 if lim.per_method:
