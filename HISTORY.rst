@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.9.1 2015-11-21
+----------------
+* Re-expose `enabled` property on `Limiter` instance.
+
 0.9 2015-11-13
 --------------
 * In-memory fallback option for unresponsive storage
@@ -191,6 +195,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
