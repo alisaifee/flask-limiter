@@ -6,6 +6,7 @@ from functools import wraps
 import logging
 
 from flask import request, current_app, g, Blueprint
+from werkzeug.http import http_date
 
 from limits.errors import ConfigurationError
 from limits.storage import storage_from_string, MemoryStorage
@@ -29,6 +30,7 @@ class C:
     HEADER_RESET = "RATELIMIT_HEADER_RESET"
     SWALLOW_ERRORS = "RATELIMIT_SWALLOW_ERRORS"
     IN_MEMORY_FALLBACK = "RATELIMIT_IN_MEMORY_FALLBACK"
+    RETRY_AFTER = "RETRY_AFTER"
 
 class HEADERS:
     RESET = 1
@@ -95,6 +97,7 @@ class Limiter(object):
                  , auto_check=True
                  , swallow_errors=False
                  , in_memory_fallback=[]
+                 , retry_after=None
     ):
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
@@ -106,6 +109,7 @@ class Limiter(object):
         self._request_filters = []
         self._headers_enabled = headers_enabled
         self._header_mapping = {}
+        self._retry_after = retry_after
         self._strategy = strategy
         self._storage_uri = storage_uri
         self._storage_options = storage_options
@@ -178,6 +182,10 @@ class Limiter(object):
            HEADERS.REMAINING : self._header_mapping.get(HEADERS.REMAINING,None) or app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
            HEADERS.LIMIT : self._header_mapping.get(HEADERS.LIMIT,None) or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
         })
+        self._retry_after = (
+            self._retry_after
+            or app.config.get(C.RETRY_AFTER)
+        )
 
         conf_limits = app.config.get(C.GLOBAL_LIMITS, None)
         if not self._global_limits and conf_limits:
@@ -246,6 +254,18 @@ class Limiter(object):
                 self._header_mapping[HEADERS.RESET],
                 window_stats[0]
             )
+            if (self._retry_after is True
+                or self._retry_after == 'delta-seconds'
+            ):
+                response.headers.add(
+                    'Retry-After',
+                    int(window_stats[0] - time.time())
+                )
+            elif self._retry_after == 'http-date':
+                response.headers.add(
+                    'Retry-After',
+                    http_date(window_stats[0])
+                )
         return response
 
     def __check_request_limit(self):
