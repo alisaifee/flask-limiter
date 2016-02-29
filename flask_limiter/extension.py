@@ -1,7 +1,7 @@
 """
 the flask extension
 """
-
+import warnings
 from functools import wraps
 import logging
 
@@ -71,7 +71,6 @@ class Limiter(object):
     :param list global_limits: a variable list of strings denoting global
      limits to apply to all routes. :ref:`ratelimit-string` for  more details.
     :param function key_func: a callable that returns the domain to rate limit by.
-     Defaults to the remote address of the request.
     :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
     :param str strategy: the strategy to use. refer to :ref:`ratelimit-strategy`
     :param str storage_uri: the storage location. refer to :ref:`ratelimit-conf`
@@ -86,7 +85,7 @@ class Limiter(object):
     """
 
     def __init__(self, app=None
-                 , key_func=get_ipaddr
+                 , key_func=None
                  , global_limits=[]
                  , headers_enabled=False
                  , strategy=None
@@ -111,11 +110,20 @@ class Limiter(object):
         self._storage_options = storage_options
         self._auto_check = auto_check
         self._swallow_errors = swallow_errors
+        if not key_func:
+            warnings.warn(
+                "Use of the default `get_ipaddr` function is discouraged."
+                " Please refer to https://flask-limiter.readthedocs.org/#key-function"
+                " for the recommended configuration",
+                UserWarning
+            )
+
+        self._key_func = key_func or get_ipaddr
         for limit in global_limits:
             self._global_limits.extend(
                 [
                     ExtLimit(
-                        limit, key_func, None, False, None, None, None
+                        limit, self._key_func, None, False, None, None, None
                     ) for limit in parse_many(limit)
                 ]
             )
@@ -123,7 +131,7 @@ class Limiter(object):
             self._in_memory_fallback.extend(
                 [
                     ExtLimit(
-                        limit, key_func, None, False, None, None, None
+                        limit, self._key_func, None, False, None, None, None
                     ) for limit in parse_many(limit)
                     ]
             )
@@ -133,7 +141,6 @@ class Limiter(object):
         self._blueprint_dynamic_limits = {}
         self._blueprint_exempt = set()
         self._storage = self._limiter = None
-        self._key_func = key_func
         self._storage_dead = False
         self._fallback_limiter = None
         self.__check_backend_count = 0

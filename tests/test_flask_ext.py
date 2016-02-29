@@ -2,23 +2,23 @@
 
 """
 import json
-import time
-
 import logging
+import time
 import unittest
-from flask import Flask, Blueprint, request, current_app, make_response
-from flask.ext.restful import Resource
-from flask.views import View, MethodView
+
 import hiro
 import mock
 import redis
-from flask.ext.limiter.extension import C, Limiter, HEADERS
-from limits.errors import ConfigurationError
-from limits.storage import MemcachedStorage, MemoryStorage
-from limits.strategies import MovingWindowRateLimiter
+from flask import Flask, Blueprint, request, current_app, make_response
 from flask.ext import restful
+from flask.ext.restful import Resource
+from flask.views import View, MethodView
+from limits.errors import ConfigurationError
+from limits.storage import MemcachedStorage
+from limits.strategies import MovingWindowRateLimiter
 
-from flask.ext.limiter.util import get_ipaddr
+from flask.ext.limiter.extension import C, Limiter, HEADERS
+from flask.ext.limiter.util import get_remote_address, get_ipaddr
 
 
 class FlaskExtTests(unittest.TestCase):
@@ -29,7 +29,8 @@ class FlaskExtTests(unittest.TestCase):
         app = Flask(__name__)
         for k, v in config.items():
             app.config.setdefault(k, v)
-        limiter = Limiter(app, key_func=get_ipaddr, **limiter_args)
+        limiter_args.setdefault('key_func', get_remote_address)
+        limiter = Limiter(app, **limiter_args)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -38,21 +39,21 @@ class FlaskExtTests(unittest.TestCase):
     def test_invalid_strategy(self):
         app = Flask(__name__)
         app.config.setdefault(C.STRATEGY, "fubar")
-        self.assertRaises(ConfigurationError, Limiter, app)
+        self.assertRaises(ConfigurationError, Limiter, app, key_func=get_remote_address)
 
     def test_invalid_storage_string(self):
         app = Flask(__name__)
         app.config.setdefault(C.STORAGE_URL, "fubar://localhost:1234")
-        self.assertRaises(ConfigurationError, Limiter, app)
+        self.assertRaises(ConfigurationError, Limiter, app, key_func=get_remote_address)
 
     def test_constructor_arguments_over_config(self):
         app = Flask(__name__)
         app.config.setdefault(C.STRATEGY, "fixed-window-elastic-expiry")
-        limiter = Limiter(strategy='moving-window', key_func=get_ipaddr)
+        limiter = Limiter(strategy='moving-window', key_func=get_remote_address)
         limiter.init_app(app)
         app.config.setdefault(C.STORAGE_URL, "redis://localhost:6379")
         self.assertEqual(type(limiter._limiter), MovingWindowRateLimiter)
-        limiter = Limiter(storage_uri='memcached://localhost:11211', key_func=get_ipaddr)
+        limiter = Limiter(storage_uri='memcached://localhost:11211', key_func=get_remote_address)
         limiter.init_app(app)
         self.assertEqual(type(limiter._storage), MemcachedStorage)
 
@@ -152,7 +153,7 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(429, cli.get("/t1").status_code)
 
     def test_multiple_decorators(self):
-        app, limiter = self.build_app()
+        app, limiter = self.build_app(key_func=get_ipaddr)
 
         @app.route("/t1")
         @limiter.limit("100 per minute", lambda: "test")  # effectively becomes a limit for all users
@@ -173,7 +174,7 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_logging(self):
         app = Flask(__name__)
-        limiter = Limiter(app, key_func=get_ipaddr)
+        limiter = Limiter(app, key_func=get_remote_address)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -193,7 +194,7 @@ class FlaskExtTests(unittest.TestCase):
         app_handler = mock.Mock()
         app_handler.level = logging.INFO
         app.logger.addHandler(app_handler)
-        limiter = Limiter(app, key_func=get_ipaddr)
+        limiter = Limiter(app, key_func=get_remote_address)
         for handler in app.logger.handlers:
             limiter.logger.addHandler(handler)
 
@@ -489,7 +490,7 @@ class FlaskExtTests(unittest.TestCase):
     def test_invalid_decorated_dynamic_limits(self):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per sec")
-        limiter = Limiter(app, global_limits=["1/second"], key_func=get_ipaddr)
+        limiter = Limiter(app, global_limits=["1/second"], key_func=get_remote_address)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -511,7 +512,7 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_invalid_decorated_static_limits(self):
         app = Flask(__name__)
-        limiter = Limiter(app, global_limits=["1/second"], key_func=get_ipaddr)
+        limiter = Limiter(app, global_limits=["1/second"], key_func=get_remote_address)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -530,7 +531,7 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_invalid_decorated_static_limit_blueprint(self):
         app = Flask(__name__)
-        limiter = Limiter(app, global_limits=["1/second"], key_func=get_ipaddr)
+        limiter = Limiter(app, global_limits=["1/second"], key_func=get_remote_address)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -553,7 +554,7 @@ class FlaskExtTests(unittest.TestCase):
     def test_invalid_decorated_dynamic_limits_blueprint(self):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per sec")
-        limiter = Limiter(app, global_limits=["1/second"], key_func=get_ipaddr)
+        limiter = Limiter(app, global_limits=["1/second"], key_func=get_remote_address)
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -579,7 +580,7 @@ class FlaskExtTests(unittest.TestCase):
         app1 = Flask(__name__)
         app2 = Flask(__name__)
 
-        limiter = Limiter(global_limits=["1/second"], key_func=get_ipaddr)
+        limiter = Limiter(global_limits=["1/second"], key_func=get_remote_address)
         limiter.init_app(app1)
         limiter.init_app(app2)
 
@@ -630,7 +631,7 @@ class FlaskExtTests(unittest.TestCase):
         app = Flask(__name__)
         limiter = Limiter(
             app, global_limits=["10/minute"], headers_enabled=True,
-            key_func=get_ipaddr
+            key_func=get_remote_address
         )
 
         @app.route("/t1")
@@ -675,7 +676,7 @@ class FlaskExtTests(unittest.TestCase):
         app = Flask(__name__)
         limiter = Limiter(
             app, global_limits=["10/minute"],
-            headers_enabled=True, key_func=get_ipaddr
+            headers_enabled=True, key_func=get_remote_address
         )
 
         @app.route("/t1")
@@ -704,7 +705,10 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
-        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+        limiter = Limiter(
+            app, global_limits=["10/minute"], headers_enabled=True,
+            key_func=get_remote_address
+        )
         limiter._header_mapping[HEADERS.RESET] = 'X-Reset'
         limiter._header_mapping[HEADERS.LIMIT] = 'X-Limit'
         limiter._header_mapping[HEADERS.REMAINING] = 'X-Remaining'
@@ -738,7 +742,11 @@ class FlaskExtTests(unittest.TestCase):
         app.config.setdefault(C.HEADER_LIMIT, "X-Limit")
         app.config.setdefault(C.HEADER_REMAINING, "X-Remaining")
         app.config.setdefault(C.HEADER_RESET, "X-Reset")
-        limiter = Limiter(app, global_limits=["10/minute"], headers_enabled=True)
+        limiter = Limiter(
+            app, global_limits=["10/minute"], headers_enabled=True,
+            key_func=get_remote_address
+        )
+
 
         @app.route("/t1")
         @limiter.limit("2/second; 10 per minute; 20/hour")
@@ -829,7 +837,7 @@ class FlaskExtTests(unittest.TestCase):
     def test_conditional_limits(self):
         """Test that the conditional activation of the limits work."""
         app = Flask(__name__)
-        limiter = Limiter(app)
+        limiter = Limiter(app, key_func=get_remote_address)
 
         @app.route("/limited")
         @limiter.limit("1 per day")
@@ -865,7 +873,7 @@ class FlaskExtTests(unittest.TestCase):
     def test_conditional_shared_limits(self):
         """Test that conditional shared limits work."""
         app = Flask(__name__)
-        limiter = Limiter(app)
+        limiter = Limiter(app, key_func=get_remote_address)
 
         @app.route("/limited")
         @limiter.shared_limit("1 per day", "test_scope")
@@ -900,7 +908,10 @@ class FlaskExtTests(unittest.TestCase):
     def test_whitelisting(self):
 
         app = Flask(__name__)
-        limiter = Limiter(app, global_limits=["1/minute"], headers_enabled=True)
+        limiter = Limiter(
+            app, global_limits=["1/minute"], headers_enabled=True,
+            key_func=get_remote_address
+        )
 
         @app.route("/")
         def t():
