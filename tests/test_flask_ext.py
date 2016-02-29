@@ -9,6 +9,7 @@ import unittest
 import hiro
 import mock
 import redis
+import datetime
 from flask import Flask, Blueprint, request, current_app, make_response
 from flask.ext import restful
 from flask.ext.restful import Resource
@@ -658,6 +659,10 @@ class FlaskExtTests(unittest.TestCase):
                         resp.headers.get('X-RateLimit-Reset'),
                         str(int(time.time() + 60))
                 )
+                self.assertEqual(
+                        resp.headers.get('Retry-After'),
+                        str(59)
+                )
                 resp = cli.get("/t2")
                 self.assertEqual(
                         resp.headers.get('X-RateLimit-Limit'),
@@ -670,6 +675,11 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(
                         resp.headers.get('X-RateLimit-Reset'),
                         str(int(time.time() + 1))
+                )
+
+                self.assertEqual(
+                    resp.headers.get('Retry-After'),
+                    str(0)
                 )
 
     def test_headers_breach(self):
@@ -702,12 +712,16 @@ class FlaskExtTests(unittest.TestCase):
                         resp.headers.get('X-RateLimit-Reset'),
                         str(int(time.time() + 49))
                 )
+                self.assertEqual(
+                        resp.headers.get('Retry-After'),
+                        str(int(49))
+                )
 
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
         limiter = Limiter(
             app, global_limits=["10/minute"], headers_enabled=True,
-            key_func=get_remote_address
+            key_func=get_remote_address, retry_after='http-date'
         )
         limiter._header_mapping[HEADERS.RESET] = 'X-Reset'
         limiter._header_mapping[HEADERS.LIMIT] = 'X-Limit'
@@ -718,7 +732,7 @@ class FlaskExtTests(unittest.TestCase):
         def t():
             return "test"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze(0) as timeline:
             with app.test_client() as cli:
                 for i in range(11):
                     resp = cli.get("/t1")
@@ -735,6 +749,10 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(
                         resp.headers.get('X-Reset'),
                         str(int(time.time() + 49))
+                )
+                self.assertEqual(
+                    resp.headers.get('Retry-After'),
+                    'Thu, 01 Jan 1970 00:01:00 GMT'
                 )
 
     def test_custom_headers_from_config(self):
