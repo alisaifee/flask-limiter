@@ -1,5 +1,7 @@
 .. _pymemcache: https://pypi.python.org/pypi/pymemcache
 .. _redis: https://pypi.python.org/pypi/redis
+.. _github issue #41: https://github.com/alisaifee/flask-limiter/issues/41
+.. _flask apps and ip spoofing: http://esd.io/blog/flask-apps-heroku-real-ip-spoofing.html
 
 *************
 Flask-Limiter
@@ -15,10 +17,14 @@ Quick start
 
    from flask import Flask
    from flask_limiter import Limiter
+   from flask_limiter.util import get_remote_address
 
    app = Flask(__name__)
-   limiter = Limiter(app, global_limits=["200 per day", "50 per hour"])
-
+   limiter = Limiter(
+       app,
+       key_func=get_remote_address,
+       global_limits=["200 per day", "50 per hour"])
+   )
    @app.route("/slow")
    @limiter.limit("1 per day")
    def slow():
@@ -36,6 +42,7 @@ Quick start
 
 The above Flask app will have the following rate limiting characteristics:
 
+* Rate limiting by `remote_address` of the request
 * A global rate limit of 200 per day, and 50 per hour applied to all routes.
 * The ``slow`` route having an explicit rate limit decorator will bypass the global
   rate limit and only allow 1 request per day.
@@ -56,16 +63,39 @@ Using the constructor
    .. code-block:: python
 
       from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
       ....
 
-      limiter = Limiter(app)
+      limiter = Limiter(app, key_func=get_remote_address)
 
 Using ``init_app``
 
     .. code-block:: python
 
-        limiter = Limiter()
+        limiter = Limiter(key_func=get_remote_address)
         limiter.init_app(app)
+
+
+
+.. _ratelimit-domain:
+
+Rate Limit Domain
+-----------------
+Each :class:`Limiter` instance is initialized with a `key_func` which returns the bucket
+in which each request is put into when evaluating whether it is within the rate limit or not.
+
+Earlier versions of Flask-Limiter defaulted the rate limiting domain to the requesting users'
+ip-address retreived via the :func:`flask_limiter.util.get_ipaddr` function.
+
+This behavior is being deprecated as it can be susceptible to ip spoofing with certain environment
+setups (more details at `github issue #41`_ & `flask apps and ip spoofing`_).
+
+It is now recommended to explicitly provide a keying function as part of the :class:`Limiter`
+initialization (:ref:`keyfunc-customization`). Two utility methods are still provided:
+
+* :func:`flask_limiter.util.get_ipaddr`: uses the last ip address in the `X-Forwarded-For` header, else falls back to the `remote_address` of the request
+* :func:`flask_limiter.util.get_remote_address`: uses the `remote_address` of the request.
+
 
 
 Decorators
@@ -102,9 +132,9 @@ instance are
              ...
 
   Custom keying function
-    By default rate limits are applied on per remote address basis. You can implement
-    your own function to retrieve the key to rate limit by. Take a look at :ref:`keyfunc-customization`
-    for some examples..
+    By default rate limits are applied based on the key function that the :class:`Limiter` instance
+    was initialized with. You can implement your own function to retrieve the key to rate limit by
+    when decorating individual routes. Take a look at :ref:`keyfunc-customization` for some examples..
 
         .. code-block:: python
 
@@ -393,17 +423,16 @@ values or by setting the ``header_mapping`` property of the :class:`Limiter` as 
 
 
 
-.. _keyfunc-customization:
 
 Recipes
 =======
 
+.. _keyfunc-customization:
 
-Custom Rate limit domains
+Rate Limit Key Functions
 -------------------------
 
-By default, all rate limits are applied on a per ``remote address`` basis.
-However, you can easily customize your rate limits to be based on any other
+You can easily customize your rate limits to be based on any
 characteristic of the incoming request. Both the :class:`Limiter` constructor
 and the :meth:`Limiter.limit` decorator accept a keyword argument
 ``key_func`` that should return a string (or an object that has a string representation).
@@ -469,7 +498,7 @@ work. You can add rate limits to your view classes using the following approach.
 .. code-block:: python
 
     app = Flask(__name__)
-    limiter = Limiter(app)
+    limiter = Limiter(app, key_func=get_remote_address)
 
     class MyView(flask.views.MethodView):
         decorators = [limiter.limit("10/second")]
@@ -520,7 +549,7 @@ Blueprint is exempt from all rate limits. The **regular** Blueprint follows the 
             return "login"
 
 
-        limiter = Limiter(app, global_limits = ["1/second"])
+        limiter = Limiter(app, global_limits = ["1/second"], key_func=get_remote_address)
         limiter.limit("60/hour")(login)
         limiter.exempt(doc)
 
@@ -540,13 +569,13 @@ log messages emitted by :mod:`flask_limiter`.
 
 Simple stdout handler::
 
-    limiter = Limiter(app)
+    limiter = Limiter(app, key_func=get_remote_address)
     limiter.logger.addHandler(StreamHandler())
 
 Reusing all the handlers of the ``logger`` instance of the :class:`flask.Flask` app::
 
     app = Flask(__name__)
-    limiter = Limiter(app)
+    limiter = Limiter(app, key_func=get_remote_address)
     for handler in app.logger.handlers:
         limiter.logger.addHandler(handler)
 
@@ -563,7 +592,7 @@ The `error_message` argument can either be a simple string or a callable that re
 
 
         app = Flask(__name__)
-        limiter = Limiter(app)
+        limiter = Limiter(app, key_func=get_remote_address)
 
         def error_handler():
             return app.config.get("DEFAULT_ERROR_MESSAGE")
@@ -587,10 +616,14 @@ Core
 ----
 .. autoclass:: Limiter
 
-
 Exceptions
 ----------
 .. autoexception:: RateLimitExceeded
+
+Utils
+-----
+
+.. automodule:: flask_limiter.util
 
 
 .. include:: ../../HISTORY.rst

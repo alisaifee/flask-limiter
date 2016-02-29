@@ -31,9 +31,14 @@ in memory implementation for storage.
 
    from flask import Flask
    from flask_limiter import Limiter
+   from flask_limiter.util import get_remote_address
 
    app = Flask(__name__)
-   limiter = Limiter(app, global_limits=["2 per minute", "1 per second"])
+   limiter = Limiter(
+       app,
+       key_func=get_remote_address,
+       global_limits=["2 per minute", "1 per second"],
+   )
 
    @app.route("/slow")
    @limiter.limit("1 per day")
