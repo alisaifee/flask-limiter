@@ -30,12 +30,14 @@ class C:
     HEADER_RESET = "RATELIMIT_HEADER_RESET"
     SWALLOW_ERRORS = "RATELIMIT_SWALLOW_ERRORS"
     IN_MEMORY_FALLBACK = "RATELIMIT_IN_MEMORY_FALLBACK"
-    RETRY_AFTER = "RETRY_AFTER"
+    HEADER_RETRY_AFTER = "RATELIMIT_HEADER_RETRY_AFTER"
+    HEADER_RETRY_AFTER_VALUE = "RATELIMIT_HEADER_RETRY_AFTER_VALUE"
 
 class HEADERS:
     RESET = 1
     REMAINING = 2
     LIMIT = 3
+    RETRY_AFTER = 4
 
 MAX_BACKEND_CHECKS = 5
 
@@ -181,10 +183,11 @@ class Limiter(object):
            HEADERS.RESET : self._header_mapping.get(HEADERS.RESET,None) or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
            HEADERS.REMAINING : self._header_mapping.get(HEADERS.REMAINING,None) or app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
            HEADERS.LIMIT : self._header_mapping.get(HEADERS.LIMIT,None) or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
+           HEADERS.RETRY_AFTER : self._header_mapping.get(HEADERS.RETRY_AFTER,None) or app.config.setdefault(C.HEADER_RETRY_AFTER, "Retry-After"),
         })
         self._retry_after = (
             self._retry_after
-            or app.config.get(C.RETRY_AFTER)
+            or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
         )
 
         conf_limits = app.config.get(C.GLOBAL_LIMITS, None)
@@ -254,18 +257,11 @@ class Limiter(object):
                 self._header_mapping[HEADERS.RESET],
                 window_stats[0]
             )
-            if (self._retry_after is True
-                or self._retry_after == 'delta-seconds'
-            ):
-                response.headers.add(
-                    'Retry-After',
-                    int(window_stats[0] - time.time())
-                )
-            elif self._retry_after == 'http-date':
-                response.headers.add(
-                    'Retry-After',
-                    http_date(window_stats[0])
-                )
+            response.headers.add(
+                self._header_mapping[HEADERS.RETRY_AFTER],
+                self._retry_after == 'http-date' and http_date(window_stats[0])
+                    or int(window_stats[0] - time.time())
+            )
         return response
 
     def __check_request_limit(self):
