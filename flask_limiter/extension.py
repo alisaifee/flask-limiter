@@ -119,7 +119,7 @@ class Limiter(object):
         if not key_func:
             warnings.warn(
                 "Use of the default `get_ipaddr` function is discouraged."
-                " Please refer to https://flask-limiter.readthedocs.org/#key-function"
+                " Please refer to https://flask-limiter.readthedocs.org/#rate-limit-domain"
                 " for the recommended configuration",
                 UserWarning
             )
