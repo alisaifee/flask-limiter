@@ -85,11 +85,7 @@ Rate Limit Domain
 Each :class:`Limiter` instance is initialized with a `key_func` which returns the bucket
 in which each request is put into when evaluating whether it is within the rate limit or not.
 
-Earlier versions of Flask-Limiter defaulted the rate limiting domain to the requesting users'
-ip-address retreived via the :func:`flask_limiter.util.get_ipaddr` function.
-
-This behavior is being deprecated as it can be susceptible to ip spoofing with certain environment
-setups (more details at `github issue #41`_ & `flask apps and ip spoofing`_).
+.. danger:: Earlier versions of Flask-Limiter defaulted the rate limiting domain to the requesting users' ip-address retreived via the :func:`flask_limiter.util.get_ipaddr` function. This behavior is being deprecated (since version `0.9.2`) as it can be susceptible to ip spoofing with certain environment setups (more details at `github issue #41`_ & `flask apps and ip spoofing`_).
 
 It is now recommended to explicitly provide a keying function as part of the :class:`Limiter`
 initialization (:ref:`keyfunc-customization`). Two utility methods are still provided:
