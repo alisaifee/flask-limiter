@@ -2,17 +2,14 @@
 
 """
 import unittest
-
-import mock
-from flask import Flask
+import warnings
 
 
 class DeprecationTests(unittest.TestCase):
-
     def test_insecure_setup(self):
-        with mock.patch("flask.ext.limiter.extension.warnings") as warnings:
-            from flask.ext.limiter import Limiter
+        with warnings.catch_warnings(record=True) as w:
+            from flask import Flask
+            from flask_limiter import Limiter
             app = Flask(__name__)
             Limiter(app)
-            self.assertEqual(warnings.warn.call_count, 1)
-
+            self.assertEqual(len(w), 1)
