@@ -7,3 +7,4 @@ Contributions
 * `Mattias Granlund <https://github.com/mtsgrd>`_
 * `Josh Friend <https://github.com/joshfriend>`_
 * `Sami Hiltunen <https://github.com/samihiltunen>`_
+* `Henning Peters <https://github.com/henningpeters>`_
