@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.9.2 2016-03-04
+----------------
+* Deprecation warning for default `key_func` `get_ipaddr`
+* Support for `Retry-After` header
+
 0.9.1 2015-11-21
 ----------------
 * Re-expose `enabled` property on `Limiter` instance.
@@ -195,6 +200,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
