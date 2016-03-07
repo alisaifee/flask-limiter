@@ -77,6 +77,22 @@ class FlaskExtTests(unittest.TestCase):
 
             self.assertEqual({'error': 'rate limit 1 per 1 day'}, json.loads(cli.get("/").data.decode()))
 
+    def test_reset(self):
+        app, limiter = self.build_app({
+            C.GLOBAL_LIMITS: "1 per day"
+        })
+
+        @app.route("/")
+        def null():
+            return "Hello Reset"
+
+        with app.test_client() as cli:
+            cli.get("/")
+            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+            limiter.reset()
+            self.assertEqual("Hello Reset", cli.get("/").data.decode())
+            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+
     def test_swallow_error(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS: "1 per day",
