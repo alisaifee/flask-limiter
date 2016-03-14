@@ -241,6 +241,16 @@ class Limiter(object):
         """
         self.__check_request_limit()
 
+    def reset(self):
+        """
+        resets the storage if it supports being reset
+        """
+        try:
+            self._storage.reset()
+            self.logger.info("Storage has be reset and all limits cleared")
+        except NotImplementedError:
+            self.logger.warning("This storage type does not support being reset")
+
     @property
     def limiter(self):
         if self._storage_dead and self._in_memory_fallback:
