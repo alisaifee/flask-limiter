@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.9.3 2016-03-14
+----------------
+* Allow `reset` of limiter storage if available
+
 0.9.2 2016-03-04
 ----------------
 * Deprecation warning for default `key_func` `get_ipaddr`
@@ -200,6 +204,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
