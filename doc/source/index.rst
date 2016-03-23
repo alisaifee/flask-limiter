@@ -24,7 +24,7 @@ Quick start
    limiter = Limiter(
        app,
        key_func=get_remote_address,
-       global_limits=["200 per day", "50 per hour"])
+       global_limits=["200 per day", "50 per hour"]
    )
    @app.route("/slow")
    @limiter.limit("1 per day")
