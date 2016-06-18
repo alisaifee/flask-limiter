@@ -3,6 +3,7 @@
 """
 import time
 import logging
+import os
 import unittest
 
 from flask import Flask
@@ -89,3 +90,22 @@ class RegressionTests(unittest.TestCase):
                 timeline.forward(2)
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
+
+    def test_negative_header_values(self):
+
+        app, limiter = self.build_app({
+            C.HEADERS_ENABLED: True,
+        })
+
+        @app.route("/t1")
+        @limiter.limit("2 per 10 second", key_func=lambda: os.urandom(16))
+        def t1():
+            return "t1"
+
+        with app.test_client() as cli:
+            resp = cli.get("/t1")
+            self.assertGreaterEqual(
+                int(resp.headers["X-RateLimit-Reset"]),
+                int(time.time())
+            )
+            self.assertGreaterEqual(int(resp.headers["Retry-After"]), 0)
