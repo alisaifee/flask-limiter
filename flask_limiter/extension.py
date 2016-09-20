@@ -247,7 +247,7 @@ class Limiter(object):
         """
         try:
             self._storage.reset()
-            self.logger.info("Storage has be reset and all limits cleared")
+            self.logger.info("Storage has been reset and all limits cleared")
         except NotImplementedError:
             self.logger.warning("This storage type does not support being reset")
 
