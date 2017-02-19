@@ -24,7 +24,7 @@ Quick start
    limiter = Limiter(
        app,
        key_func=get_remote_address,
-       global_limits=["200 per day", "50 per hour"]
+       default_limits=["200 per day", "50 per hour"]
    )
    @app.route("/slow")
    @limiter.limit("1 per day")
@@ -44,10 +44,10 @@ Quick start
 The above Flask app will have the following rate limiting characteristics:
 
 * Rate limiting by `remote_address` of the request
-* A global rate limit of 200 per day, and 50 per hour applied to all routes.
-* The ``slow`` route having an explicit rate limit decorator will bypass the global
+* A default rate limit of 200 per day, and 50 per hour applied to all routes.
+* The ``slow`` route having an explicit rate limit decorator will bypass the default
   rate limit and only allow 1 request per day.
-* The ``ping`` route will be exempt from any global rate limits.
+* The ``ping`` route will be exempt from any default rate limits.
 
 .. note:: The built in flask static files routes are also exempt from rate limits.
 
@@ -240,8 +240,7 @@ instance are
 .. _ratelimit-decorator-request-filter:
 
 :meth:`Limiter.request_filter`
-  This decorator simply marks a function as a filter for requests that are going
-  to be tested for rate limits. If any of the request filters return ``True`` no
+  This decorator simply marks a function as a filter for requests that are going to be tested for rate limits. If any of the request filters return ``True`` no
   rate limiting will be performed for that request. This mechanism can be used to
   create custom white lists.
 
@@ -271,12 +270,17 @@ The following flask configuration values are honored by
 .. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
 ===================================== ================================================
-``RATELIMIT_GLOBAL``                  A comma (or some other delimiter) separated string
-                                      that will be used to apply a global limit on all
-                                      routes. If not provided, the global limits can be
+``RATELIMIT_GLOBAL``                  .. deprecated:: 0.9.4
+                                      Use ``RATELIMIT_DEFAULT`` instead.
+``RATELIMIT_DEFAULT``                 A comma (or some other delimiter) separated string
+                                      that will be used to apply a default limit on all
+                                      routes. If not provided, the default limits can be
                                       passed to the :class:`Limiter` constructor
                                       as well (the values passed to the constructor take precedence
                                       over those in the config). :ref:`ratelimit-string` for details.
+``RATELIMIT_APPLICATION``             A comma (or some other delimiter) separated string
+                                      that will be used to apply limits to the application as a whole (i.e. shared
+                                      by all routes).
 ``RATELIMIT_STORAGE_URL``             One of ``memory://`` or ``redis://host:port``
                                       or ``memcached://host:port``. Using the redis storage
                                       requires the installation of the `redis`_ package
@@ -325,9 +329,9 @@ Examples
 
 .. warning:: If rate limit strings that are provided to the :meth:`Limiter.limit`
    decorator are malformed and can't be parsed the decorated route will fall back
-   to the global rate limit(s) and an ``ERROR`` log message will be emitted. Refer
+   to the default rate limit(s) and an ``ERROR`` log message will be emitted. Refer
    to :ref:`logging` for more details on capturing this information. Malformed
-   global rate limit strings will however raise an exception as they are evaluated
+   default rate limit strings will however raise an exception as they are evaluated
    early enough to not cause disruption to a running application.
 
 
@@ -461,7 +465,7 @@ Rate limiting all requests by country::
         return gi.record_by_name(request.remote_addr)['region_name']
 
     app = Flask(__name__)
-    limiter = Limiter(app, global_limits=["10/hour"], key_func = get_request_country)
+    limiter = Limiter(app, default_limits=["10/hour"], key_func = get_request_country)
 
 
 
@@ -528,7 +532,7 @@ Rate limiting all routes in a :class:`flask.Blueprint`
 :meth:`Limiter.limit`, :meth:`Limiter.shared_limit` & :meth:`Limiter.exempt` can
 all be applied to :class:`flask.Blueprint` instances as well. In the following example
 the **login** Blueprint has a special rate limit applied to all its routes, while the **help**
-Blueprint is exempt from all rate limits. The **regular** Blueprint follows the global rate limits.
+Blueprint is exempt from all rate limits. The **regular** Blueprint follows the default rate limits.
 
 
     .. code-block:: python
@@ -552,7 +556,7 @@ Blueprint is exempt from all rate limits. The **regular** Blueprint follows the 
             return "login"
 
 
-        limiter = Limiter(app, global_limits = ["1/second"], key_func=get_remote_address)
+        limiter = Limiter(app, default_limits = ["1/second"], key_func=get_remote_address)
         limiter.limit("60/hour")(login)
         limiter.exempt(doc)
 

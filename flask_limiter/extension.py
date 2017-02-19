@@ -25,6 +25,8 @@ class C:
     STORAGE_OPTIONS = "RATELIMIT_STORAGE_OPTIONS"
     STRATEGY = "RATELIMIT_STRATEGY"
     GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
+    DEFAULT_LIMITS = "RATELIMIT_DEFAULT"
+    APPLICATION_LIMITS = "RATELIMIT_APPLICATION"
     HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
     HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
     HEADER_RESET = "RATELIMIT_HEADER_RESET"
@@ -72,8 +74,10 @@ class Limiter(object):
     """
     :param app: :class:`flask.Flask` instance to initialize the extension
      with.
-    :param list global_limits: a variable list of strings denoting global
+    :param list default_limits: a variable list of strings denoting global
      limits to apply to all routes. :ref:`ratelimit-string` for  more details.
+    :param list application_limits: a variable list of strings for limits that
+     are applied to the entire application (i.e a shared limit for all routes)
     :param function key_func: a callable that returns the domain to rate limit by.
     :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
     :param str strategy: the strategy to use. refer to :ref:`ratelimit-strategy`
@@ -91,6 +95,8 @@ class Limiter(object):
     def __init__(self, app=None
                  , key_func=None
                  , global_limits=[]
+                 , default_limits=[]
+                 , application_limits=[]
                  , headers_enabled=False
                  , strategy=None
                  , storage_uri=None
@@ -104,7 +110,8 @@ class Limiter(object):
         self.logger = logging.getLogger("flask-limiter")
 
         self.enabled = True
-        self._global_limits = []
+        self._default_limits = []
+        self._application_limits = []
         self._in_memory_fallback = []
         self._exempt_routes = set()
         self._request_filters = []
@@ -123,13 +130,23 @@ class Limiter(object):
                 " for the recommended configuration",
                 UserWarning
             )
+        if global_limits:
+            self.raise_global_limits_warning()
 
         self._key_func = key_func or get_ipaddr
-        for limit in global_limits:
-            self._global_limits.extend(
+        for limit in set(global_limits + default_limits):
+            self._default_limits.extend(
                 [
                     ExtLimit(
                         limit, self._key_func, None, False, None, None, None
+                    ) for limit in parse_many(limit)
+                ]
+            )
+        for limit in application_limits:
+            self._application_limits.extend(
+                [
+                    ExtLimit(
+                        limit, self._key_func, "global", False, None, None, None
                     ) for limit in parse_many(limit)
                 ]
             )
@@ -197,9 +214,19 @@ class Limiter(object):
             or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
         )
 
-        conf_limits = app.config.get(C.GLOBAL_LIMITS, None)
-        if not self._global_limits and conf_limits:
-            self._global_limits = [
+        app_limits = app.config.get(C.APPLICATION_LIMITS, None)
+        if not self._application_limits and app_limits:
+            self._application_limits = [
+                ExtLimit(
+                    limit, self._key_func, "global", False, None, None, None
+                ) for limit in parse_many(app_limits)
+            ]
+
+        if app.config.get(C.GLOBAL_LIMITS, None):
+            self.raise_global_limits_warning()
+        conf_limits = app.config.get(C.GLOBAL_LIMITS, app.config.get(C.DEFAULT_LIMITS, None))
+        if not self._default_limits and conf_limits:
+            self._default_limits = [
                 ExtLimit(
                     limit, self._key_func, None, False, None, None, None
                 ) for limit in parse_many(conf_limits)
@@ -351,7 +378,7 @@ class Limiter(object):
                 else:
                     all_limits = self._in_memory_fallback
             if not all_limits:
-                all_limits = (limits + dynamic_limits or self._global_limits)
+                all_limits = self._application_limits + (limits + dynamic_limits or self._default_limits)
             for lim in all_limits:
                 limit_scope = lim.scope or endpoint
                 if lim.is_exempt:
@@ -516,3 +543,11 @@ class Limiter(object):
         self._request_filters.append(fn)
         return fn
 
+
+    def raise_global_limits_warning(self):
+        warnings.warn(
+            "global_limits was a badly name configuration since it is actually a default limit and not a "
+            " globally shared limit. Use default_limits if you want to provide a default or use application_limits "
+            " if you intend to really have a global shared limit",
+            UserWarning
+        )

@@ -37,7 +37,7 @@ in memory implementation for storage.
    limiter = Limiter(
        app,
        key_func=get_remote_address,
-       global_limits=["2 per minute", "1 per second"],
+       default_limits=["2 per minute", "1 per second"],
    )
 
    @app.route("/slow")
@@ -58,7 +58,7 @@ in memory implementation for storage.
 
 
 
-Test it out. The ``fast`` endpoint respects the global rate limit while the
+Test it out. The ``fast`` endpoint respects the default rate limit while the
 ``slow`` endpoint uses the decorated one. ``ping`` has no rate limit associated
 with it.
 
