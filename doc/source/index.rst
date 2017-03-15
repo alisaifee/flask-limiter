@@ -278,9 +278,10 @@ The following flask configuration values are honored by
                                       as well (the values passed to the constructor take precedence
                                       over those in the config). :ref:`ratelimit-string` for details.
 ``RATELIMIT_STORAGE_URL``             One of ``memory://`` or ``redis://host:port``
-                                      or ``memcached://host:port``. Using the redis storage
+                                      or ``memcached://host:port`` or ``gaememcached://``. Using the redis storage
                                       requires the installation of the `redis`_ package
-                                      while memcached relies on the `pymemcache`_ package.
+                                      while memcached relies on the `pymemcache`_ package. GAE memcached is for users 
+                                      working in the Google App Engine python environment.
                                       (For details refer to :ref:`storage-scheme`)
 ``RATELIMIT_STORAGE_OPTIONS``         A dictionary to set extra options to be passed to the
                                       storage implementation upon initialization. (Useful if you're
