@@ -18,6 +18,7 @@ import time
 from .errors import RateLimitExceeded
 from .util import get_ipaddr
 
+
 class C:
     ENABLED = "RATELIMIT_ENABLED"
     HEADERS_ENABLED = "RATELIMIT_HEADERS_ENABLED"
@@ -35,6 +36,7 @@ class C:
     HEADER_RETRY_AFTER = "RATELIMIT_HEADER_RETRY_AFTER"
     HEADER_RETRY_AFTER_VALUE = "RATELIMIT_HEADER_RETRY_AFTER_VALUE"
 
+
 class HEADERS:
     RESET = 1
     REMAINING = 2
@@ -43,12 +45,15 @@ class HEADERS:
 
 MAX_BACKEND_CHECKS = 5
 
+
 class ExtLimit(object):
+
     """
     simple wrapper to encapsulate limits and their context
     """
-    def __init__(self, limit, key_func, scope, per_method, methods, error_message,
-                 exempt_when):
+    
+    def __init__(self, limit, key_func, scope, per_method, methods, error_message, exempt_when):
+
         self._limit = limit
         self.key_func = key_func
         self._scope = scope
@@ -71,6 +76,7 @@ class ExtLimit(object):
         return self.exempt_when and self.exempt_when()
 
 class Limiter(object):
+
     """
     :param app: :class:`flask.Flask` instance to initialize the extension
      with.
@@ -105,6 +111,7 @@ class Limiter(object):
                  , swallow_errors=False
                  , in_memory_fallback=[]
                  , retry_after=None
+                 , outside_routes=set()
     ):
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
@@ -113,7 +120,7 @@ class Limiter(object):
         self._default_limits = []
         self._application_limits = []
         self._in_memory_fallback = []
-        self._exempt_routes = set()
+        self._exempt_routes = outside_routes
         self._request_filters = []
         self._headers_enabled = headers_enabled
         self._header_mapping = {}
@@ -170,6 +177,7 @@ class Limiter(object):
         self.__last_check_backend = time.time()
 
         class BlackHoleHandler(logging.StreamHandler):
+
             def emit(*_):
                 return
         self.logger.addHandler(BlackHoleHandler())
@@ -248,7 +256,7 @@ class Limiter(object):
 
         # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, 'extensions'):
-            app.extensions = {} # pragma: no cover
+            app.extensions = {}  # pragma: no cover
         app.extensions['limiter'] = self
 
     def __should_check_backend(self):
@@ -313,8 +321,8 @@ class Limiter(object):
         view_func = current_app.view_functions.get(endpoint, None)
         name = ("%s.%s" % (
                 view_func.__module__, view_func.__name__
-            ) if view_func else ""
-        )
+                ) if view_func else ""
+                )
         if (not request.endpoint
             or not self.enabled
             or view_func == current_app.send_static_file
@@ -323,6 +331,8 @@ class Limiter(object):
             or any(fn() for fn in self._request_filters)
         ):
             return
+        if any(fn() for fn in self.request_blockers):
+            raise RateLimitExceeded("")
         limits = (
             name in self._route_limits and self._route_limits[name]
             or []
@@ -339,8 +349,7 @@ class Limiter(object):
                     )
                 except ValueError as e:
                     self.logger.error(
-                        "failed to load ratelimit for view function %s (%s)"
-                        , name, e
+                        "failed to load ratelimit for view function %s (%s)", name, e
                     )
         if request.blueprint:
             if (request.blueprint in self._blueprint_dynamic_limits
@@ -356,9 +365,9 @@ class Limiter(object):
                         )
                     except ValueError as e:
                         self.logger.error(
-                            "failed to load ratelimit for blueprint %s (%s)"
-                            , request.blueprint, e
+                            "failed to load ratelimit for blueprint %s (%s)", request.blueprint, e
                         )
+
             if (request.blueprint in self._blueprint_limits
                 and not limits
             ):
@@ -391,8 +400,7 @@ class Limiter(object):
                     limit_for_header = (lim.limit, lim.key_func(), limit_scope)
                 if not self.limiter.hit(lim.limit, lim.key_func(), limit_scope):
                     self.logger.warning(
-                        "ratelimit %s (%s) exceeded at endpoint: %s"
-                        , lim.limit, lim.key_func(), limit_scope
+                        "ratelimit %s (%s) exceeded at endpoint: %s", lim.limit, lim.key_func(), limit_scope
                     )
                     failed_limit = lim
                     limit_for_header = (lim.limit, lim.key_func(), limit_scope)
@@ -478,7 +486,6 @@ class Limiter(object):
                 return __inner
         return _inner
 
-
     def limit(self, limit_value, key_func=None, per_method=False,
               methods=None, error_message=None, exempt_when=None):
         """
@@ -500,7 +507,6 @@ class Limiter(object):
                                       methods=methods, error_message=error_message,
                                       exempt_when=exempt_when)
 
-
     def shared_limit(self, limit_value, scope, key_func=None,
                      error_message=None, exempt_when=None):
         """
@@ -520,13 +526,13 @@ class Limiter(object):
             exempt_when=exempt_when
         )
 
-
     def exempt(self, obj):
         """
         decorator to mark a view or all views in a blueprint as exempt from rate limits.
         """
         if not isinstance(obj, Blueprint):
             name = "%s.%s" % (obj.__module__, obj.__name__)
+
             @wraps(obj)
             def __inner(*a, **k):
                 return obj(*a, **k)
@@ -542,7 +548,6 @@ class Limiter(object):
         """
         self._request_filters.append(fn)
         return fn
-
 
     def raise_global_limits_warning(self):
         warnings.warn(
