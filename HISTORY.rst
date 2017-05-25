@@ -3,9 +3,47 @@
 Changelog
 =========
 
+0.9.4 2017-05-01
+----------------
+* Implemented application wide shared limits
+
+0.9.3 2016-03-14
+----------------
+* Allow `reset` of limiter storage if available
+
+0.9.2 2016-03-04
+----------------
+* Deprecation warning for default `key_func` `get_ipaddr`
+* Support for `Retry-After` header
+
+0.9.1 2015-11-21
+----------------
+* Re-expose `enabled` property on `Limiter` instance.
+
+0.9 2015-11-13
+--------------
+* In-memory fallback option for unresponsive storage
+* Rate limit exemption option per limit
+
+0.8.5 2015-10-05
+----------------
+* Bug fix for reported issues of missing (limits) dependency upon installation.
+
+0.8.4 2015-10-03
+----------------
+* Documentation tweaks.
+
+0.8.2 2015-09-17
+----------------
+* Remove outdated files from egg
+
+0.8.1 2015-08-06
+----------------
+* Fixed compatibility with latest version of **Flask-Restful**
+
 0.8 2015-06-07
 --------------
-* No functional change 
+* No functional change
 
 0.7.9 2015-04-02
 ----------------
@@ -170,6 +208,15 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
+
+
+
+
+
+
+
+
 
 
 

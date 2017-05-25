@@ -8,10 +8,14 @@
     :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |landscape| image:: https://landscape.io/github/alisaifee/flask-limiter/master/landscape.svg?style=flat-square
     :target: https://landscape.io/github/alisaifee/flask-limiter/master
+.. |gitter| image:: https://img.shields.io/badge/gitter-join%20chat-blue.svg?style=flat-square
+   :alt: Join the chat at https://gitter.im/alisaifee/flask-limiter
+   :target: https://gitter.im/alisaifee/flask-limiter?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
 *************
 Flask-Limiter
 *************
-|travis-ci| |coveralls| |landscape| |pypi| |license|
+|travis-ci| |coveralls| |landscape| |pypi| |gitter| |license| 
 
 Flask-Limiter provides rate limiting features to flask routes.
 It has support for a configurable backend for storage
@@ -27,9 +31,14 @@ in memory implementation for storage.
 
    from flask import Flask
    from flask_limiter import Limiter
+   from flask_limiter.util import get_remote_address
 
    app = Flask(__name__)
-   limiter = Limiter(app, global_limits=["2 per minute", "1 per second"])
+   limiter = Limiter(
+       app,
+       key_func=get_remote_address,
+       default_limits=["2 per minute", "1 per second"],
+   )
 
    @app.route("/slow")
    @limiter.limit("1 per day")
@@ -49,7 +58,7 @@ in memory implementation for storage.
 
 
 
-Test it out. The ``fast`` endpoint respects the global rate limit while the
+Test it out. The ``fast`` endpoint respects the default rate limit while the
 ``slow`` endpoint uses the decorated one. ``ping`` has no rate limit associated
 with it.
 
@@ -84,6 +93,8 @@ with it.
 
 
 `Read the docs <http://flask-limiter.readthedocs.org>`_
+
+
 
 
 
