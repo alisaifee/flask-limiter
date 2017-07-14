@@ -205,11 +205,12 @@ instance are
 
 
     Dynamic shared limit: when a callable is passed as scope, the return value
-    of the function will be used as the scope.
+    of the function will be used as the scope. Note that the callable takes one argument: a string representing
+    the request endpoint.
 
       .. code-block:: python
 
-        def host_scope():
+        def host_scope(endpoint_name):
             return request.host
         host_limit = limiter.shared_limit("100/hour", scope=host_scope)
 
