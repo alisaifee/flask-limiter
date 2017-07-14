@@ -387,15 +387,16 @@ class Limiter(object):
                     return
                 if lim.per_method:
                     limit_scope += ":%s" % request.method
+                limit_key = lim.key_func()
                 if not limit_for_header or lim.limit < limit_for_header[0]:
-                    limit_for_header = (lim.limit, lim.key_func(), limit_scope)
-                if not self.limiter.hit(lim.limit, lim.key_func(), limit_scope):
+                    limit_for_header = (lim.limit, limit_key, limit_scope)
+                if not self.limiter.hit(lim.limit, limit_key, limit_scope):
                     self.logger.warning(
                         "ratelimit %s (%s) exceeded at endpoint: %s"
-                        , lim.limit, lim.key_func(), limit_scope
+                        , lim.limit, limit_key, limit_scope
                     )
                     failed_limit = lim
-                    limit_for_header = (lim.limit, lim.key_func(), limit_scope)
+                    limit_for_header = (lim.limit, limit_key, limit_scope)
                     break
 
             g.view_rate_limit = limit_for_header
