@@ -1229,3 +1229,28 @@ class FlaskExtTests(unittest.TestCase):
                 resp = cli.get("/t3")
                 self.assertEqual(429, resp.status_code)
                 self.assertEqual(resp.data, b'tres')
+
+    def test_custom_key_prefix(self):
+        app1, limiter1 = self.build_app(key_prefix="moo", storage_uri="redis://localhost:6379")
+        app2, limiter2 = self.build_app(key_prefix="cow", storage_uri="redis://localhost:6379")
+
+        @app1.route("/test")
+        @limiter1.limit("1/day")
+        def t1():
+            return "app1 test"
+
+        @app2.route("/test")
+        @limiter2.limit("1/day")
+        def t1():
+            return "app1 test"
+
+        with app1.test_client() as cli:
+            resp = cli.get("/test")
+            self.assertEqual(200, resp.status_code)
+            resp = cli.get("/test")
+            self.assertEqual(429, resp.status_code)
+        with app2.test_client() as cli:
+            resp = cli.get("/test")
+            self.assertEqual(200, resp.status_code)
+            resp = cli.get("/test")
+            self.assertEqual(429, resp.status_code)
