@@ -306,6 +306,8 @@ The following flask configuration values are honored by
                                       occurred.
 ``RATELIMIT_IN_MEMORY_FALLBACK``      A comma (or some other delimiter) separated string
                                       that will be used when the configured storage is down.
+``RATELIMIT_KEY_PREFIX``              Prefix that is prepended to each stored rate limit key. This can be useful when using a
+                                      shared storage for multiple applications or rate limit domains.
 ===================================== ================================================
 
 .. _ratelimit-string:
