@@ -34,6 +34,7 @@ class C:
     IN_MEMORY_FALLBACK = "RATELIMIT_IN_MEMORY_FALLBACK"
     HEADER_RETRY_AFTER = "RATELIMIT_HEADER_RETRY_AFTER"
     HEADER_RETRY_AFTER_VALUE = "RATELIMIT_HEADER_RETRY_AFTER_VALUE"
+    KEY_PREFIX = "RATELIMIT_KEY_PREFIX"
 
 class HEADERS:
     RESET = 1
@@ -90,6 +91,7 @@ class Limiter(object):
      An exception will still be logged. default ``False``
     :param list in_memory_fallback: a variable list of strings denoting fallback
      limits to apply when the storage is down.
+    :param str key_prefix: prefix prepended to rate limiter keys.
     """
 
     def __init__(self, app=None
@@ -105,6 +107,7 @@ class Limiter(object):
                  , swallow_errors=False
                  , in_memory_fallback=[]
                  , retry_after=None
+                 , key_prefix=""
     ):
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
@@ -134,6 +137,8 @@ class Limiter(object):
             self.raise_global_limits_warning()
 
         self._key_func = key_func or get_ipaddr
+        self._key_prefix = key_prefix
+
         for limit in set(global_limits + default_limits):
             self._default_limits.extend(
                 [
@@ -388,9 +393,10 @@ class Limiter(object):
                 if lim.per_method:
                     limit_scope += ":%s" % request.method
                 limit_key = lim.key_func()
+
                 if not limit_for_header or lim.limit < limit_for_header[0]:
                     limit_for_header = (lim.limit, limit_key, limit_scope)
-                if not self.limiter.hit(lim.limit, limit_key, limit_scope):
+                if not self.limiter.hit(lim.limit, *filter(None, [self._key_prefix, limit_key, limit_scope])):
                     self.logger.warning(
                         "ratelimit %s (%s) exceeded at endpoint: %s"
                         , lim.limit, limit_key, limit_scope
