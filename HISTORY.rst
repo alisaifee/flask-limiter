@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.9.5 2017-07-26
+----------------
+* Add support for key prefixes
+
 0.9.4 2017-05-01
 ----------------
 * Implemented application wide shared limits
@@ -208,6 +212,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
