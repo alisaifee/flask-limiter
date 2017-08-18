@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.9.5.1 2017-08-18
+------------------
+* Upgrade versioneer
+
 0.9.5 2017-07-26
 ----------------
 * Add support for key prefixes
@@ -212,6 +216,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
