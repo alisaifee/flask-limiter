@@ -1,2 +1,2 @@
 -r test.txt
-coveralls
+coveralls==1.1
