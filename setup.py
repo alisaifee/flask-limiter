@@ -16,11 +16,6 @@ REQUIREMENTS = filter(None, open(
 
 import versioneer
 
-versioneer.versionfile_source = "flask_limiter/_version.py"
-versioneer.versionfile_build = "flask_limiter/version.py"
-versioneer.tag_prefix = ""
-versioneer.parentdir_prefix = "flask_limiter-"
-
 setup(
     name='Flask-Limiter',
     author=__author__,

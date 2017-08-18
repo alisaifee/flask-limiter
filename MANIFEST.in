@@ -7,3 +7,4 @@ include versioneer.py
 recursive-include requirements *.txt
 recursive-include doc/source *
 recursive-include doc *.py Make*
+include flask_limiter/_version.py
