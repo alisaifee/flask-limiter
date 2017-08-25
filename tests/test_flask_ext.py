@@ -733,6 +733,26 @@ class FlaskExtTests(unittest.TestCase):
                         str(int(49))
                 )
 
+    def test_retry_after(self):
+        app = Flask(__name__)
+        _ = Limiter(
+            app, default_limits=["1/minute"],
+            headers_enabled=True, key_func=get_remote_address
+        )
+
+        @app.route("/t1")
+        def t():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                resp = cli.get("/t1")
+                retry_after = int(resp.headers.get('Retry-After'))
+                self.assertGreater(retry_after, 0)
+                timeline.forward(retry_after)
+                resp = cli.get("/t1")
+                self.assertEqual(resp.status_code, 200)
+
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
         limiter = Limiter(
