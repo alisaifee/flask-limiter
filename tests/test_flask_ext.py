@@ -748,7 +748,7 @@ class FlaskExtTests(unittest.TestCase):
             with app.test_client() as cli:
                 resp = cli.get("/t1")
                 retry_after = int(resp.headers.get('Retry-After'))
-                self.assertGreater(retry_after, 0)
+                self.assertTrue(retry_after > 0)
                 timeline.forward(retry_after)
                 resp = cli.get("/t1")
                 self.assertEqual(resp.status_code, 200)
