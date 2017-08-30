@@ -294,6 +294,7 @@ class Limiter(object):
         current_limit = getattr(g, 'view_rate_limit', None)
         if self.enabled and self._headers_enabled and current_limit:
             window_stats = self.limiter.get_window_stats(*current_limit)
+            reset_in = 1 + window_stats[0]
             response.headers.add(
                 self._header_mapping[HEADERS.LIMIT],
                 str(current_limit[0].amount)
@@ -304,12 +305,12 @@ class Limiter(object):
             )
             response.headers.add(
                 self._header_mapping[HEADERS.RESET],
-                window_stats[0]
+                reset_in
             )
             response.headers.add(
                 self._header_mapping[HEADERS.RETRY_AFTER],
-                self._retry_after == 'http-date' and http_date(window_stats[0])
-                    or int(window_stats[0] - time.time())
+                self._retry_after == 'http-date' and http_date(reset_in)
+                    or int(reset_in - time.time())
             )
         return response
 

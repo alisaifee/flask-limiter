@@ -673,11 +673,11 @@ class FlaskExtTests(unittest.TestCase):
                 )
                 self.assertEqual(
                         resp.headers.get('X-RateLimit-Reset'),
-                        str(int(time.time() + 60))
+                        str(int(time.time() + 61))
                 )
                 self.assertEqual(
                         resp.headers.get('Retry-After'),
-                        str(59)
+                        str(60)
                 )
                 resp = cli.get("/t2")
                 self.assertEqual(
@@ -690,12 +690,12 @@ class FlaskExtTests(unittest.TestCase):
                 )
                 self.assertEqual(
                         resp.headers.get('X-RateLimit-Reset'),
-                        str(int(time.time() + 1))
+                        str(int(time.time() + 2))
                 )
 
                 self.assertEqual(
                     resp.headers.get('Retry-After'),
-                    str(0)
+                    str(1)
                 )
 
     def test_headers_breach(self):
@@ -726,12 +726,32 @@ class FlaskExtTests(unittest.TestCase):
                 )
                 self.assertEqual(
                         resp.headers.get('X-RateLimit-Reset'),
-                        str(int(time.time() + 49))
+                        str(int(time.time() + 50))
                 )
                 self.assertEqual(
                         resp.headers.get('Retry-After'),
-                        str(int(49))
+                        str(int(50))
                 )
+
+    def test_retry_after(self):
+        app = Flask(__name__)
+        _ = Limiter(
+            app, default_limits=["1/minute"],
+            headers_enabled=True, key_func=get_remote_address
+        )
+
+        @app.route("/t1")
+        def t():
+            return "test"
+
+        with hiro.Timeline().freeze() as timeline:
+            with app.test_client() as cli:
+                resp = cli.get("/t1")
+                retry_after = int(resp.headers.get('Retry-After'))
+                self.assertTrue(retry_after > 0)
+                timeline.forward(retry_after)
+                resp = cli.get("/t1")
+                self.assertEqual(resp.status_code, 200)
 
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
@@ -764,11 +784,11 @@ class FlaskExtTests(unittest.TestCase):
                 )
                 self.assertEqual(
                         resp.headers.get('X-Reset'),
-                        str(int(time.time() + 49))
+                        str(int(time.time() + 50))
                 )
                 self.assertEqual(
                     resp.headers.get('Retry-After'),
-                    'Thu, 01 Jan 1970 00:01:00 GMT'
+                    'Thu, 01 Jan 1970 00:01:01 GMT'
                 )
 
     def test_custom_headers_from_config(self):
@@ -803,7 +823,7 @@ class FlaskExtTests(unittest.TestCase):
                 )
                 self.assertEqual(
                         resp.headers.get('X-Reset'),
-                        str(int(time.time() + 49))
+                        str(int(time.time() + 50))
                 )
 
     def test_named_shared_limit(self):
