@@ -99,10 +99,15 @@ class RegressionTests(unittest.TestCase):
             return None
 
         @app.route("/t1")
-        @limiter.limit(func)
+        @limiter.limit("2/second", key_func=func)
         def t1():
             return "t1"
 
         with app.test_client() as cli:
             cli.get("/t1")
+            cli.get("/t1")
+            cli.get("/t1")
             self.assertEqual(cli.get("/t1").status_code, 200)
+            limiter.limit("1/second", key_func=lambda: "key")(t1)
+            cli.get("/t1")
+            self.assertEqual(cli.get("/t1").status_code, 429)
