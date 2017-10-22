@@ -89,3 +89,20 @@ class RegressionTests(unittest.TestCase):
                 timeline.forward(2)
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
+
+    def test_invalid_ratelimit_key(self):
+        app, limiter = self.build_app(
+            {C.HEADERS_ENABLED: True}
+        )
+
+        def func(*a):
+            return None
+
+        @app.route("/t1")
+        @limiter.limit(func)
+        def t1():
+            return "t1"
+
+        with app.test_client() as cli:
+            cli.get("/t1")
+            self.assertEqual(cli.get("/t1").status_code, 200)
