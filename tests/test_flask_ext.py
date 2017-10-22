@@ -11,15 +11,14 @@ import mock
 import redis
 import datetime
 from flask import Flask, Blueprint, request, current_app, make_response
-from flask.ext import restful
-from flask.ext.restful import Resource
+from flask_restful import Resource, Api as RestfulApi
 from flask.views import View, MethodView
 from limits.errors import ConfigurationError
 from limits.storage import MemcachedStorage
 from limits.strategies import MovingWindowRateLimiter
 
-from flask.ext.limiter.extension import C, Limiter, HEADERS
-from flask.ext.limiter.util import get_remote_address, get_ipaddr
+from flask_limiter.extension import C, Limiter, HEADERS
+from flask_limiter.util import get_remote_address, get_ipaddr
 
 
 class FlaskExtTests(unittest.TestCase):
@@ -1111,7 +1110,7 @@ class FlaskExtTests(unittest.TestCase):
         app, limiter = self.build_app(
                 default_limits=["1/hour"]
         )
-        api = restful.Api(app)
+        api = RestfulApi(app)
 
         class Va(Resource):
             decorators = [limiter.limit("2/second")]

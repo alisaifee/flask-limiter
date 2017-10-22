@@ -10,8 +10,8 @@ import hiro
 import mock
 import redis
 
-from flask.ext.limiter.extension import C, Limiter
-from flask.ext.limiter.util import get_ipaddr
+from flask_limiter.extension import C, Limiter
+from flask_limiter.util import get_ipaddr
 
 
 class RegressionTests(unittest.TestCase):
