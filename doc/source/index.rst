@@ -93,6 +93,7 @@ initialization (:ref:`keyfunc-customization`). Two utility methods are still pro
 * :func:`flask_limiter.util.get_ipaddr`: uses the last ip address in the `X-Forwarded-For` header, else falls back to the `remote_address` of the request
 * :func:`flask_limiter.util.get_remote_address`: uses the `remote_address` of the request.
 
+Please refer to :ref:`deploy-behind-proxy` for an example.
 
 
 Decorators
@@ -271,8 +272,7 @@ The following flask configuration values are honored by
 .. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
 ===================================== ================================================
-``RATELIMIT_GLOBAL``                  .. deprecated:: 0.9.4
-                                      Use ``RATELIMIT_DEFAULT`` instead.
+``RATELIMIT_GLOBAL``                  .. deprecated:: 0.9.4. Use ``RATELIMIT_DEFAULT`` instead.
 ``RATELIMIT_DEFAULT``                 A comma (or some other delimiter) separated string
                                       that will be used to apply a default limit on all
                                       routes. If not provided, the default limits can be
@@ -617,7 +617,27 @@ The `error_message` argument can either be a simple string or a callable that re
         def ping():
             ....
 
+.. _deploy-behind-proxy:
 
+Deploying an application behind a proxy
+---------------------------------------
+
+If your application is behind a proxy and you are using werkzeug > 0.9+ you can use the :class:`werkzeug.contrib.fixers.ProxyFix`
+fixer to reliably get the remote address of the user, while protecting your application against ip spoofing via headers.
+
+
+    .. code-block:: python
+
+        from flask import Flask
+        from flask_limiter import Limiter
+        from flask_limiter.util import get_remote_address
+        from werkzeug.contrib.fixers import ProxyFix
+
+        app = Flask(__name__)
+        # for example if the request goes through one proxy
+        # before hitting your application server
+        app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+        limiter = Limiter(app, key_func=get_remote_address)
 
 API
 ===
