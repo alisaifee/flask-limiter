@@ -385,17 +385,17 @@ class Limiter(object):
 
                 args = [limit_key, limit_scope]
                 if all(args):
-                    if not limit_for_header or lim.limit < limit_for_header[0]:
-                        limit_for_header = (lim.limit, limit_key, limit_scope)
                     if self._key_prefix:
                         args = [self._key_prefix] + args
+                    if not limit_for_header or lim.limit < limit_for_header[0]:
+                        limit_for_header = [lim.limit] + args
                     if not self.limiter.hit(lim.limit, *args):
                         self.logger.warning(
                             "ratelimit %s (%s) exceeded at endpoint: %s",
                             lim.limit, limit_key, limit_scope
                         )
                         failed_limit = lim
-                        limit_for_header = (lim.limit, limit_key, limit_scope)
+                        limit_for_header = [lim.limit] + args
                         break
                 else:
                     self.logger.error(
