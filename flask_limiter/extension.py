@@ -312,6 +312,51 @@ class Limiter(object):
             )
         return response
 
+    def __evaluate_limits(self, endpoint, limits):
+        failed_limit = None
+        limit_for_header = None
+        for lim in limits:
+            limit_scope = lim.scope or endpoint
+            if lim.is_exempt:
+                return
+            if lim.methods is not None and request.method.lower(
+            ) not in lim.methods:
+                return
+            if lim.per_method:
+                limit_scope += ":%s" % request.method
+            limit_key = lim.key_func()
+
+            args = [limit_key, limit_scope]
+            if all(args):
+                if self._key_prefix:
+                    args = [self._key_prefix] + args
+                if not limit_for_header or lim.limit < limit_for_header[0]:
+                    limit_for_header = [lim.limit] + args
+                if not self.limiter.hit(lim.limit, *args):
+                    self.logger.warning(
+                        "ratelimit %s (%s) exceeded at endpoint: %s",
+                        lim.limit, limit_key, limit_scope
+                    )
+                    failed_limit = lim
+                    limit_for_header = [lim.limit] + args
+                    break
+            else:
+                self.logger.error(
+                    "Skipping limit: %s. Empty value found in parameters.",
+                    lim.limit
+                )
+                continue
+        g.view_rate_limit = limit_for_header
+
+        if failed_limit:
+            if failed_limit.error_message:
+                exc_description = failed_limit.error_message if not callable(
+                    failed_limit.error_message
+                ) else failed_limit.error_message()
+            else:
+                exc_description = six.text_type(failed_limit.limit)
+            raise RateLimitExceeded(exc_description)
+
     def __check_request_limit(self):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
@@ -365,8 +410,6 @@ class Limiter(object):
             if request.blueprint in self._blueprint_limits and not limits:
                 limits.extend(self._blueprint_limits[request.blueprint])
 
-        failed_limit = None
-        limit_for_header = None
         try:
             all_limits = []
             if self._storage_dead and self._fallback_limiter:
@@ -384,47 +427,7 @@ class Limiter(object):
                     (limits + dynamic_limits)
                     or itertools.chain(*self._default_limits)
                 )
-            for lim in all_limits:
-                limit_scope = lim.scope or endpoint
-                if lim.is_exempt:
-                    return
-                if lim.methods is not None and request.method.lower(
-                ) not in lim.methods:
-                    return
-                if lim.per_method:
-                    limit_scope += ":%s" % request.method
-                limit_key = lim.key_func()
-
-                args = [limit_key, limit_scope]
-                if all(args):
-                    if self._key_prefix:
-                        args = [self._key_prefix] + args
-                    if not limit_for_header or lim.limit < limit_for_header[0]:
-                        limit_for_header = [lim.limit] + args
-                    if not self.limiter.hit(lim.limit, *args):
-                        self.logger.warning(
-                            "ratelimit %s (%s) exceeded at endpoint: %s",
-                            lim.limit, limit_key, limit_scope
-                        )
-                        failed_limit = lim
-                        limit_for_header = [lim.limit] + args
-                        break
-                else:
-                    self.logger.error(
-                        "Skipping limit: %s. Empty value found in parameters.",
-                        lim.limit
-                    )
-                    continue
-            g.view_rate_limit = limit_for_header
-
-            if failed_limit:
-                if failed_limit.error_message:
-                    exc_description = failed_limit.error_message if not callable(
-                        failed_limit.error_message
-                    ) else failed_limit.error_message()
-                else:
-                    exc_description = six.text_type(failed_limit.limit)
-                raise RateLimitExceeded(exc_description)
+            self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:  # no qa
             if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
@@ -452,7 +455,8 @@ class Limiter(object):
         per_method=False,
         methods=None,
         error_message=None,
-        exempt_when=None
+        exempt_when=None,
+        use_middleware=True
     ):
         _scope = scope if shared else None
 
@@ -491,19 +495,25 @@ class Limiter(object):
                         name, []
                     ).extend(static_limits)
             else:
-
                 @wraps(obj)
                 def __inner(*a, **k):
+                    if not use_middleware:
+                        self.__evaluate_limits(
+                            request.endpoint,
+                            dynamic_limit if dynamic_limit else static_limits
+                        )
                     return obj(*a, **k)
-
-                if dynamic_limit:
-                    self._dynamic_route_limits.setdefault(
-                        name, []
-                    ).append(dynamic_limit)
+                if use_middleware:
+                    if dynamic_limit:
+                        self._dynamic_route_limits.setdefault(
+                            name, []
+                        ).append(dynamic_limit)
+                    else:
+                        self._route_limits.setdefault(
+                            name, []
+                        ).extend(static_limits)
                 else:
-                    self._route_limits.setdefault(
-                        name, []
-                    ).extend(static_limits)
+                    self.exempt(obj)
                 return __inner
 
         return _inner
@@ -515,7 +525,8 @@ class Limiter(object):
         per_method=False,
         methods=None,
         error_message=None,
-        exempt_when=None
+        exempt_when=None,
+        use_middleware=True
     ):
         """
         decorator to be used for rate limiting individual routes or blueprints.
@@ -530,6 +541,8 @@ class Limiter(object):
          limited (default: None).
         :param error_message: string (or callable that returns one) to override the
          error message used in the response.
+        :param exempt_when:
+        :param use_middleware:
         :return:
         """
         return self.__limit_decorator(
@@ -538,7 +551,8 @@ class Limiter(object):
             per_method=per_method,
             methods=methods,
             error_message=error_message,
-            exempt_when=exempt_when
+            exempt_when=exempt_when,
+            use_middleware=use_middleware
         )
 
     def shared_limit(
@@ -547,7 +561,8 @@ class Limiter(object):
         scope,
         key_func=None,
         error_message=None,
-        exempt_when=None
+        exempt_when=None,
+        use_middleware=True
     ):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -560,6 +575,8 @@ class Limiter(object):
          the rate limit. defaults to remote address of the request.
         :param error_message: string (or callable that returns one) to override the
          error message used in the response.
+        :param exempt_when:
+        :param use_middleware:
         """
         return self.__limit_decorator(
             limit_value,
@@ -567,7 +584,8 @@ class Limiter(object):
             True,
             scope,
             error_message=error_message,
-            exempt_when=exempt_when
+            exempt_when=exempt_when,
+            use_middleware=use_middleware
         )
 
     def exempt(self, obj):
