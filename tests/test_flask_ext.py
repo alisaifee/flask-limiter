@@ -403,7 +403,7 @@ class FlaskExtTests(unittest.TestCase):
                 # result in it being marked after pow(2,0) seconds and next
                 # check
                 self.assertEqual(cli.get("/t1").status_code, 429)
-                timeline.forward(1)
+                timeline.forward(2)
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 200)
@@ -453,7 +453,7 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(cli.get("/t2").status_code, 429)
             # redis back to normal, go back to regular limits
             with hiro.Timeline() as timeline:
-                timeline.forward(1)
+                timeline.forward(2)
                 limiter._storage.storage.flushall()
                 self.assertEqual(cli.get("/t2").status_code, 200)
                 self.assertEqual(cli.get("/t2").status_code, 200)
