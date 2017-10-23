@@ -153,6 +153,7 @@ class Limiter(object):
         self._fallback_limiter = None
         self.__check_backend_count = 0
         self.__last_check_backend = time.time()
+        self.__marked_for_limiting = set()
 
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
@@ -271,7 +272,7 @@ class Limiter(object):
 
         :raises: RateLimitExceeded
         """
-        self.__check_request_limit()
+        self.__check_request_limit(False)
 
     def reset(self):
         """
@@ -357,7 +358,7 @@ class Limiter(object):
                 exc_description = six.text_type(failed_limit.limit)
             raise RateLimitExceeded(exc_description)
 
-    def __check_request_limit(self):
+    def __check_request_limit(self, in_middleware=True):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
         name = (
@@ -370,21 +371,24 @@ class Limiter(object):
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
             or any(fn() for fn in self._request_filters)
+            or g.get("_rate_limiting_complete")
         ):
             return
-        limits = (
-            name in self._route_limits and self._route_limits[name] or []
-        )
-        dynamic_limits = []
-        if name in self._dynamic_route_limits:
-            for lim in self._dynamic_route_limits[name]:
-                try:
-                    dynamic_limits.extend(list(lim))
-                except ValueError as e:
-                    self.logger.error(
-                        "failed to load ratelimit for view function %s (%s)",
-                        name, e
-                    )
+        limits, dynamic_limits = [], []
+        if not in_middleware:
+            limits = (
+                name in self._route_limits and self._route_limits[name] or []
+            )
+            dynamic_limits = []
+            if name in self._dynamic_route_limits:
+                for lim in self._dynamic_route_limits[name]:
+                    try:
+                        dynamic_limits.extend(list(lim))
+                    except ValueError as e:
+                        self.logger.error(
+                            "failed to load ratelimit for view function %s (%s)",
+                            name, e
+                        )
         if request.blueprint:
             if (request.blueprint in self._blueprint_dynamic_limits
                 and not dynamic_limits
@@ -413,20 +417,26 @@ class Limiter(object):
         try:
             all_limits = []
             if self._storage_dead and self._fallback_limiter:
-                if self.__should_check_backend() and self._storage.check():
-                    self.logger.info("Rate limit storage recovered")
-                    self._storage_dead = False
-                    self.__check_backend_count = 0
+                if in_middleware and name in self.__marked_for_limiting:
+                    pass
                 else:
-                    all_limits = list(
-                        itertools.chain(*self._in_memory_fallback)
-                    )
+                    if self.__should_check_backend() and self._storage.check():
+                        self.logger.info("Rate limit storage recovered")
+                        self._storage_dead = False
+                        self.__check_backend_count = 0
+                    else:
+                        all_limits = list(
+                            itertools.chain(*self._in_memory_fallback)
+                        )
             if not all_limits:
-                all_limits = itertools.chain(
-                    itertools.chain(*self._application_limits),
-                    (limits + dynamic_limits)
-                    or itertools.chain(*self._default_limits)
-                )
+                route_limits = limits + dynamic_limits
+                all_limits = list(itertools.chain(*self._application_limits))
+                all_limits += route_limits
+                if (
+                    not route_limits
+                    and not (in_middleware and name in self.__marked_for_limiting)
+                ):
+                        all_limits += list(itertools.chain(*self._default_limits))
             self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:  # no qa
             if isinstance(e, RateLimitExceeded):
@@ -437,7 +447,7 @@ class Limiter(object):
                     " in-memory storage"
                 )
                 self._storage_dead = True
-                self.__check_request_limit()
+                self.__check_request_limit(in_middleware)
             else:
                 if self._swallow_errors:
                     self.logger.exception(
@@ -456,7 +466,6 @@ class Limiter(object):
         methods=None,
         error_message=None,
         exempt_when=None,
-        use_middleware=True
     ):
         _scope = scope if shared else None
 
@@ -495,27 +504,23 @@ class Limiter(object):
                         name, []
                     ).extend(static_limits)
             else:
+                self.__marked_for_limiting.add(name)
+                if dynamic_limit:
+                    self._dynamic_route_limits.setdefault(
+                        name, []
+                    ).append(dynamic_limit)
+                else:
+                    self._route_limits.setdefault(
+                        name, []
+                    ).extend(static_limits)
+
                 @wraps(obj)
                 def __inner(*a, **k):
-                    if not use_middleware:
-                        self.__evaluate_limits(
-                            request.endpoint,
-                            dynamic_limit if dynamic_limit else static_limits
-                        )
+                    if self._auto_check and not g.get("_rate_limiting_complete"):
+                        self.__check_request_limit(False)
+                        g._rate_limiting_complete = True
                     return obj(*a, **k)
-                if use_middleware:
-                    if dynamic_limit:
-                        self._dynamic_route_limits.setdefault(
-                            name, []
-                        ).append(dynamic_limit)
-                    else:
-                        self._route_limits.setdefault(
-                            name, []
-                        ).extend(static_limits)
-                else:
-                    self.exempt(obj)
                 return __inner
-
         return _inner
 
     def limit(
@@ -526,7 +531,6 @@ class Limiter(object):
         methods=None,
         error_message=None,
         exempt_when=None,
-        use_middleware=True
     ):
         """
         decorator to be used for rate limiting individual routes or blueprints.
@@ -542,7 +546,6 @@ class Limiter(object):
         :param error_message: string (or callable that returns one) to override the
          error message used in the response.
         :param exempt_when:
-        :param use_middleware:
         :return:
         """
         return self.__limit_decorator(
@@ -552,7 +555,6 @@ class Limiter(object):
             methods=methods,
             error_message=error_message,
             exempt_when=exempt_when,
-            use_middleware=use_middleware
         )
 
     def shared_limit(
@@ -562,7 +564,6 @@ class Limiter(object):
         key_func=None,
         error_message=None,
         exempt_when=None,
-        use_middleware=True
     ):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -576,7 +577,6 @@ class Limiter(object):
         :param error_message: string (or callable that returns one) to override the
          error message used in the response.
         :param exempt_when:
-        :param use_middleware:
         """
         return self.__limit_decorator(
             limit_value,
@@ -585,7 +585,6 @@ class Limiter(object):
             scope,
             error_message=error_message,
             exempt_when=exempt_when,
-            use_middleware=use_middleware
         )
 
     def exempt(self, obj):

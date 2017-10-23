@@ -656,7 +656,7 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         @app.route("/", methods=["GET", "POST"])
         @append_info
-        @limiter.limit(lambda: g.rate_limit, per_method=True, use_middleware=False)
+        @limiter.limit(lambda: g.rate_limit, per_method=True)
         def root():
             return "root"
 
@@ -669,7 +669,7 @@ class DecoratorTests(FlaskLimiterTestCase):
     def test_decorated_shared_limit_immediate(self):
 
         app, limiter = self.build_app(default_limits=['1/minute'])
-        shared = limiter.shared_limit(lambda: g.rate_limit, 'shared', use_middleware=False)
+        shared = limiter.shared_limit(lambda: g.rate_limit, 'shared')
         def append_info(fn):
             @wraps(fn)
             def __inner(*args, **kwargs):
