@@ -7,6 +7,7 @@ import time
 import unittest
 from functools import wraps
 
+import functools
 import hiro
 import mock
 import redis
@@ -694,6 +695,42 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.get("/").status_code)
                 self.assertEqual(200, cli.get("/").status_code)
                 self.assertEqual(429, cli.get("/").status_code)
+
+    def test_backward_compatibility_with_incorrect_ordering(self):
+        app, limiter = self.build_app()
+
+        def something_else(fn):
+            @functools.wraps(fn)
+            def __inner(*args, **kwargs):
+                return fn(*args, **kwargs)
+            return __inner
+
+        @limiter.limit("1/second")
+        @app.route("/t1", methods=["GET", "POST"])
+        def root():
+            return "t1"
+
+        @limiter.limit("1/second")
+        @app.route("/t2", methods=["GET", "POST"])
+        @something_else
+        def t2():
+            return "t2"
+
+        @limiter.limit("2/second")
+        @limiter.limit("1/second")
+        @app.route("/t3", methods=["GET", "POST"])
+        def t3():
+            return "t3"
+
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/t1").status_code)
+                self.assertEqual(429, cli.get("/t1").status_code)
+                self.assertEqual(200, cli.get("/t2").status_code)
+                self.assertEqual(429, cli.get("/t2").status_code)
+                self.assertEqual(200, cli.get("/t3").status_code)
+                self.assertEqual(429, cli.get("/t3").status_code)
 
 
 class BlueprintTests(FlaskLimiterTestCase):

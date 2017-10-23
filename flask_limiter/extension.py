@@ -153,7 +153,7 @@ class Limiter(object):
         self._fallback_limiter = None
         self.__check_backend_count = 0
         self.__last_check_backend = time.time()
-        self.__marked_for_limiting = set()
+        self.__marked_for_limiting = {}
 
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
@@ -375,7 +375,28 @@ class Limiter(object):
         ):
             return
         limits, dynamic_limits = [], []
-        if not in_middleware:
+
+        # this is to ensure backward compatibility with behavior that
+        # existed accidentally, i.e::
+        #
+        # @limiter.limit(...)
+        # @app.route('...')
+        # def func(...):
+        #
+        # The above setup would work in pre 1.0 versions because the decorator
+        # was not acting immediately and instead simply registering the rate
+        # limiting. The correct way to use the decorator is to wrap
+        # the limiter with the route, i.e::
+        #
+        # @app.route(...)
+        # @limiter.limit(...)
+        # def func(...):
+
+        implicit_decorator = view_func in self.__marked_for_limiting.get(
+            name, []
+        )
+
+        if not in_middleware or implicit_decorator:
             limits = (
                 name in self._route_limits and self._route_limits[name] or []
             )
@@ -435,6 +456,7 @@ class Limiter(object):
                 if (
                     not route_limits
                     and not (in_middleware and name in self.__marked_for_limiting)
+                    or implicit_decorator
                 ):
                         all_limits += list(itertools.chain(*self._default_limits))
             self.__evaluate_limits(endpoint, all_limits)
@@ -504,7 +526,7 @@ class Limiter(object):
                         name, []
                     ).extend(static_limits)
             else:
-                self.__marked_for_limiting.add(name)
+                self.__marked_for_limiting.setdefault(name, []).append(obj)
                 if dynamic_limit:
                     self._dynamic_route_limits.setdefault(
                         name, []
