@@ -218,7 +218,10 @@ class Limiter(object):
             self._retry_after
             or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
         )
-
+        self._key_prefix = (
+            self._key_prefix
+            or app.config.get(C.KEY_PREFIX)
+        )
         app_limits = app.config.get(C.APPLICATION_LIMITS, None)
         if not self._application_limits and app_limits:
             self._application_limits = [
