@@ -19,22 +19,10 @@ from limits.strategies import MovingWindowRateLimiter
 
 from flask_limiter.extension import C, Limiter, HEADERS
 from flask_limiter.util import get_remote_address, get_ipaddr
+from tests import FlaskLimiterTestCase
 
 
-class FlaskExtTests(unittest.TestCase):
-    def setUp(self):
-        redis.Redis().flushall()
-
-    def build_app(self, config={}, **limiter_args):
-        app = Flask(__name__)
-        for k, v in config.items():
-            app.config.setdefault(k, v)
-        limiter_args.setdefault('key_func', get_remote_address)
-        limiter = Limiter(app, **limiter_args)
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
-        return app, limiter
+class FlaskExtTests(FlaskLimiterTestCase):
 
     def test_invalid_strategy(self):
         app = Flask(__name__)
@@ -853,6 +841,7 @@ class FlaskExtTests(unittest.TestCase):
 
     def test_application_shared_limit(self):
         app, limiter = self.build_app(application_limits=["2/minute"])
+
         @app.route("/t1")
         def t1():
             return "route1"
@@ -866,6 +855,41 @@ class FlaskExtTests(unittest.TestCase):
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t2").status_code)
                 self.assertEqual(429, cli.get("/t1").status_code)
+
+    def test_callable_default_limit(self):
+        app, limiter = self.build_app(default_limits=[lambda: "1/minute"])
+
+        @app.route("/t1")
+        def t1():
+            return "t1"
+
+        @app.route("/t2")
+        def t2():
+            return "t2"
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                self.assertEqual(cli.get("/t2").status_code, 429)
+
+    def test_callable_application_limit(self):
+
+        app, limiter = self.build_app(application_limits=[lambda: "1/minute"])
+
+        @app.route("/t1")
+        def t1():
+            return "t1"
+
+        @app.route("/t2")
+        def t2():
+            return "t2"
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 429)
 
     def test_dynamic_shared_limit(self):
         app, limiter = self.build_app()

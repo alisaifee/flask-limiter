@@ -2,31 +2,15 @@
 
 """
 import time
-import logging
-import unittest
 
-from flask import Flask
 import hiro
-import mock
-import redis
 
-from flask_limiter.extension import C, Limiter
-from flask_limiter.util import get_ipaddr
+from flask_limiter.extension import C
+from tests import FlaskLimiterTestCase
 
 
-class RegressionTests(unittest.TestCase):
-    def setUp(self):
-        redis.Redis().flushall()
+class RegressionTests(FlaskLimiterTestCase):
 
-    def build_app(self, config={}, **limiter_args):
-        app = Flask(__name__)
-        for k, v in config.items():
-            app.config.setdefault(k, v)
-        limiter = Limiter(app, key_func=get_ipaddr, **limiter_args)
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
-        return app, limiter
 
     def test_redis_request_slower_than_fixed_window(self):
         app, limiter = self.build_app({
