@@ -54,9 +54,9 @@ class Limiter(object):
     """
     :param app: :class:`flask.Flask` instance to initialize the extension
      with.
-    :param list default_limits: a variable list of strings denoting global
+    :param list default_limits: a variable list of strings or callables returning strings denoting global
      limits to apply to all routes. :ref:`ratelimit-string` for  more details.
-    :param list application_limits: a variable list of strings for limits that
+    :param list application_limits: a variable list of strings or callables returning strings for limits that
      are applied to the entire application (i.e a shared limit for all routes)
     :param function key_func: a callable that returns the domain to rate limit by.
     :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
@@ -68,7 +68,7 @@ class Limiter(object):
      chain of the application. default ``True``
     :param bool swallow_errors: whether to swallow errors when hitting a rate limit.
      An exception will still be logged. default ``False``
-    :param list in_memory_fallback: a variable list of strings denoting fallback
+    :param list in_memory_fallback: a variable list of strings or callables returning strings denoting fallback
      limits to apply when the storage is down.
     :param str key_prefix: prefix prepended to rate limiter keys.
     """
