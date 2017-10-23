@@ -87,8 +87,16 @@ class RegressionTests(FlaskLimiterTestCase):
             self.assertEqual(cli.get("/t1").status_code, 429)
 
     def test_custom_key_prefix_with_headers(self):
-        app1, limiter1 = self.build_app(key_prefix="moo", storage_uri="redis://localhost:6379", headers_enabled=True)
-        app2, limiter2 = self.build_app(key_prefix="cow", storage_uri="redis://localhost:6379", headers_enabled=True)
+        app1, limiter1 = self.build_app(
+            key_prefix="moo",
+            storage_uri="redis://localhost:6379",
+            headers_enabled=True
+        )
+        app2, limiter2 = self.build_app(
+            key_prefix="cow",
+            storage_uri="redis://localhost:6379",
+            headers_enabled=True
+        )
 
         @app1.route("/test")
         @limiter1.limit("1/minute")
@@ -104,17 +112,11 @@ class RegressionTests(FlaskLimiterTestCase):
             resp = cli.get("/test")
             self.assertEqual(200, resp.status_code)
             resp = cli.get("/test")
-            self.assertEqual(
-                resp.headers.get('Retry-After'),
-                str(60)
-            )
+            self.assertEqual(resp.headers.get('Retry-After'), str(60))
             self.assertEqual(429, resp.status_code)
         with app2.test_client() as cli:
             resp = cli.get("/test")
             self.assertEqual(200, resp.status_code)
             resp = cli.get("/test")
-            self.assertEqual(
-                resp.headers.get('Retry-After'),
-                str(60)
-            )
+            self.assertEqual(resp.headers.get('Retry-After'), str(60))
             self.assertEqual(429, resp.status_code)
