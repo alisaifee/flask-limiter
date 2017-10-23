@@ -1,19 +1,18 @@
 """
 the flask extension
 """
+import itertools
 import logging
 import sys
 import time
 import warnings
 from functools import wraps
 
-import itertools
 import six
 from flask import request, current_app, g, Blueprint
 from limits.errors import ConfigurationError
 from limits.storage import storage_from_string, MemoryStorage
 from limits.strategies import STRATEGIES
-from limits.util import parse_many
 from werkzeug.http import http_date
 
 from flask_limiter.wrappers import Limit, LimitGroup
@@ -120,23 +119,30 @@ class Limiter(object):
         self._key_prefix = key_prefix
 
         for limit in set(global_limits + default_limits):
-            self._default_limits.extend([
-                LimitGroup(
-                    limit, self._key_func, None, False, None, None, None
-                )
-            ])
+            self._default_limits.extend(
+                [
+                    LimitGroup(
+                        limit, self._key_func, None, False, None, None, None
+                    )
+                ]
+            )
         for limit in application_limits:
-            self._application_limits.extend([
-                LimitGroup(
-                    limit, self._key_func, "global", False, None, None, None
-                )
-            ])
+            self._application_limits.extend(
+                [
+                    LimitGroup(
+                        limit, self._key_func, "global", False, None, None,
+                        None
+                    )
+                ]
+            )
         for limit in in_memory_fallback:
-            self._in_memory_fallback.extend([
-                LimitGroup(
-                    limit, self._key_func, None, False, None, None, None
-                )
-            ])
+            self._in_memory_fallback.extend(
+                [
+                    LimitGroup(
+                        limit, self._key_func, None, False, None, None, None
+                    )
+                ]
+            )
         self._route_limits = {}
         self._dynamic_route_limits = {}
         self._blueprint_limits = {}
@@ -183,20 +189,24 @@ class Limiter(object):
                 "Invalid rate limiting strategy %s" % strategy
             )
         self._limiter = STRATEGIES[strategy](self._storage)
-        self._header_mapping.update({
-            HEADERS.RESET:
-            self._header_mapping.get(HEADERS.RESET, None)
-            or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
-            HEADERS.REMAINING:
-            self._header_mapping.get(HEADERS.REMAINING, None) or
-            app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
-            HEADERS.LIMIT:
-            self._header_mapping.get(HEADERS.LIMIT, None)
-            or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
-            HEADERS.RETRY_AFTER:
-            self._header_mapping.get(HEADERS.RETRY_AFTER, None)
-            or app.config.setdefault(C.HEADER_RETRY_AFTER, "Retry-After"),
-        })
+        self._header_mapping.update(
+            {
+                HEADERS.RESET:
+                self._header_mapping.get(HEADERS.RESET, None)
+                or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
+                HEADERS.REMAINING:
+                self._header_mapping.get(HEADERS.REMAINING, None)
+                or app.config.setdefault(
+                    C.HEADER_REMAINING, "X-RateLimit-Remaining"
+                ),
+                HEADERS.LIMIT:
+                self._header_mapping.get(HEADERS.LIMIT, None)
+                or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
+                HEADERS.RETRY_AFTER:
+                self._header_mapping.get(HEADERS.RETRY_AFTER, None)
+                or app.config.setdefault(C.HEADER_RETRY_AFTER, "Retry-After"),
+            }
+        )
         self._retry_after = (
             self._retry_after or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
         )
@@ -338,19 +348,21 @@ class Limiter(object):
                     request.blueprint
                 ]:
                     try:
-                        dynamic_limits.extend([
-                            Limit(
-                                limit.limit, limit.key_func, limit.scope,
-                                limit.per_method, limit.methods,
-                                limit.error_message, limit.exempt_when
-                            ) for limit in limit_group
-                        ])
+                        dynamic_limits.extend(
+                            [
+                                Limit(
+                                    limit.limit, limit.key_func, limit.scope,
+                                    limit.per_method, limit.methods,
+                                    limit.error_message, limit.exempt_when
+                                ) for limit in limit_group
+                            ]
+                        )
                     except ValueError as e:
                         self.logger.error(
                             "failed to load ratelimit for blueprint %s (%s)",
                             request.blueprint, e
                         )
-            if (request.blueprint in self._blueprint_limits and not limits):
+            if request.blueprint in self._blueprint_limits and not limits:
                 limits.extend(self._blueprint_limits[request.blueprint])
 
         failed_limit = None
@@ -475,8 +487,9 @@ class Limiter(object):
                         name, []
                     ).append(dynamic_limit)
                 else:
-                    self._blueprint_limits.setdefault(name, []
-                                                      ).extend(static_limits)
+                    self._blueprint_limits.setdefault(
+                        name, []
+                    ).extend(static_limits)
             else:
 
                 @wraps(obj)
@@ -488,8 +501,9 @@ class Limiter(object):
                         name, []
                     ).append(dynamic_limit)
                 else:
-                    self._route_limits.setdefault(name,
-                                                  []).extend(static_limits)
+                    self._route_limits.setdefault(
+                        name, []
+                    ).extend(static_limits)
                 return __inner
 
         return _inner

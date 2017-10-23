@@ -11,12 +11,14 @@ from tests import FlaskLimiterTestCase
 
 class RegressionTests(FlaskLimiterTestCase):
     def test_redis_request_slower_than_fixed_window(self):
-        app, limiter = self.build_app({
-            C.GLOBAL_LIMITS: "5 per second",
-            C.STORAGE_URL: "redis://localhost:6379",
-            C.STRATEGY: "fixed-window",
-            C.HEADERS_ENABLED: True
-        })
+        app, limiter = self.build_app(
+            {
+                C.GLOBAL_LIMITS: "5 per second",
+                C.STORAGE_URL: "redis://localhost:6379",
+                C.STRATEGY: "fixed-window",
+                C.HEADERS_ENABLED: True
+            }
+        )
 
         @app.route("/t1")
         def t1():
@@ -28,12 +30,14 @@ class RegressionTests(FlaskLimiterTestCase):
             self.assertEqual(resp.headers["X-RateLimit-Remaining"], '5')
 
     def test_redis_request_slower_than_moving_window(self):
-        app, limiter = self.build_app({
-            C.GLOBAL_LIMITS: "5 per second",
-            C.STORAGE_URL: "redis://localhost:6379",
-            C.STRATEGY: "moving-window",
-            C.HEADERS_ENABLED: True
-        })
+        app, limiter = self.build_app(
+            {
+                C.GLOBAL_LIMITS: "5 per second",
+                C.STORAGE_URL: "redis://localhost:6379",
+                C.STRATEGY: "moving-window",
+                C.HEADERS_ENABLED: True
+            }
+        )
 
         @app.route("/t1")
         def t1():
@@ -45,10 +49,12 @@ class RegressionTests(FlaskLimiterTestCase):
             self.assertEqual(resp.headers["X-RateLimit-Remaining"], '5')
 
     def test_dynamic_limits(self):
-        app, limiter = self.build_app({
-            C.STRATEGY: "moving-window",
-            C.HEADERS_ENABLED: True
-        })
+        app, limiter = self.build_app(
+            {
+                C.STRATEGY: "moving-window",
+                C.HEADERS_ENABLED: True
+            }
+        )
 
         def func(*a):
             return "1/second; 2/minute"
