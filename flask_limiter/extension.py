@@ -39,11 +39,13 @@ class C:
     HEADER_RETRY_AFTER_VALUE = "RATELIMIT_HEADER_RETRY_AFTER_VALUE"
     KEY_PREFIX = "RATELIMIT_KEY_PREFIX"
 
+
 class HEADERS:
     RESET = 1
     REMAINING = 2
     LIMIT = 3
     RETRY_AFTER = 4
+
 
 MAX_BACKEND_CHECKS = 5
 
@@ -71,20 +73,22 @@ class Limiter(object):
     :param str key_prefix: prefix prepended to rate limiter keys.
     """
 
-    def __init__(self, app=None
-                 , key_func=None
-                 , global_limits=[]
-                 , default_limits=[]
-                 , application_limits=[]
-                 , headers_enabled=False
-                 , strategy=None
-                 , storage_uri=None
-                 , storage_options={}
-                 , auto_check=True
-                 , swallow_errors=False
-                 , in_memory_fallback=[]
-                 , retry_after=None
-                 , key_prefix=""
+    def __init__(
+        self,
+        app=None,
+        key_func=None,
+        global_limits=[],
+        default_limits=[],
+        application_limits=[],
+        headers_enabled=False,
+        strategy=None,
+        storage_uri=None,
+        storage_options={},
+        auto_check=True,
+        swallow_errors=False,
+        in_memory_fallback=[],
+        retry_after=None,
+        key_prefix=""
     ):
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
@@ -107,8 +111,7 @@ class Limiter(object):
             warnings.warn(
                 "Use of the default `get_ipaddr` function is discouraged."
                 " Please refer to https://flask-limiter.readthedocs.org/#rate-limit-domain"
-                " for the recommended configuration",
-                UserWarning
+                " for the recommended configuration", UserWarning
             )
         if global_limits:
             self.raise_global_limits_warning()
@@ -117,29 +120,23 @@ class Limiter(object):
         self._key_prefix = key_prefix
 
         for limit in set(global_limits + default_limits):
-            self._default_limits.extend(
-                [
-                    LimitGroup(
-                        limit, self._key_func, None, False, None, None, None
-                    )
-                ]
-            )
+            self._default_limits.extend([
+                LimitGroup(
+                    limit, self._key_func, None, False, None, None, None
+                )
+            ])
         for limit in application_limits:
-            self._application_limits.extend(
-                [
-                    LimitGroup(
-                        limit, self._key_func, "global", False, None, None, None
-                    )
-                ]
-            )
+            self._application_limits.extend([
+                LimitGroup(
+                    limit, self._key_func, "global", False, None, None, None
+                )
+            ])
         for limit in in_memory_fallback:
-            self._in_memory_fallback.extend(
-                [
-                    LimitGroup(
-                        limit, self._key_func, None, False, None, None, None
-                    )
-                ]
-            )
+            self._in_memory_fallback.extend([
+                LimitGroup(
+                    limit, self._key_func, None, False, None, None, None
+                )
+            ])
         self._route_limits = {}
         self._dynamic_route_limits = {}
         self._blueprint_limits = {}
@@ -154,6 +151,7 @@ class Limiter(object):
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
                 return
+
         self.logger.addHandler(BlackHoleHandler())
         if app:
             self.init_app(app)
@@ -170,46 +168,53 @@ class Limiter(object):
             self._headers_enabled
             or app.config.setdefault(C.HEADERS_ENABLED, False)
         )
-        self._storage_options.update(
-            app.config.get(C.STORAGE_OPTIONS, {})
-        )
+        self._storage_options.update(app.config.get(C.STORAGE_OPTIONS, {}))
         self._storage = storage_from_string(
             self._storage_uri
             or app.config.setdefault(C.STORAGE_URL, 'memory://'),
-            ** self._storage_options
+            **self._storage_options
         )
         strategy = (
             self._strategy
             or app.config.setdefault(C.STRATEGY, 'fixed-window')
         )
         if strategy not in STRATEGIES:
-            raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
+            raise ConfigurationError(
+                "Invalid rate limiting strategy %s" % strategy
+            )
         self._limiter = STRATEGIES[strategy](self._storage)
         self._header_mapping.update({
-           HEADERS.RESET : self._header_mapping.get(HEADERS.RESET,None) or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
-           HEADERS.REMAINING : self._header_mapping.get(HEADERS.REMAINING,None) or app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
-           HEADERS.LIMIT : self._header_mapping.get(HEADERS.LIMIT,None) or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
-           HEADERS.RETRY_AFTER : self._header_mapping.get(HEADERS.RETRY_AFTER,None) or app.config.setdefault(C.HEADER_RETRY_AFTER, "Retry-After"),
+            HEADERS.RESET:
+            self._header_mapping.get(HEADERS.RESET, None)
+            or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
+            HEADERS.REMAINING:
+            self._header_mapping.get(HEADERS.REMAINING, None) or
+            app.config.setdefault(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
+            HEADERS.LIMIT:
+            self._header_mapping.get(HEADERS.LIMIT, None)
+            or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
+            HEADERS.RETRY_AFTER:
+            self._header_mapping.get(HEADERS.RETRY_AFTER, None)
+            or app.config.setdefault(C.HEADER_RETRY_AFTER, "Retry-After"),
         })
         self._retry_after = (
-            self._retry_after
-            or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
+            self._retry_after or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
         )
-        self._key_prefix = (
-            self._key_prefix
-            or app.config.get(C.KEY_PREFIX)
-        )
+        self._key_prefix = (self._key_prefix or app.config.get(C.KEY_PREFIX))
         app_limits = app.config.get(C.APPLICATION_LIMITS, None)
         if not self._application_limits and app_limits:
             self._application_limits = [
                 LimitGroup(
-                    app_limits, self._key_func, "global", False, None, None, None
+                    app_limits, self._key_func, "global", False, None, None,
+                    None
                 )
             ]
 
         if app.config.get(C.GLOBAL_LIMITS, None):
             self.raise_global_limits_warning()
-        conf_limits = app.config.get(C.GLOBAL_LIMITS, app.config.get(C.DEFAULT_LIMITS, None))
+        conf_limits = app.config.get(
+            C.GLOBAL_LIMITS, app.config.get(C.DEFAULT_LIMITS, None)
+        )
         if not self._default_limits and conf_limits:
             self._default_limits = [
                 LimitGroup(
@@ -220,7 +225,8 @@ class Limiter(object):
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
                 LimitGroup(
-                    fallback_limits, self._key_func, None, False, None, None, None
+                    fallback_limits, self._key_func, None, False, None, None,
+                    None
                 )
             ]
         if self._auto_check:
@@ -229,17 +235,21 @@ class Limiter(object):
 
         if self._in_memory_fallback:
             self._fallback_storage = MemoryStorage()
-            self._fallback_limiter = STRATEGIES[strategy](self._fallback_storage)
+            self._fallback_limiter = STRATEGIES[strategy](
+                self._fallback_storage
+            )
 
         # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, 'extensions'):
-            app.extensions = {} # pragma: no cover
+            app.extensions = {}  # pragma: no cover
         app.extensions['limiter'] = self
 
     def __should_check_backend(self):
         if self.__check_backend_count > MAX_BACKEND_CHECKS:
             self.__check_backend_count = 0
-        if time.time() - self.__last_check_backend > pow(2, self.__check_backend_count):
+        if time.time() - self.__last_check_backend > pow(
+            2, self.__check_backend_count
+        ):
             self.__last_check_backend = time.time()
             self.__check_backend_count += 1
             return True
@@ -261,7 +271,9 @@ class Limiter(object):
             self._storage.reset()
             self.logger.info("Storage has been reset and all limits cleared")
         except NotImplementedError:
-            self.logger.warning("This storage type does not support being reset")
+            self.logger.warning(
+                "This storage type does not support being reset"
+            )
 
     @property
     def limiter(self):
@@ -280,26 +292,22 @@ class Limiter(object):
                 str(current_limit[0].amount)
             )
             response.headers.add(
-                self._header_mapping[HEADERS.REMAINING],
-                window_stats[1]
+                self._header_mapping[HEADERS.REMAINING], window_stats[1]
             )
-            response.headers.add(
-                self._header_mapping[HEADERS.RESET],
-                reset_in
-            )
+            response.headers.add(self._header_mapping[HEADERS.RESET], reset_in)
             response.headers.add(
                 self._header_mapping[HEADERS.RETRY_AFTER],
                 self._retry_after == 'http-date' and http_date(reset_in)
-                    or int(reset_in - time.time())
+                or int(reset_in - time.time())
             )
         return response
 
     def __check_request_limit(self):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
-        name = ("%s.%s" % (
-                view_func.__module__, view_func.__name__
-            ) if view_func else ""
+        name = (
+            "%s.%s" % (view_func.__module__, view_func.__name__)
+            if view_func else ""
         )
         if (not request.endpoint
             or not self.enabled
@@ -310,8 +318,7 @@ class Limiter(object):
         ):
             return
         limits = (
-            name in self._route_limits and self._route_limits[name]
-            or []
+            name in self._route_limits and self._route_limits[name] or []
         )
         dynamic_limits = []
         if name in self._dynamic_route_limits:
@@ -320,27 +327,28 @@ class Limiter(object):
                     dynamic_limits.extend(list(lim))
                 except ValueError as e:
                     self.logger.error(
-                        "failed to load ratelimit for view function %s (%s)"
-                        , name, e
+                        "failed to load ratelimit for view function %s (%s)",
+                        name, e
                     )
         if request.blueprint:
             if (request.blueprint in self._blueprint_dynamic_limits
                 and not dynamic_limits
             ):
-                for limit_group in self._blueprint_dynamic_limits[request.blueprint]:
+                for limit_group in self._blueprint_dynamic_limits[
+                    request.blueprint
+                ]:
                     try:
-                        dynamic_limits.extend(
-                            [
-                                Limit(
-                                    limit.limit, limit.key_func, limit.scope, limit.per_method,
-                                    limit.methods, limit.error_message, limit.exempt_when
-                                ) for limit in limit_group
-                            ]
-                        )
+                        dynamic_limits.extend([
+                            Limit(
+                                limit.limit, limit.key_func, limit.scope,
+                                limit.per_method, limit.methods,
+                                limit.error_message, limit.exempt_when
+                            ) for limit in limit_group
+                        ])
                     except ValueError as e:
                         self.logger.error(
-                            "failed to load ratelimit for blueprint %s (%s)"
-                            , request.blueprint, e
+                            "failed to load ratelimit for blueprint %s (%s)",
+                            request.blueprint, e
                         )
             if (request.blueprint in self._blueprint_limits and not limits):
                 limits.extend(self._blueprint_limits[request.blueprint])
@@ -351,23 +359,25 @@ class Limiter(object):
             all_limits = []
             if self._storage_dead and self._fallback_limiter:
                 if self.__should_check_backend() and self._storage.check():
-                    self.logger.info(
-                        "Rate limit storage recovered"
-                    )
+                    self.logger.info("Rate limit storage recovered")
                     self._storage_dead = False
                     self.__check_backend_count = 0
                 else:
-                    all_limits = list(itertools.chain(*self._in_memory_fallback))
+                    all_limits = list(
+                        itertools.chain(*self._in_memory_fallback)
+                    )
             if not all_limits:
                 all_limits = itertools.chain(
                     itertools.chain(*self._application_limits),
-                    (limits + dynamic_limits) or itertools.chain(*self._default_limits)
+                    (limits + dynamic_limits)
+                    or itertools.chain(*self._default_limits)
                 )
             for lim in all_limits:
                 limit_scope = lim.scope or endpoint
                 if lim.is_exempt:
                     return
-                if lim.methods is not None and request.method.lower() not in lim.methods:
+                if lim.methods is not None and request.method.lower(
+                ) not in lim.methods:
                     return
                 if lim.per_method:
                     limit_scope += ":%s" % request.method
@@ -381,14 +391,17 @@ class Limiter(object):
                         args = [self._key_prefix] + args
                     if not self.limiter.hit(lim.limit, *args):
                         self.logger.warning(
-                            "ratelimit %s (%s) exceeded at endpoint: %s"
-                            , lim.limit, limit_key, limit_scope
+                            "ratelimit %s (%s) exceeded at endpoint: %s",
+                            lim.limit, limit_key, limit_scope
                         )
                         failed_limit = lim
                         limit_for_header = (lim.limit, limit_key, limit_scope)
                         break
                 else:
-                    self.logger.error("Skipping limit: %s. Empty value found in parameters.", lim.limit)
+                    self.logger.error(
+                        "Skipping limit: %s. Empty value found in parameters.",
+                        lim.limit
+                    )
                     continue
             g.view_rate_limit = limit_for_header
 
@@ -400,7 +413,7 @@ class Limiter(object):
                 else:
                     exc_description = six.text_type(failed_limit.limit)
                 raise RateLimitExceeded(exc_description)
-        except Exception as e: # no qa
+        except Exception as e:  # no qa
             if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
             if self._in_memory_fallback and not self._storage_dead:
@@ -418,59 +431,78 @@ class Limiter(object):
                 else:
                     six.reraise(*sys.exc_info())
 
-    def __limit_decorator(self, limit_value,
-                          key_func=None, shared=False,
-                          scope=None,
-                          per_method=False,
-                          methods=None,
-                          error_message=None,
-                          exempt_when=None):
+    def __limit_decorator(
+        self,
+        limit_value,
+        key_func=None,
+        shared=False,
+        scope=None,
+        per_method=False,
+        methods=None,
+        error_message=None,
+        exempt_when=None
+    ):
         _scope = scope if shared else None
 
         def _inner(obj):
             func = key_func or self._key_func
             is_route = not isinstance(obj, Blueprint)
-            name = "%s.%s" % (obj.__module__, obj.__name__) if is_route else obj.name
+            name = "%s.%s" % (
+                obj.__module__, obj.__name__
+            ) if is_route else obj.name
             dynamic_limit, static_limits = None, []
             if callable(limit_value):
-                dynamic_limit = LimitGroup(limit_value, func, _scope, per_method, methods, error_message, exempt_when)
+                dynamic_limit = LimitGroup(
+                    limit_value, func, _scope, per_method, methods,
+                    error_message, exempt_when
+                )
             else:
                 try:
                     static_limits = list(
-                        LimitGroup(limit_value, func, _scope, per_method, methods, error_message, exempt_when)
+                        LimitGroup(
+                            limit_value, func, _scope, per_method, methods,
+                            error_message, exempt_when
+                        )
                     )
                 except ValueError as e:
                     self.logger.error(
-                        "failed to configure %s %s (%s)",
-                        "view function" if is_route else "blueprint", name, e
+                        "failed to configure %s %s (%s)", "view function"
+                        if is_route else "blueprint", name, e
                     )
             if isinstance(obj, Blueprint):
                 if dynamic_limit:
-                    self._blueprint_dynamic_limits.setdefault(name, []).append(
-                        dynamic_limit
-                    )
+                    self._blueprint_dynamic_limits.setdefault(
+                        name, []
+                    ).append(dynamic_limit)
                 else:
-                    self._blueprint_limits.setdefault(name, []).extend(
-                        static_limits
-                    )
+                    self._blueprint_limits.setdefault(name, []
+                                                      ).extend(static_limits)
             else:
+
                 @wraps(obj)
                 def __inner(*a, **k):
                     return obj(*a, **k)
+
                 if dynamic_limit:
-                    self._dynamic_route_limits.setdefault(name, []).append(
-                        dynamic_limit
-                    )
+                    self._dynamic_route_limits.setdefault(
+                        name, []
+                    ).append(dynamic_limit)
                 else:
-                    self._route_limits.setdefault(name, []).extend(
-                        static_limits
-                    )
+                    self._route_limits.setdefault(name,
+                                                  []).extend(static_limits)
                 return __inner
+
         return _inner
 
-
-    def limit(self, limit_value, key_func=None, per_method=False,
-              methods=None, error_message=None, exempt_when=None):
+    def limit(
+        self,
+        limit_value,
+        key_func=None,
+        per_method=False,
+        methods=None,
+        error_message=None,
+        exempt_when=None
+    ):
         """
         decorator to be used for rate limiting individual routes or blueprints.
 
@@ -486,13 +518,23 @@ class Limiter(object):
          error message used in the response.
         :return:
         """
-        return self.__limit_decorator(limit_value, key_func, per_method=per_method,
-                                      methods=methods, error_message=error_message,
-                                      exempt_when=exempt_when)
+        return self.__limit_decorator(
+            limit_value,
+            key_func,
+            per_method=per_method,
+            methods=methods,
+            error_message=error_message,
+            exempt_when=exempt_when
+        )
 
-
-    def shared_limit(self, limit_value, scope, key_func=None,
-                     error_message=None, exempt_when=None):
+    def shared_limit(
+        self,
+        limit_value,
+        scope,
+        key_func=None,
+        error_message=None,
+        exempt_when=None
+    ):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
@@ -506,10 +548,13 @@ class Limiter(object):
          error message used in the response.
         """
         return self.__limit_decorator(
-            limit_value, key_func, True, scope, error_message=error_message,
+            limit_value,
+            key_func,
+            True,
+            scope,
+            error_message=error_message,
             exempt_when=exempt_when
         )
-
 
     def exempt(self, obj):
         """
@@ -517,9 +562,11 @@ class Limiter(object):
         """
         if not isinstance(obj, Blueprint):
             name = "%s.%s" % (obj.__module__, obj.__name__)
+
             @wraps(obj)
             def __inner(*a, **k):
                 return obj(*a, **k)
+
             self._exempt_routes.add(name)
             return __inner
         else:
@@ -533,11 +580,9 @@ class Limiter(object):
         self._request_filters.append(fn)
         return fn
 
-
     def raise_global_limits_warning(self):
         warnings.warn(
             "global_limits was a badly name configuration since it is actually a default limit and not a "
             " globally shared limit. Use default_limits if you want to provide a default or use application_limits "
-            " if you intend to really have a global shared limit",
-            UserWarning
+            " if you intend to really have a global shared limit", UserWarning
         )

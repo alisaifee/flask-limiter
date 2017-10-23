@@ -23,32 +23,38 @@ from tests import FlaskLimiterTestCase
 
 
 class FlaskExtTests(FlaskLimiterTestCase):
-
     def test_invalid_strategy(self):
         app = Flask(__name__)
         app.config.setdefault(C.STRATEGY, "fubar")
-        self.assertRaises(ConfigurationError, Limiter, app, key_func=get_remote_address)
+        self.assertRaises(
+            ConfigurationError, Limiter, app, key_func=get_remote_address
+        )
 
     def test_invalid_storage_string(self):
         app = Flask(__name__)
         app.config.setdefault(C.STORAGE_URL, "fubar://localhost:1234")
-        self.assertRaises(ConfigurationError, Limiter, app, key_func=get_remote_address)
+        self.assertRaises(
+            ConfigurationError, Limiter, app, key_func=get_remote_address
+        )
 
     def test_constructor_arguments_over_config(self):
         app = Flask(__name__)
         app.config.setdefault(C.STRATEGY, "fixed-window-elastic-expiry")
-        limiter = Limiter(strategy='moving-window', key_func=get_remote_address)
+        limiter = Limiter(
+            strategy='moving-window', key_func=get_remote_address
+        )
         limiter.init_app(app)
         app.config.setdefault(C.STORAGE_URL, "redis://localhost:6379")
         self.assertEqual(type(limiter._limiter), MovingWindowRateLimiter)
-        limiter = Limiter(storage_uri='memcached://localhost:11211', key_func=get_remote_address)
+        limiter = Limiter(
+            storage_uri='memcached://localhost:11211',
+            key_func=get_remote_address
+        )
         limiter.init_app(app)
         self.assertEqual(type(limiter._storage), MemcachedStorage)
 
     def test_error_message(self):
-        app, limiter = self.build_app({
-            C.GLOBAL_LIMITS: "1 per day"
-        })
+        app, limiter = self.build_app({C.GLOBAL_LIMITS: "1 per day"})
 
         @app.route("/")
         def null():
@@ -60,14 +66,16 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
             @app.errorhandler(429)
             def ratelimit_handler(e):
-                return make_response('{"error" : "rate limit %s"}' % str(e.description), 429)
+                return make_response(
+                    '{"error" : "rate limit %s"}' % str(e.description), 429
+                )
 
-            self.assertEqual({'error': 'rate limit 1 per 1 day'}, json.loads(cli.get("/").data.decode()))
+            self.assertEqual({
+                'error': 'rate limit 1 per 1 day'
+            }, json.loads(cli.get("/").data.decode()))
 
     def test_reset(self):
-        app, limiter = self.build_app({
-            C.GLOBAL_LIMITS: "1 per day"
-        })
+        app, limiter = self.build_app({C.GLOBAL_LIMITS: "1 per day"})
 
         @app.route("/")
         def null():
@@ -91,7 +99,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
             return "ok"
 
         with app.test_client() as cli:
-            with mock.patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
+            with mock.patch(
+                "limits.strategies.FixedWindowRateLimiter.hit"
+            ) as hit:
+
                 def raiser(*a, **k):
                     raise Exception
 
@@ -112,7 +123,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
             return str(e), 500
 
         with app.test_client() as cli:
-            with mock.patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
+            with mock.patch(
+                "limits.strategies.FixedWindowRateLimiter.hit"
+            ) as hit:
+
                 def raiser(*a, **k):
                     raise Exception("underlying")
 
@@ -151,16 +165,23 @@ class FlaskExtTests(FlaskLimiterTestCase):
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
                 for i in range(0, 100):
-                    self.assertEqual(200,
-                                     cli.get("/t1", headers={"X_FORWARDED_FOR": "127.0.0.2"}).status_code
-                                     )
+                    self.assertEqual(
+                        200,
+                        cli.get(
+                            "/t1", headers={
+                                "X_FORWARDED_FOR": "127.0.0.2"
+                            }
+                        ).status_code
+                    )
                 self.assertEqual(429, cli.get("/t1").status_code)
 
     def test_multiple_decorators(self):
         app, limiter = self.build_app(key_func=get_ipaddr)
 
         @app.route("/t1")
-        @limiter.limit("100 per minute", lambda: "test")  # effectively becomes a limit for all users
+        @limiter.limit(
+            "100 per minute", lambda: "test"
+        )  # effectively becomes a limit for all users
         @limiter.limit("50/minute")  # per ip as per default key_func
         def t1():
             return "test"
@@ -168,13 +189,23 @@ class FlaskExtTests(FlaskLimiterTestCase):
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
                 for i in range(0, 100):
-                    self.assertEqual(200 if i < 50 else 429,
-                                     cli.get("/t1", headers={"X_FORWARDED_FOR": "127.0.0.2"}).status_code
-                                     )
+                    self.assertEqual(
+                        200 if i < 50 else 429,
+                        cli.get(
+                            "/t1", headers={
+                                "X_FORWARDED_FOR": "127.0.0.2"
+                            }
+                        ).status_code
+                    )
                 for i in range(50):
                     self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(429, cli.get("/t1").status_code)
-                self.assertEqual(429, cli.get("/t1", headers={"X_FORWARDED_FOR": "127.0.0.3"}).status_code)
+                self.assertEqual(
+                    429,
+                    cli.get("/t1", headers={
+                        "X_FORWARDED_FOR": "127.0.0.3"
+                    }).status_code
+                )
 
     def test_logging(self):
         app = Flask(__name__)
@@ -316,8 +347,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
     def test_disabled_flag(self):
         app, limiter = self.build_app(
-                config={C.ENABLED: False},
-                default_limits=["1/minute"]
+            config={C.ENABLED: False}, default_limits=["1/minute"]
         )
 
         @app.route("/t1")
@@ -338,26 +368,27 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
     def test_fallback_to_memory_config(self):
         _, limiter = self.build_app(
-                config={C.ENABLED: True},
-                default_limits=["5/minute"],
-                storage_uri="redis://localhost:6379",
-                in_memory_fallback=["1/minute"]
+            config={C.ENABLED: True},
+            default_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback=["1/minute"]
         )
         self.assertEqual(len(limiter._in_memory_fallback), 1)
 
         _, limiter = self.build_app(
-                config={C.ENABLED: True, C.IN_MEMORY_FALLBACK: "1/minute"},
-                default_limits=["5/minute"],
-                storage_uri="redis://localhost:6379",
+            config={C.ENABLED: True,
+                    C.IN_MEMORY_FALLBACK: "1/minute"},
+            default_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
         )
         self.assertEqual(len(limiter._in_memory_fallback), 1)
 
     def test_fallback_to_memory_backoff_check(self):
         app, limiter = self.build_app(
-                config={C.ENABLED: True},
-                default_limits=["5/minute"],
-                storage_uri="redis://localhost:6379",
-                in_memory_fallback=["1/minute"]
+            config={C.ENABLED: True},
+            default_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback=["1/minute"]
         )
 
         @app.route("/t1")
@@ -365,12 +396,13 @@ class FlaskExtTests(FlaskLimiterTestCase):
             return "test"
 
         with app.test_client() as cli:
+
             def raiser(*a):
                 raise Exception("redis dead")
 
             with hiro.Timeline() as timeline:
                 with mock.patch(
-                        "redis.client.Redis.execute_command"
+                    "redis.client.Redis.execute_command"
                 ) as exec_command:
                     exec_command.side_effect = raiser
                     self.assertEqual(cli.get("/t1").status_code, 200)
@@ -401,10 +433,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
     def test_fallback_to_memory(self):
         app, limiter = self.build_app(
-                config={C.ENABLED: True},
-                default_limits=["5/minute"],
-                storage_uri="redis://localhost:6379",
-                in_memory_fallback=["1/minute"]
+            config={C.ENABLED: True},
+            default_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback=["1/minute"]
         )
 
         @app.route("/t1")
@@ -432,7 +464,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 raise Exception("redis dead")
 
             with mock.patch(
-                    "redis.client.Redis.execute_command"
+                "redis.client.Redis.execute_command"
             ) as exec_command:
                 exec_command.side_effect = raiser
                 self.assertEqual(cli.get("/t1").status_code, 200)
@@ -449,14 +481,18 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/t2").status_code, 429)
 
     def test_decorated_dynamic_limits(self):
-        app, limiter = self.build_app({"X": "2 per second"}, default_limits=["1/second"])
+        app, limiter = self.build_app({
+            "X": "2 per second"
+        },
+                                      default_limits=["1/second"])
 
         def request_context_limit():
             limits = {
                 "127.0.0.1": "10 per minute",
                 "127.0.0.2": "1 per minute"
             }
-            remote_addr = (request.access_route and request.access_route[0]) or request.remote_addr or '127.0.0.1'
+            remote_addr = (request.access_route and request.access_route[0]
+                           ) or request.remote_addr or '127.0.0.1'
             limit = limits.setdefault(remote_addr, '1 per minute')
             return limit
 
@@ -478,7 +514,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
         with app.test_client() as cli:
             with hiro.Timeline().freeze() as timeline:
                 for i in range(0, 10):
-                    self.assertEqual(cli.get("/t1", headers=R1).status_code, 200)
+                    self.assertEqual(
+                        cli.get("/t1", headers=R1).status_code, 200
+                    )
                     timeline.forward(1)
                 self.assertEqual(cli.get("/t1", headers=R1).status_code, 429)
                 self.assertEqual(cli.get("/t1", headers=R2).status_code, 200)
@@ -494,7 +532,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
     def test_invalid_decorated_dynamic_limits(self):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per sec")
-        limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
+        limiter = Limiter(
+            app, default_limits=["1/second"], key_func=get_remote_address
+        )
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -510,13 +550,24 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/t1").status_code, 429)
         # 2 for invalid limit, 1 for warning.
         self.assertEqual(mock_handler.handle.call_count, 3)
-        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[0][0][0].msg)
-        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[1][0][0].msg)
-        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[2][0][0].msg)
+        self.assertTrue(
+            "failed to load ratelimit" in mock_handler.handle.call_args_list[0]
+            [0][0].msg
+        )
+        self.assertTrue(
+            "failed to load ratelimit" in mock_handler.handle.call_args_list[1]
+            [0][0].msg
+        )
+        self.assertTrue(
+            "exceeded at endpoint" in mock_handler.handle.call_args_list[2][0]
+            [0].msg
+        )
 
     def test_invalid_decorated_static_limits(self):
         app = Flask(__name__)
-        limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
+        limiter = Limiter(
+            app, default_limits=["1/second"], key_func=get_remote_address
+        )
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -530,12 +581,20 @@ class FlaskExtTests(FlaskLimiterTestCase):
             with hiro.Timeline().freeze() as timeline:
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertTrue("failed to configure" in mock_handler.handle.call_args_list[0][0][0].msg)
-        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[1][0][0].msg)
+        self.assertTrue(
+            "failed to configure" in mock_handler.handle.call_args_list[0][0]
+            [0].msg
+        )
+        self.assertTrue(
+            "exceeded at endpoint" in mock_handler.handle.call_args_list[1][0]
+            [0].msg
+        )
 
     def test_invalid_decorated_static_limit_blueprint(self):
         app = Flask(__name__)
-        limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
+        limiter = Limiter(
+            app, default_limits=["1/second"], key_func=get_remote_address
+        )
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -552,13 +611,21 @@ class FlaskExtTests(FlaskLimiterTestCase):
             with hiro.Timeline().freeze() as timeline:
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertTrue("failed to configure" in mock_handler.handle.call_args_list[0][0][0].msg)
-        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[1][0][0].msg)
+        self.assertTrue(
+            "failed to configure" in mock_handler.handle.call_args_list[0][0]
+            [0].msg
+        )
+        self.assertTrue(
+            "exceeded at endpoint" in mock_handler.handle.call_args_list[1][0]
+            [0].msg
+        )
 
     def test_invalid_decorated_dynamic_limits_blueprint(self):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per sec")
-        limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
+        limiter = Limiter(
+            app, default_limits=["1/second"], key_func=get_remote_address
+        )
         mock_handler = mock.Mock()
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
@@ -576,15 +643,26 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         self.assertEqual(mock_handler.handle.call_count, 3)
-        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[0][0][0].msg)
-        self.assertTrue("failed to load ratelimit" in mock_handler.handle.call_args_list[1][0][0].msg)
-        self.assertTrue("exceeded at endpoint" in mock_handler.handle.call_args_list[2][0][0].msg)
+        self.assertTrue(
+            "failed to load ratelimit" in mock_handler.handle.call_args_list[0]
+            [0][0].msg
+        )
+        self.assertTrue(
+            "failed to load ratelimit" in mock_handler.handle.call_args_list[1]
+            [0][0].msg
+        )
+        self.assertTrue(
+            "exceeded at endpoint" in mock_handler.handle.call_args_list[2][0]
+            [0].msg
+        )
 
     def test_multiple_apps(self):
         app1 = Flask(__name__)
         app2 = Flask(__name__)
 
-        limiter = Limiter(default_limits=["1/second"], key_func=get_remote_address)
+        limiter = Limiter(
+            default_limits=["1/second"], key_func=get_remote_address
+        )
         limiter.init_app(app1)
         limiter.init_app(app2)
 
@@ -634,7 +712,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
     def test_headers_no_breach(self):
         app = Flask(__name__)
         limiter = Limiter(
-            app, default_limits=["10/minute"], headers_enabled=True,
+            app,
+            default_limits=["10/minute"],
+            headers_enabled=True,
             key_func=get_remote_address
         )
 
@@ -650,46 +730,34 @@ class FlaskExtTests(FlaskLimiterTestCase):
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 resp = cli.get("/t1")
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '10')
                 self.assertEqual(
-                        resp.headers.get('X-RateLimit-Limit'),
-                        '10'
+                    resp.headers.get('X-RateLimit-Remaining'), '9'
                 )
                 self.assertEqual(
-                        resp.headers.get('X-RateLimit-Remaining'),
-                        '9'
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 61))
                 )
-                self.assertEqual(
-                        resp.headers.get('X-RateLimit-Reset'),
-                        str(int(time.time() + 61))
-                )
-                self.assertEqual(
-                        resp.headers.get('Retry-After'),
-                        str(60)
-                )
+                self.assertEqual(resp.headers.get('Retry-After'), str(60))
                 resp = cli.get("/t2")
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '2')
                 self.assertEqual(
-                        resp.headers.get('X-RateLimit-Limit'),
-                        '2'
+                    resp.headers.get('X-RateLimit-Remaining'), '1'
                 )
                 self.assertEqual(
-                        resp.headers.get('X-RateLimit-Remaining'),
-                        '1'
-                )
-                self.assertEqual(
-                        resp.headers.get('X-RateLimit-Reset'),
-                        str(int(time.time() + 2))
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 2))
                 )
 
-                self.assertEqual(
-                    resp.headers.get('Retry-After'),
-                    str(1)
-                )
+                self.assertEqual(resp.headers.get('Retry-After'), str(1))
 
     def test_headers_breach(self):
         app = Flask(__name__)
         limiter = Limiter(
-            app, default_limits=["10/minute"],
-            headers_enabled=True, key_func=get_remote_address
+            app,
+            default_limits=["10/minute"],
+            headers_enabled=True,
+            key_func=get_remote_address
         )
 
         @app.route("/t1")
@@ -703,28 +771,23 @@ class FlaskExtTests(FlaskLimiterTestCase):
                     resp = cli.get("/t1")
                     timeline.forward(1)
 
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '10')
                 self.assertEqual(
-                        resp.headers.get('X-RateLimit-Limit'),
-                        '10'
+                    resp.headers.get('X-RateLimit-Remaining'), '0'
                 )
                 self.assertEqual(
-                        resp.headers.get('X-RateLimit-Remaining'),
-                        '0'
+                    resp.headers.get('X-RateLimit-Reset'),
+                    str(int(time.time() + 50))
                 )
-                self.assertEqual(
-                        resp.headers.get('X-RateLimit-Reset'),
-                        str(int(time.time() + 50))
-                )
-                self.assertEqual(
-                        resp.headers.get('Retry-After'),
-                        str(int(50))
-                )
+                self.assertEqual(resp.headers.get('Retry-After'), str(int(50)))
 
     def test_retry_after(self):
         app = Flask(__name__)
         _ = Limiter(
-            app, default_limits=["1/minute"],
-            headers_enabled=True, key_func=get_remote_address
+            app,
+            default_limits=["1/minute"],
+            headers_enabled=True,
+            key_func=get_remote_address
         )
 
         @app.route("/t1")
@@ -743,8 +806,11 @@ class FlaskExtTests(FlaskLimiterTestCase):
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
         limiter = Limiter(
-            app, default_limits=["10/minute"], headers_enabled=True,
-            key_func=get_remote_address, retry_after='http-date'
+            app,
+            default_limits=["10/minute"],
+            headers_enabled=True,
+            key_func=get_remote_address,
+            retry_after='http-date'
         )
         limiter._header_mapping[HEADERS.RESET] = 'X-Reset'
         limiter._header_mapping[HEADERS.LIMIT] = 'X-Limit'
@@ -761,17 +827,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
                     resp = cli.get("/t1")
                     timeline.forward(1)
 
+                self.assertEqual(resp.headers.get('X-Limit'), '10')
+                self.assertEqual(resp.headers.get('X-Remaining'), '0')
                 self.assertEqual(
-                        resp.headers.get('X-Limit'),
-                        '10'
-                )
-                self.assertEqual(
-                        resp.headers.get('X-Remaining'),
-                        '0'
-                )
-                self.assertEqual(
-                        resp.headers.get('X-Reset'),
-                        str(int(time.time() + 50))
+                    resp.headers.get('X-Reset'), str(int(time.time() + 50))
                 )
                 self.assertEqual(
                     resp.headers.get('Retry-After'),
@@ -784,10 +843,11 @@ class FlaskExtTests(FlaskLimiterTestCase):
         app.config.setdefault(C.HEADER_REMAINING, "X-Remaining")
         app.config.setdefault(C.HEADER_RESET, "X-Reset")
         limiter = Limiter(
-            app, default_limits=["10/minute"], headers_enabled=True,
+            app,
+            default_limits=["10/minute"],
+            headers_enabled=True,
             key_func=get_remote_address
         )
-
 
         @app.route("/t1")
         @limiter.limit("2/second; 10 per minute; 20/hour")
@@ -800,17 +860,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
                     resp = cli.get("/t1")
                     timeline.forward(1)
 
+                self.assertEqual(resp.headers.get('X-Limit'), '10')
+                self.assertEqual(resp.headers.get('X-Remaining'), '0')
                 self.assertEqual(
-                        resp.headers.get('X-Limit'),
-                        '10'
-                )
-                self.assertEqual(
-                        resp.headers.get('X-Remaining'),
-                        '0'
-                )
-                self.assertEqual(
-                        resp.headers.get('X-Reset'),
-                        str(int(time.time() + 50))
+                    resp.headers.get('X-Reset'), str(int(time.time() + 50))
                 )
 
     def test_named_shared_limit(self):
@@ -974,14 +1027,18 @@ class FlaskExtTests(FlaskLimiterTestCase):
             return "passed"
 
         @app.route("/unlimited")
-        @limiter.shared_limit("1 per day", "test_scope", exempt_when=lambda: True)
+        @limiter.shared_limit(
+            "1 per day", "test_scope", exempt_when=lambda: True
+        )
         def never_limited_route():
             return "should always pass"
 
         is_exempt = False
 
         @app.route("/conditional")
-        @limiter.shared_limit("1 per day", "test_scope", exempt_when=lambda: is_exempt)
+        @limiter.shared_limit(
+            "1 per day", "test_scope", exempt_when=lambda: is_exempt
+        )
         def conditionally_limited_route():
             return "conditional"
 
@@ -1002,7 +1059,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         app = Flask(__name__)
         limiter = Limiter(
-            app, default_limits=["1/minute"], headers_enabled=True,
+            app,
+            default_limits=["1/minute"],
+            headers_enabled=True,
             key_func=get_remote_address
         )
 
@@ -1025,14 +1084,13 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
                 for i in range(0, 10):
                     self.assertEqual(
-                            cli.get("/", headers={"internal": "true"}).status_code,
-                            200
+                        cli.get("/", headers={
+                            "internal": "true"
+                        }).status_code, 200
                     )
 
     def test_pluggable_views(self):
-        app, limiter = self.build_app(
-                default_limits=["1/hour"]
-        )
+        app, limiter = self.build_app(default_limits=["1/hour"])
 
         class Va(View):
             methods = ['GET', 'POST']
@@ -1073,9 +1131,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.get("/c").status_code)
 
     def test_pluggable_method_views(self):
-        app, limiter = self.build_app(
-                default_limits=["1/hour"]
-        )
+        app, limiter = self.build_app(default_limits=["1/hour"])
 
         class Va(MethodView):
             decorators = [limiter.limit("2/second")]
@@ -1131,9 +1187,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.post("/d").status_code)
 
     def test_flask_restful_resource(self):
-        app, limiter = self.build_app(
-                default_limits=["1/hour"]
-        )
+        app, limiter = self.build_app(default_limits=["1/hour"])
         api = RestfulApi(app)
 
         class Va(Resource):
@@ -1233,10 +1287,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         @app.errorhandler(429)
         def ratelimit_handler(e):
-            return make_response(
-                    e.description
-                    , 429
-            )
+            return make_response(e.description, 429)
 
         l1 = lambda: "1/second"
         e1 = lambda: "dos"
@@ -1251,7 +1302,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
         def t2():
             return "2"
 
-        s1 = limiter.shared_limit("1/second", scope='error_message', error_message="tres")
+        s1 = limiter.shared_limit(
+            "1/second", scope='error_message', error_message="tres"
+        )
 
         @app.route("/t3")
         @s1
@@ -1274,8 +1327,13 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(resp.data, b'tres')
 
     def test_custom_key_prefix(self):
-        app1, limiter1 = self.build_app(key_prefix="moo", storage_uri="redis://localhost:6379")
-        app2, limiter2 = self.build_app({C.KEY_PREFIX: "cow"}, storage_uri="redis://localhost:6379")
+        app1, limiter1 = self.build_app(
+            key_prefix="moo", storage_uri="redis://localhost:6379"
+        )
+        app2, limiter2 = self.build_app({
+            C.KEY_PREFIX: "cow"
+        },
+                                        storage_uri="redis://localhost:6379")
         app3, limiter3 = self.build_app(storage_uri="redis://localhost:6379")
 
         @app1.route("/test")

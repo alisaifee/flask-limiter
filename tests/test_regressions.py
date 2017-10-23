@@ -10,8 +10,6 @@ from tests import FlaskLimiterTestCase
 
 
 class RegressionTests(FlaskLimiterTestCase):
-
-
     def test_redis_request_slower_than_fixed_window(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS: "5 per second",
@@ -27,10 +25,7 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             resp = cli.get("/t1")
-            self.assertEqual(
-                    resp.headers["X-RateLimit-Remaining"],
-                    '5'
-            )
+            self.assertEqual(resp.headers["X-RateLimit-Remaining"], '5')
 
     def test_redis_request_slower_than_moving_window(self):
         app, limiter = self.build_app({
@@ -47,10 +42,7 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             resp = cli.get("/t1")
-            self.assertEqual(
-                    resp.headers["X-RateLimit-Remaining"],
-                    '5'
-            )
+            self.assertEqual(resp.headers["X-RateLimit-Remaining"], '5')
 
     def test_dynamic_limits(self):
         app, limiter = self.build_app({
@@ -75,9 +67,7 @@ class RegressionTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/t1").status_code, 429)
 
     def test_invalid_ratelimit_key(self):
-        app, limiter = self.build_app(
-            {C.HEADERS_ENABLED: True}
-        )
+        app, limiter = self.build_app({C.HEADERS_ENABLED: True})
 
         def func(*a):
             return None

@@ -7,7 +7,6 @@ from pkg_resources import get_distribution
 from werkzeug import exceptions
 from six import text_type
 
-
 werkzeug_version = get_distribution("werkzeug").version
 if LooseVersion(werkzeug_version) < LooseVersion("0.9"):  # pragma: no cover
     # sorry, for touching your internals :).

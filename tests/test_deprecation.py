@@ -19,5 +19,5 @@ class DeprecationTests(unittest.TestCase):
             from flask import Flask
             from flask_limiter import Limiter
             app = Flask(__name__)
-            Limiter(app, key_func = lambda x: 'test', global_limits=['1/second'])
+            Limiter(app, key_func=lambda x: 'test', global_limits=['1/second'])
             self.assertEqual(len(w), 1)
