@@ -1,22 +1,25 @@
 """
 the flask extension
 """
+import logging
+import sys
+import time
 import warnings
 from functools import wraps
-import logging
 
+import itertools
+import six
 from flask import request, current_app, g, Blueprint
-from werkzeug.http import http_date
-
 from limits.errors import ConfigurationError
 from limits.storage import storage_from_string, MemoryStorage
 from limits.strategies import STRATEGIES
 from limits.util import parse_many
-import six
-import sys
-import time
+from werkzeug.http import http_date
+
+from flask_limiter.wrappers import Limit, LimitGroup
 from .errors import RateLimitExceeded
 from .util import get_ipaddr
+
 
 class C:
     ENABLED = "RATELIMIT_ENABLED"
@@ -44,32 +47,6 @@ class HEADERS:
 
 MAX_BACKEND_CHECKS = 5
 
-class ExtLimit(object):
-    """
-    simple wrapper to encapsulate limits and their context
-    """
-    def __init__(self, limit, key_func, scope, per_method, methods, error_message,
-                 exempt_when):
-        self._limit = limit
-        self.key_func = key_func
-        self._scope = scope
-        self.per_method = per_method
-        self.methods = methods and [m.lower() for m in methods] or methods
-        self.error_message = error_message
-        self.exempt_when = exempt_when
-
-    @property
-    def limit(self):
-        return self._limit() if callable(self._limit) else self._limit
-
-    @property
-    def scope(self):
-        return self._scope(request.endpoint) if callable(self._scope) else self._scope
-
-    @property
-    def is_exempt(self):
-        """Check if the limit is exempt."""
-        return self.exempt_when and self.exempt_when()
 
 class Limiter(object):
     """
@@ -142,26 +119,26 @@ class Limiter(object):
         for limit in set(global_limits + default_limits):
             self._default_limits.extend(
                 [
-                    ExtLimit(
+                    LimitGroup(
                         limit, self._key_func, None, False, None, None, None
-                    ) for limit in parse_many(limit)
+                    )
                 ]
             )
         for limit in application_limits:
             self._application_limits.extend(
                 [
-                    ExtLimit(
+                    LimitGroup(
                         limit, self._key_func, "global", False, None, None, None
-                    ) for limit in parse_many(limit)
+                    )
                 ]
             )
         for limit in in_memory_fallback:
             self._in_memory_fallback.extend(
                 [
-                    ExtLimit(
+                    LimitGroup(
                         limit, self._key_func, None, False, None, None, None
-                    ) for limit in parse_many(limit)
-                    ]
+                    )
+                ]
             )
         self._route_limits = {}
         self._dynamic_route_limits = {}
@@ -225,9 +202,9 @@ class Limiter(object):
         app_limits = app.config.get(C.APPLICATION_LIMITS, None)
         if not self._application_limits and app_limits:
             self._application_limits = [
-                ExtLimit(
-                    limit, self._key_func, "global", False, None, None, None
-                ) for limit in parse_many(app_limits)
+                LimitGroup(
+                    app_limits, self._key_func, "global", False, None, None, None
+                )
             ]
 
         if app.config.get(C.GLOBAL_LIMITS, None):
@@ -235,17 +212,17 @@ class Limiter(object):
         conf_limits = app.config.get(C.GLOBAL_LIMITS, app.config.get(C.DEFAULT_LIMITS, None))
         if not self._default_limits and conf_limits:
             self._default_limits = [
-                ExtLimit(
-                    limit, self._key_func, None, False, None, None, None
-                ) for limit in parse_many(conf_limits)
+                LimitGroup(
+                    conf_limits, self._key_func, None, False, None, None, None
+                )
             ]
         fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
-                ExtLimit(
-                    limit, self._key_func, None, False, None, None, None
-                ) for limit in parse_many(fallback_limits)
-                ]
+                LimitGroup(
+                    fallback_limits, self._key_func, None, False, None, None, None
+                )
+            ]
         if self._auto_check:
             app.before_request(self.__check_request_limit)
         app.after_request(self.__inject_headers)
@@ -340,12 +317,7 @@ class Limiter(object):
         if name in self._dynamic_route_limits:
             for lim in self._dynamic_route_limits[name]:
                 try:
-                    dynamic_limits.extend(
-                        ExtLimit(
-                            limit, lim.key_func, lim.scope, lim.per_method,
-                            lim.methods, lim.error_message, lim.exempt_when
-                        ) for limit in parse_many(lim.limit)
-                    )
+                    dynamic_limits.extend(list(lim))
                 except ValueError as e:
                     self.logger.error(
                         "failed to load ratelimit for view function %s (%s)"
@@ -355,23 +327,23 @@ class Limiter(object):
             if (request.blueprint in self._blueprint_dynamic_limits
                 and not dynamic_limits
             ):
-                for lim in self._blueprint_dynamic_limits[request.blueprint]:
+                for limit_group in self._blueprint_dynamic_limits[request.blueprint]:
                     try:
                         dynamic_limits.extend(
-                            ExtLimit(
-                                limit, lim.key_func, lim.scope, lim.per_method,
-                                lim.methods, lim.error_message, lim.exempt_when
-                            ) for limit in parse_many(lim.limit)
+                            [
+                                Limit(
+                                    limit.limit, limit.key_func, limit.scope, limit.per_method,
+                                    limit.methods, limit.error_message, limit.exempt_when
+                                ) for limit in limit_group
+                            ]
                         )
                     except ValueError as e:
                         self.logger.error(
                             "failed to load ratelimit for blueprint %s (%s)"
                             , request.blueprint, e
                         )
-            if (request.blueprint in self._blueprint_limits
-                and not limits
-            ):
-               limits.extend(self._blueprint_limits[request.blueprint])
+            if (request.blueprint in self._blueprint_limits and not limits):
+                limits.extend(self._blueprint_limits[request.blueprint])
 
         failed_limit = None
         limit_for_header = None
@@ -385,9 +357,12 @@ class Limiter(object):
                     self._storage_dead = False
                     self.__check_backend_count = 0
                 else:
-                    all_limits = self._in_memory_fallback
+                    all_limits = list(itertools.chain(*self._in_memory_fallback))
             if not all_limits:
-                all_limits = self._application_limits + (limits + dynamic_limits or self._default_limits)
+                all_limits = itertools.chain(
+                    itertools.chain(*self._application_limits),
+                    (limits + dynamic_limits) or itertools.chain(*self._default_limits)
+                )
             for lim in all_limits:
                 limit_scope = lim.scope or endpoint
                 if lim.is_exempt:
@@ -400,7 +375,6 @@ class Limiter(object):
 
                 args = [limit_key, limit_scope]
                 if all(args):
-                    print(lim.limit, limit_key, limit_scope)
                     if not limit_for_header or lim.limit < limit_for_header[0]:
                         limit_for_header = (lim.limit, limit_key, limit_scope)
                     if self._key_prefix:
@@ -459,14 +433,12 @@ class Limiter(object):
             name = "%s.%s" % (obj.__module__, obj.__name__) if is_route else obj.name
             dynamic_limit, static_limits = None, []
             if callable(limit_value):
-                dynamic_limit = ExtLimit(limit_value, func, _scope, per_method,
-                                         methods, error_message, exempt_when)
+                dynamic_limit = LimitGroup(limit_value, func, _scope, per_method, methods, error_message, exempt_when)
             else:
                 try:
-                    static_limits = [ExtLimit(
-                        limit, func, _scope, per_method,
-                        methods, error_message, exempt_when
-                    ) for limit in parse_many(limit_value)]
+                    static_limits = list(
+                        LimitGroup(limit_value, func, _scope, per_method, methods, error_message, exempt_when)
+                    )
                 except ValueError as e:
                     self.logger.error(
                         "failed to configure %s %s (%s)",
