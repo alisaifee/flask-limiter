@@ -395,17 +395,24 @@ class Limiter(object):
                     limit_scope += ":%s" % request.method
                 limit_key = lim.key_func()
 
-                if not limit_for_header or lim.limit < limit_for_header[0]:
-                    limit_for_header = (lim.limit, limit_key, limit_scope)
-                if not self.limiter.hit(lim.limit, *filter(None, [self._key_prefix, limit_key, limit_scope])):
-                    self.logger.warning(
-                        "ratelimit %s (%s) exceeded at endpoint: %s"
-                        , lim.limit, limit_key, limit_scope
-                    )
-                    failed_limit = lim
-                    limit_for_header = (lim.limit, limit_key, limit_scope)
-                    break
-
+                args = [limit_key, limit_scope]
+                if all(args):
+                    print(lim.limit, limit_key, limit_scope)
+                    if not limit_for_header or lim.limit < limit_for_header[0]:
+                        limit_for_header = (lim.limit, limit_key, limit_scope)
+                    if self._key_prefix:
+                        args = [self._key_prefix] + args
+                    if not self.limiter.hit(lim.limit, *args):
+                        self.logger.warning(
+                            "ratelimit %s (%s) exceeded at endpoint: %s"
+                            , lim.limit, limit_key, limit_scope
+                        )
+                        failed_limit = lim
+                        limit_for_header = (lim.limit, limit_key, limit_scope)
+                        break
+                else:
+                    self.logger.error("Skipping limit: %s. Empty value found in parameters.", lim.limit)
+                    continue
             g.view_rate_limit = limit_for_header
 
             if failed_limit:
