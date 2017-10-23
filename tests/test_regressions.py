@@ -10,7 +10,7 @@ from tests import FlaskLimiterTestCase
 
 
 class RegressionTests(FlaskLimiterTestCase):
-    def xest_redis_request_slower_than_fixed_window(self):
+    def test_redis_request_slower_than_fixed_window(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS: "5 per second",
             C.STORAGE_URL: "redis://localhost:6379",
