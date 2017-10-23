@@ -607,13 +607,13 @@ The `error_message` argument can either be a simple string or a callable that re
         def error_handler():
             return app.config.get("DEFAULT_ERROR_MESSAGE")
 
-        @limiter.limit("1/second", error_message='chill!')
         @app.route("/")
+        @limiter.limit("1/second", error_message='chill!')
         def index():
             ....
 
-        @limiter.limit("10/second", error_message=error_handler)
         @app.route("/ping")
+        @limiter.limit("10/second", error_message=error_handler)
         def ping():
             ....
 
