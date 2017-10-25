@@ -5,12 +5,14 @@ import json
 import logging
 import time
 import unittest
+from functools import wraps
 
+import functools
 import hiro
 import mock
 import redis
 import datetime
-from flask import Flask, Blueprint, request, current_app, make_response
+from flask import Flask, Blueprint, request, current_app, make_response, g
 from flask_restful import Resource, Api as RestfulApi
 from flask.views import View, MethodView
 from limits.errors import ConfigurationError
@@ -642,6 +644,93 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.get("/").status_code)
                 self.assertEqual(200, cli.post("/").status_code)
                 self.assertEqual(200, cli.post("/").status_code)
+
+    def test_decorated_limit_immediate(self):
+        app, limiter = self.build_app(default_limits=["1/minute"])
+
+        def append_info(fn):
+            @wraps(fn)
+            def __inner(*args, **kwargs):
+                g.rate_limit = "2/minute"
+                return fn(*args, **kwargs)
+            return __inner
+
+        @app.route("/", methods=["GET", "POST"])
+        @append_info
+        @limiter.limit(lambda: g.rate_limit, per_method=True)
+        def root():
+            return "root"
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(429, cli.get("/").status_code)
+
+    def test_decorated_shared_limit_immediate(self):
+
+        app, limiter = self.build_app(default_limits=['1/minute'])
+        shared = limiter.shared_limit(lambda: g.rate_limit, 'shared')
+        def append_info(fn):
+            @wraps(fn)
+            def __inner(*args, **kwargs):
+                g.rate_limit = "2/minute"
+                return fn(*args, **kwargs)
+            return __inner
+
+        @app.route("/", methods=["GET", "POST"])
+        @append_info
+        @shared
+        def root():
+            return "root"
+
+        @app.route("/other", methods=["GET", "POST"])
+        def other():
+            return "other"
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/other").status_code)
+                self.assertEqual(429, cli.get("/other").status_code)
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(429, cli.get("/").status_code)
+
+    def test_backward_compatibility_with_incorrect_ordering(self):
+        app, limiter = self.build_app()
+
+        def something_else(fn):
+            @functools.wraps(fn)
+            def __inner(*args, **kwargs):
+                return fn(*args, **kwargs)
+            return __inner
+
+        @limiter.limit("1/second")
+        @app.route("/t1", methods=["GET", "POST"])
+        def root():
+            return "t1"
+
+        @limiter.limit("1/second")
+        @app.route("/t2", methods=["GET", "POST"])
+        @something_else
+        def t2():
+            return "t2"
+
+        @limiter.limit("2/second")
+        @limiter.limit("1/second")
+        @app.route("/t3", methods=["GET", "POST"])
+        def t3():
+            return "t3"
+
+
+        with hiro.Timeline().freeze():
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/t1").status_code)
+                self.assertEqual(429, cli.get("/t1").status_code)
+                self.assertEqual(200, cli.get("/t2").status_code)
+                self.assertEqual(429, cli.get("/t2").status_code)
+                self.assertEqual(200, cli.get("/t3").status_code)
+                self.assertEqual(429, cli.get("/t3").status_code)
 
 
 class BlueprintTests(FlaskLimiterTestCase):
@@ -1335,6 +1424,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
             with app.test_client() as cli:
                 self.assertEqual(200, cli.get("/").status_code)
                 self.assertEqual(429, cli.get("/").status_code)
+
 
     def test_custom_key_prefix(self):
         app1, limiter1 = self.build_app(
