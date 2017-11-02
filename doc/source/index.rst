@@ -406,7 +406,7 @@ used in the scenario when the request does not breach any rate limits.
                                reset.
 ``Retry-After``                Seconds to retry after or the http date when the
                                Rate Limit will be reset. The way the value is presented
-                               depends on the configuration value set in `RATELIMIT_HEADER_REMAINING_VALUE`
+                               depends on the configuration value set in `RATELIMIT_HEADER_RETRY_AFTER_VALUE`
                                and defaults to `delta-seconds`.
 ============================== ================================================
 
