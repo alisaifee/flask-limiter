@@ -3,11 +3,12 @@
 Changelog
 =========
 
-1.0.0rc1 2017-10-26
--------------------
+1.0.0 2017-11-06
+----------------
 * Improved documentation for handling ip addresses for applications behind proxiues (`Issue 41 <https://github.com/alisiafee/flask-limiter/issues/41>`_)
 * Execute rate limits for decorated routes in decorator instead of `before_request`  (`Issue 67 <https://github.com/alisiafee/flask-limiter/issues/67>`_)
 * Bug Fix
+
   * Python 3.5 Errors (`Issue 82 <https://github.com/alisiafee/flask-limiter/issues/82>`_)
   * RATELIMIT_KEY_PREFIX configuration constant not used (`Issue 88 <https://github.com/alisiafee/flask-limiter/issues/88>`_)
   * Can't use dynamic limit in `default_limits` (`Issue 94 <https://github.com/alisiafee/flask-limiter/issues/94>`_)
@@ -226,6 +227,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
