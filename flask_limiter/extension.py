@@ -451,7 +451,7 @@ class Limiter(object):
                         )
             if not all_limits:
                 route_limits = limits + dynamic_limits
-                all_limits = list(itertools.chain(*self._application_limits))
+                all_limits = list(itertools.chain(*self._application_limits)) if in_middleware else []
                 all_limits += route_limits
                 if (
                     not route_limits
