@@ -126,3 +126,28 @@ class RegressionTests(FlaskLimiterTestCase):
             resp = cli.get("/test")
             self.assertEqual(resp.headers.get('Retry-After'), str(60))
             self.assertEqual(429, resp.status_code)
+
+    def test_default_limits_with_per_route_limit(self):
+        app, limiter = self.build_app(
+            application_limits=['3/minute']
+        )
+
+        @app.route("/explicit")
+        @limiter.limit("1/minute")
+        def explicit():
+            return "explicit"
+
+        @app.route("/default")
+        def default():
+            return "default"
+
+        with app.test_client() as cli:
+            with hiro.Timeline().freeze() as timeline:
+                self.assertEqual(200, cli.get("/explicit").status_code)
+                self.assertEqual(429, cli.get("/explicit").status_code)
+                self.assertEqual(200, cli.get("/default").status_code)
+                self.assertEqual(429, cli.get("/default").status_code)
+                timeline.forward(60)
+                self.assertEqual(200, cli.get("/explicit").status_code)
+                self.assertEqual(200, cli.get("/default").status_code)
+
