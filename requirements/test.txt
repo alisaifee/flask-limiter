@@ -1,7 +1,7 @@
 -r main.txt
 nose==1.3.7
 mock==2.0.0
-coverage
+coverage==4.4.2
 nose-cov
 git+https://github.com/alisaifee/pymemcache.git#egg=pymemcache
 redis
