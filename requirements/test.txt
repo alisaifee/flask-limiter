@@ -6,5 +6,5 @@ nose-cov==1.6
 git+https://github.com/alisaifee/pymemcache.git#egg=pymemcache
 redis==2.10.6
 hiro>0.1.6
-ordereddict
+ordereddict==1.1
 flask-restful
