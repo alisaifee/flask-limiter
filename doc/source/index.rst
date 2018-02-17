@@ -298,8 +298,8 @@ The following flask configuration values are honored by
 ``RATELIMIT_HEADER_LIMIT``            Header for the current rate limit. Defaults to ``X-RateLimit-Limit``
 ``RATELIMIT_HEADER_RESET``            Header for the reset time of the current rate limit. Defaults to ``X-RateLimit-Reset``
 ``RATELIMIT_HEADER_REMAINING``        Header for the number of requests remaining in the current rate limit. Defaults to ``X-RateLimit-Remaining``
-``RATELIMIT_HEADER_REMAINING``        Header for when the client should retry the request. Defaults to ``Retry-After``
-``RATELIMIT_HEADER_REMAINING_VALUE``  Allows configuration of how the value of the `Retry-After` header is rendered. One of `http-date` or `delta-seconds`. (`RFC2616`_).
+``RATELIMIT_HEADER_RETRY_AFTER``        Header for when the client should retry the request. Defaults to ``Retry-After``
+``RATELIMIT_HEADER_RETRY_AFTER_VALUE``  Allows configuration of how the value of the `Retry-After` header is rendered. One of `http-date` or `delta-seconds`. (`RFC2616`_).
 ``RATELIMIT_SWALLOW_ERRORS``          Whether to allow failures while attempting to perform a rate limit
                                       such as errors with downstream storage. Setting this value to ``True``
                                       will effectively disable rate limiting for requests where an error has
@@ -406,7 +406,7 @@ used in the scenario when the request does not breach any rate limits.
                                reset.
 ``Retry-After``                Seconds to retry after or the http date when the
                                Rate Limit will be reset. The way the value is presented
-                               depends on the configuration value set in `RATELIMIT_HEADER_REMAINING_VALUE`
+                               depends on the configuration value set in `RATELIMIT_HEADER_RETRY_AFTER_VALUE`
                                and defaults to `delta-seconds`.
 ============================== ================================================
 
