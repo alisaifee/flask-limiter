@@ -87,12 +87,13 @@ class Limiter(object):
         swallow_errors=False,
         in_memory_fallback=[],
         retry_after=None,
-        key_prefix=""
+        key_prefix="",
+        enabled=True
     ):
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
 
-        self.enabled = True
+        self.enabled = enabled
         self._default_limits = []
         self._application_limits = []
         self._in_memory_fallback = []
@@ -167,7 +168,7 @@ class Limiter(object):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
-        self.enabled = app.config.setdefault(C.ENABLED, True)
+        self.enabled = app.config.setdefault(C.ENABLED, self.enabled)
         self._swallow_errors = app.config.setdefault(
             C.SWALLOW_ERRORS, self._swallow_errors
         )
@@ -240,9 +241,6 @@ class Limiter(object):
                     None
                 )
             ]
-        if self._auto_check:
-            app.before_request(self.__check_request_limit)
-        app.after_request(self.__inject_headers)
 
         if self._in_memory_fallback:
             self._fallback_storage = MemoryStorage()
@@ -253,6 +251,12 @@ class Limiter(object):
         # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, 'extensions'):
             app.extensions = {}  # pragma: no cover
+
+        if not app.extensions.get('limiter'):
+            if self._auto_check:
+                app.before_request(self.__check_request_limit)
+            app.after_request(self.__inject_headers)
+
         app.extensions['limiter'] = self
 
     def __should_check_backend(self):
