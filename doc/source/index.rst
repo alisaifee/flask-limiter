@@ -12,8 +12,16 @@ Flask-Limiter
 Usage
 =====
 
+Installation
+------------
+
+::
+
+   pip install Flask-Limiter
+
 Quick start
 -----------
+
 .. code-block:: python
 
    from flask import Flask
