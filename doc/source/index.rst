@@ -69,7 +69,7 @@ Using the constructor
 
       limiter = Limiter(app, key_func=get_remote_address)
 
-Using ``init_app``
+Deferred app initialization using ``init_app``
 
     .. code-block:: python
 
