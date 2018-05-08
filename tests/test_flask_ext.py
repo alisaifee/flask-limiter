@@ -1287,6 +1287,44 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 resp = cli.get("/t1")
                 self.assertEqual(resp.status_code, 200)
 
+    def test_retry_after_exists_seconds(self):
+        app = Flask(__name__)
+        _ = Limiter(
+            app,
+            default_limits=["1/minute"],
+            headers_enabled=True,
+            key_func=get_remote_address
+        )
+
+        @app.route("/t1")
+        def t():
+            return "", 200, {'Retry-After': '1000000'}
+
+        with app.test_client() as cli:
+            resp = cli.get("/t1")
+
+            retry_after = int(resp.headers.get('Retry-After'))
+            self.assertTrue(retry_after > 1000)
+
+    def test_retry_after_exists_rfc1123(self):
+        app = Flask(__name__)
+        _ = Limiter(
+            app,
+            default_limits=["1/minute"],
+            headers_enabled=True,
+            key_func=get_remote_address
+        )
+
+        @app.route("/t1")
+        def t():
+            return "", 200, {'Retry-After': 'Sun, 06 Nov 2032 01:01:01 GMT'}
+
+        with app.test_client() as cli:
+            resp = cli.get("/t1")
+
+            retry_after = int(resp.headers.get('Retry-After'))
+            self.assertTrue(retry_after > 1000)
+
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
         limiter = Limiter(
