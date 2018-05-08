@@ -1304,7 +1304,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
             resp = cli.get("/t1")
 
             retry_after = int(resp.headers.get('Retry-After'))
-            self.assertTrue(retry_after > 1000)
+            self.assertGreater(retry_after, 1000)
 
     def test_retry_after_exists_rfc1123(self):
         app = Flask(__name__)
@@ -1323,7 +1323,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
             resp = cli.get("/t1")
 
             retry_after = int(resp.headers.get('Retry-After'))
-            self.assertTrue(retry_after > 1000)
+            self.assertGreater(retry_after, 1000)
 
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
