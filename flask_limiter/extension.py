@@ -1,6 +1,7 @@
 """
 the flask extension
 """
+import datetime
 import itertools
 import logging
 import sys
@@ -13,7 +14,7 @@ from flask import request, current_app, g, Blueprint
 from limits.errors import ConfigurationError
 from limits.storage import storage_from_string, MemoryStorage
 from limits.strategies import STRATEGIES
-from werkzeug.http import http_date
+from werkzeug.http import http_date, parse_date
 
 from flask_limiter.wrappers import Limit, LimitGroup
 from .errors import RateLimitExceeded
@@ -310,7 +311,25 @@ class Limiter(object):
                 self._header_mapping[HEADERS.REMAINING], window_stats[1]
             )
             response.headers.add(self._header_mapping[HEADERS.RESET], reset_in)
-            response.headers.add(
+
+            # response may have an existing retry after
+            existing_retry_after_header = response.headers.get('Retry-After')
+            if existing_retry_after_header is not None:
+                # might be in http-date format
+                retry_after = parse_date(existing_retry_after_header)
+
+                # parse_date failure returns None
+                if retry_after is None:
+                    retry_after = int(existing_retry_after_header)
+
+                if isinstance(retry_after, datetime.datetime):
+                    delta = retry_after - datetime.datetime.utcnow()
+                    retry_after = delta.seconds
+
+                reset_in = max(retry_after, reset_in)
+
+            # set the header instead of using add
+            response.headers.set(
                 self._header_mapping[HEADERS.RETRY_AFTER],
                 self._retry_after == 'http-date' and http_date(reset_in)
                 or int(reset_in - time.time())
