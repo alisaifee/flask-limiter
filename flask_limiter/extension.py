@@ -659,6 +659,6 @@ class Limiter(object):
     def raise_global_limits_warning(self):
         warnings.warn(
             "global_limits was a badly name configuration since it is actually a default limit and not a "
-            " globally shared limit. Use default_limits if you want to provide a default or use application_limits "
-            " if you intend to really have a global shared limit", UserWarning
+            "globally shared limit. Use default_limits if you want to provide a default or use application_limits "
+            "if you intend to really have a global shared limit", UserWarning
         )
