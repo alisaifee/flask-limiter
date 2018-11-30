@@ -301,39 +301,53 @@ class Limiter(object):
     def __inject_headers(self, response):
         current_limit = getattr(g, 'view_rate_limit', None)
         if self.enabled and self._headers_enabled and current_limit:
-            window_stats = self.limiter.get_window_stats(*current_limit)
-            reset_in = 1 + window_stats[0]
             response.headers.add(
                 self._header_mapping[HEADERS.LIMIT],
                 str(current_limit[0].amount)
             )
-            response.headers.add(
-                self._header_mapping[HEADERS.REMAINING], window_stats[1]
-            )
-            response.headers.add(self._header_mapping[HEADERS.RESET], reset_in)
+            try:
+                window_stats = self.limiter.get_window_stats(*current_limit)
+                reset_in = 1 + window_stats[0]
+                response.headers.add(
+                    self._header_mapping[HEADERS.REMAINING], window_stats[1]
+                )
+                response.headers.add(self._header_mapping[HEADERS.RESET], reset_in)
 
-            # response may have an existing retry after
-            existing_retry_after_header = response.headers.get('Retry-After')
+                # response may have an existing retry after
+                existing_retry_after_header = response.headers.get('Retry-After')
 
-            if existing_retry_after_header is not None:
-                # might be in http-date format
-                retry_after = parse_date(existing_retry_after_header)
+                if existing_retry_after_header is not None:
+                    # might be in http-date format
+                    retry_after = parse_date(existing_retry_after_header)
 
-                # parse_date failure returns None
-                if retry_after is None:
-                    retry_after = time.time() + int(existing_retry_after_header)
+                    # parse_date failure returns None
+                    if retry_after is None:
+                        retry_after = time.time() + int(existing_retry_after_header)
 
-                if isinstance(retry_after, datetime.datetime):
-                    retry_after = time.mktime(retry_after.timetuple())
+                    if isinstance(retry_after, datetime.datetime):
+                        retry_after = time.mktime(retry_after.timetuple())
 
-                reset_in = max(retry_after, reset_in)
+                    reset_in = max(retry_after, reset_in)
 
-            # set the header instead of using add
-            response.headers.set(
-                self._header_mapping[HEADERS.RETRY_AFTER],
-                self._retry_after == 'http-date' and http_date(reset_in)
-                or int(reset_in - time.time())
-            )
+                # set the header instead of using add
+                response.headers.set(
+                    self._header_mapping[HEADERS.RETRY_AFTER],
+                    self._retry_after == 'http-date' and http_date(reset_in)
+                    or int(reset_in - time.time())
+                )
+            except:
+                if self._in_memory_fallback and not self._storage_dead:
+                    self.logger.warn(
+                        "Rate limit storage unreachable - falling back to"
+                        " in-memory storage"
+                    )
+                    self._storage_dead = True
+                if self._swallow_errors:
+                    self.logger.exception(
+                        "Failed to update rate limit headers. Swallowing error"
+                    )
+                else:
+                    six.reraise(*sys.exc_info())
         return response
 
     def __evaluate_limits(self, endpoint, limits):
