@@ -301,13 +301,13 @@ class Limiter(object):
     def __inject_headers(self, response):
         current_limit = getattr(g, 'view_rate_limit', None)
         if self.enabled and self._headers_enabled and current_limit:
-            response.headers.add(
-                self._header_mapping[HEADERS.LIMIT],
-                str(current_limit[0].amount)
-            )
             try:
                 window_stats = self.limiter.get_window_stats(*current_limit)
                 reset_in = 1 + window_stats[0]
+                response.headers.add(
+                    self._header_mapping[HEADERS.LIMIT],
+                    str(current_limit[0].amount)
+                )
                 response.headers.add(
                     self._header_mapping[HEADERS.REMAINING], window_stats[1]
                 )
@@ -342,6 +342,7 @@ class Limiter(object):
                         " in-memory storage"
                     )
                     self._storage_dead = True
+                    self.__inject_headers(response)
                 if self._swallow_errors:
                     self.logger.exception(
                         "Failed to update rate limit headers. Swallowing error"
