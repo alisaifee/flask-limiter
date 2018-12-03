@@ -342,7 +342,7 @@ class Limiter(object):
                         " in-memory storage"
                     )
                     self._storage_dead = True
-                    self.__inject_headers(response)
+                    response = self.__inject_headers(response)
                 if self._swallow_errors:
                     self.logger.exception(
                         "Failed to update rate limit headers. Swallowing error"
