@@ -11,11 +11,13 @@
 .. |gitter| image:: https://img.shields.io/badge/gitter-join%20chat-blue.svg?style=flat-square
    :alt: Join the chat at https://gitter.im/alisaifee/flask-limiter
    :target: https://gitter.im/alisaifee/flask-limiter?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+.. |hound| image:: https://img.shields.io/badge/Reviewed_by-Hound-8E64B0.svg?style=flat-square&longCache=true
+    :target: https://houndci.com
 
 *************
 Flask-Limiter
 *************
-|travis-ci| |coveralls| |landscape| |pypi| |gitter| |license| 
+|travis-ci| |coveralls| |landscape| |pypi| |gitter| |license| |hound|
 
 Flask-Limiter provides rate limiting features to flask routes.
 It has support for a configurable backend for storage
