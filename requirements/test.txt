@@ -4,7 +4,7 @@ mock==3.0.5
 coverage==4.5.3
 nose-cov==1.6
 git+https://github.com/alisaifee/pymemcache.git#egg=pymemcache
-redis
+redis==3.3.0
 hiro>0.1.6
 ordereddict
 flask-restful
