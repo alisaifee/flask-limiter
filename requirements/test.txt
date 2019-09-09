@@ -7,4 +7,4 @@ git+https://github.com/alisaifee/pymemcache.git#egg=pymemcache
 redis==3.3.8
 hiro>0.1.6
 ordereddict==1.1
-flask-restful
+flask-restful==0.3.7
