@@ -373,13 +373,7 @@ class Limiter(object):
         g.view_rate_limit = limit_for_header
 
         if failed_limit:
-            if failed_limit.error_message:
-                exc_description = failed_limit.error_message if not callable(
-                    failed_limit.error_message
-                ) else failed_limit.error_message()
-            else:
-                exc_description = six.text_type(failed_limit.limit)
-            raise RateLimitExceeded(exc_description)
+            raise RateLimitExceeded(failed_limit)
 
     def __check_request_limit(self, in_middleware=True):
         endpoint = request.endpoint or ""
