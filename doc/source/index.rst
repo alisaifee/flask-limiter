@@ -428,7 +428,7 @@ used in the scenario when the request does not breach any rate limits.
 The header names can be customised if required by either using the flask configuration (:ref:`ratelimit-conf`)
 values or by setting the ``header_mapping`` property of the :class:`Limiter` as follows::
 
-    from flask.ext.limiter import Limiter, HEADERS
+    from flask_limiter import Limiter, HEADERS
     limiter = Limiter()
     limiter.header_mapping = {
         HEADERS.LIMIT : "X-My-Limit",
