@@ -154,7 +154,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
 
         @app.errorhandler(500)
         def e500(e):
-            return str(e), 500
+            return str(e.original_exception), 500
 
         with app.test_client() as cli:
             with mock.patch(
