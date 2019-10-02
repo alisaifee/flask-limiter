@@ -1,2 +1,3 @@
 -r ci.txt
 twine
+keyring
