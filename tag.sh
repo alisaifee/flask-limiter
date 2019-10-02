@@ -18,6 +18,7 @@ then
     git commit -m "updating changelog for  ${new_version}"
     git tag -s ${new_version} -m "tagging version ${new_version}"
     python setup.py build sdist bdist_egg bdist_wheel
+    twine upload dist/*
 else
     echo changelog has errors. skipping tag.
 fi;
