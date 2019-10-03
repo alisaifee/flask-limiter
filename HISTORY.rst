@@ -3,6 +3,12 @@
 Changelog
 =========
 
+1.1.0 2019-10-02
+----------------
+* Provide Rate limit information with Exception (`Pull Request 202 <https://github.com/alisaifee/flask-limiter/pull/202>`_)
+* Respect existing Retry-After header values (`Pull Request 143 <https://github.com/alisaifee/flask-limiter/pull/143>`_)
+* Documentation improvements
+
 1.0.1 2017-12-08
 ----------------
 * Bug fix
@@ -233,6 +239,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
