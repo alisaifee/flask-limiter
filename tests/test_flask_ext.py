@@ -176,6 +176,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             in_memory_fallback=["1/minute"]
         )
         self.assertEqual(len(limiter._in_memory_fallback), 1)
+        self.assertEqual(limiter._in_memory_fallback_enabled, True)
 
         _, limiter = self.build_app(
             config={C.ENABLED: True,
@@ -184,6 +185,21 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             storage_uri="redis://localhost:6379",
         )
         self.assertEqual(len(limiter._in_memory_fallback), 1)
+        self.assertEqual(limiter._in_memory_fallback_enabled, True)
+
+        _, limiter = self.build_app(
+            config={C.ENABLED: True, C.IN_MEMORY_FALLBACK_ENABLED: True},
+            global_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+        )
+        self.assertEqual(limiter._in_memory_fallback_enabled, True)
+
+        _, limiter = self.build_app(
+            config={C.ENABLED: True},
+            global_limits=["5/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback_enabled=True
+        )
 
     def test_fallback_to_memory_backoff_check(self):
         app, limiter = self.build_app(
@@ -233,7 +249,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
 
-    def test_fallback_to_memory(self):
+    def test_fallback_to_memory_with_global_override(self):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
             default_limits=["5/minute"],
@@ -279,6 +295,48 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 limiter._storage.storage.flushall()
                 self.assertEqual(cli.get("/t2").status_code, 200)
                 self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 429)
+
+    def test_fallback_to_memory(self):
+        app, limiter = self.build_app(
+            config={C.ENABLED: True},
+            global_limits=["2/minute"],
+            storage_uri="redis://localhost:6379",
+            in_memory_fallback_enabled=True
+        )
+
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        @app.route("/t2")
+        @limiter.limit("1 per minute")
+        def t2():
+            return "test"
+        with app.test_client() as cli:
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 200)
+            self.assertEqual(cli.get("/t1").status_code, 429)
+            self.assertEqual(cli.get("/t2").status_code, 200)
+            self.assertEqual(cli.get("/t2").status_code, 429)
+
+            def raiser(*a):
+                raise Exception("redis dead")
+
+            with mock.patch(
+                "redis.client.Redis.execute_command"
+            ) as exec_command:
+                exec_command.side_effect = raiser
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                self.assertEqual(cli.get("/t2").status_code, 200)
+                self.assertEqual(cli.get("/t2").status_code, 429)
+            # redis back to normal, go back to regular limits
+            with hiro.Timeline() as timeline:
+                timeline.forward(1)
+                limiter._storage.storage.flushall()
                 self.assertEqual(cli.get("/t2").status_code, 200)
                 self.assertEqual(cli.get("/t2").status_code, 429)
 
