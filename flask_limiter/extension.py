@@ -72,7 +72,7 @@ class Limiter(object):
     :param list in_memory_fallback: a variable list of strings or callables returning strings denoting fallback
      limits to apply when the storage is down.
     :param bool in_memory_fallback_enabled: simply falls back to in memory storage
-     then the main storage is down and inherits the original limits.
+     when the main storage is down and inherits the original limits.
     :param str key_prefix: prefix prepended to rate limiter keys.
     """
 
