@@ -1,10 +1,12 @@
 [run]
-include = 
+include =
     **/flask_limiter/*
 omit =
     /*/flask_limiter/_version*
     /*/flask_limiter/backports/*
-
+    /*/tests/*.py
+    versioneer.py
+    setup.py
 [report]
 exclude_lines =
     pragma: no cover
