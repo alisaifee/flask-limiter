@@ -1,0 +1,3 @@
+-r main.txt
+sphinx
+
