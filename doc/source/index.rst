@@ -176,10 +176,10 @@ instance are
            caching the response.
         .. note:: The callable is called from within a
            :ref:`flask request context <flask:request-context>`.
-  
+
   Exemption conditions
     Each limit can be exempted when given conditions are fulfilled. These
-    conditions can be specified by supplying a callable as an 
+    conditions can be specified by supplying a callable as an
     ```exempt_when``` argument when defining the limit.
 
         .. code-block:: python
@@ -274,8 +274,8 @@ instance are
 Configuration
 =============
 The following flask configuration values are honored by
-:class:`Limiter`. If the corresponding configuration is passed in to the
-:class:`Limiter` constructor, those will take precedence.
+:class:`Limiter`. If the corresponding configuration value is passed in through
+the :class:`Limiter` constructor, those will take precedence.
 
 .. tabularcolumns:: |p{6.5cm}|p{8.5cm}|
 
@@ -290,11 +290,15 @@ The following flask configuration values are honored by
 ``RATELIMIT_APPLICATION``                 A comma (or some other delimiter) separated string
                                           that will be used to apply limits to the application as a whole (i.e. shared
                                           by all routes).
-``RATELIMIT_STORAGE_URL``                 One of ``memory://`` or ``redis://host:port``
-                                          or ``memcached://host:port``. Using the redis storage
-                                          requires the installation of the `redis`_ package
-                                          while memcached relies on the `pymemcache`_ package.
-                                          (For details refer to :ref:`storage-scheme`)
+``RATELIMIT_STORAGE_URL``                 A storage location conforming to the scheme in :ref:`storage-scheme`.
+                                          A basic in-memory storage can be used by specifying ``memory://`` though this
+                                          should probably never be used in production. Some supported backends include:
+
+                                           - Memcached: ``memcached://host:port``
+                                           - Redis: ``redis://host:port``
+                                           - GAE Memcached: ``gaememcached://host:port``
+
+                                          For specific examples and requirements of supported backends please refer to :ref:`storage-scheme`.
 ``RATELIMIT_STORAGE_OPTIONS``             A dictionary to set extra options to be passed to the
                                           storage implementation upon initialization. (Useful if you're
                                           subclassing :class:`limits.storage.Storage` to create a
