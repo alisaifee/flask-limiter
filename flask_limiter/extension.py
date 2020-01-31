@@ -365,10 +365,10 @@ class Limiter(object):
         for lim in limits:
             limit_scope = lim.scope or endpoint
             if lim.is_exempt:
-                return
+                continue
             if lim.methods is not None and request.method.lower(
             ) not in lim.methods:
-                return
+                continue
             if lim.per_method:
                 limit_scope += ":%s" % request.method
             limit_key = lim.key_func()
