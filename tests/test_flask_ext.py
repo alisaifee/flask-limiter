@@ -1062,9 +1062,24 @@ class ViewsTests(FlaskLimiterTestCase):
             def get(self):
                 return request.method.lower()
 
+        class Vd(Resource):
+            decorators = [
+                limiter.limit("2/second", methods=['GET']),
+                limiter.limit("1/second", methods=['POST']),
+
+            ]
+
+            def get(self):
+                return request.method.lower()
+
+            def post(self):
+                return request.method.lower()
+
+
         api.add_resource(Va, "/a")
         api.add_resource(Vb, "/b")
         api.add_resource(Vc, "/c")
+        api.add_resource(Vd, "/d")
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
@@ -1073,6 +1088,11 @@ class ViewsTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.get("/a").status_code)
                 self.assertEqual(429, cli.post("/a").status_code)
                 self.assertEqual(200, cli.get("/b").status_code)
+                self.assertEqual(200, cli.get("/d").status_code)
+                self.assertEqual(200, cli.get("/d").status_code)
+                self.assertEqual(429, cli.get("/d").status_code)
+                self.assertEqual(200, cli.post("/d").status_code)
+                self.assertEqual(429, cli.post("/d").status_code)
                 timeline.forward(1)
                 self.assertEqual(200, cli.get("/b").status_code)
                 timeline.forward(1)
