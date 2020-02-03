@@ -30,6 +30,11 @@ class Limit(object):
             self.__scope
         ) else self.__scope
 
+    @property
+    def method_exempt(self):
+        """Check if the limit is not applicable for this method"""
+        return self.methods is not None and request.method.lower() not in self.methods
+
 
 class LimitGroup(object):
     """

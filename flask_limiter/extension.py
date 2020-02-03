@@ -364,10 +364,7 @@ class Limiter(object):
         limit_for_header = None
         for lim in limits:
             limit_scope = lim.scope or endpoint
-            if lim.is_exempt:
-                continue
-            if lim.methods is not None and request.method.lower(
-            ) not in lim.methods:
+            if lim.is_exempt or lim.method_exempt:
                 continue
             if lim.per_method:
                 limit_scope += ":%s" % request.method
@@ -494,7 +491,7 @@ class Limiter(object):
                 all_limits = list(itertools.chain(*self._application_limits)) if in_middleware else []
                 all_limits += route_limits
                 if (
-                    not route_limits
+                    all(limit.method_exempt for limit in route_limits)
                     and not (in_middleware and name in self.__marked_for_limiting)
                     or implicit_decorator
                 ):
