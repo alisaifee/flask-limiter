@@ -88,13 +88,13 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         l1 = lambda: "1/second"
         e1 = lambda: "dos"
 
-        @limiter.limit("1/second", error_message="uno")
         @app.route("/t1")
+        @limiter.limit("1/second", error_message="uno")
         def t1():
             return "1"
 
-        @limiter.limit(l1, error_message=e1)
         @app.route("/t2")
+        @limiter.limit(l1, error_message=e1)
         def t2():
             return "2"
 
@@ -691,8 +691,8 @@ class DecoratorTests(FlaskLimiterTestCase):
     def test_explicit_method_limits(self):
         app, limiter = self.build_app()
 
-        @limiter.limit("1/second", methods=["GET"])
         @app.route("/", methods=["GET", "POST"])
+        @limiter.limit("1/second", methods=["GET"])
         def root():
             return "root"
 
