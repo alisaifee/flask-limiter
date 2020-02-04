@@ -6,13 +6,11 @@
     :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |license| image:: https://img.shields.io/pypi/l/Flask-Limiter.svg?style=flat-square
     :target: https://pypi.python.org/pypi/Flask-Limiter
-.. |hound| image:: https://img.shields.io/badge/Reviewed_by-Hound-8E64B0.svg?style=flat-square&longCache=true
-    :target: https://houndci.com
 
 *************
 Flask-Limiter
 *************
-|travis-ci| |coveralls| |pypi| |license| |hound|
+|travis-ci| |coveralls| |pypi| |license|
 
 Flask-Limiter provides rate limiting features to flask routes.
 It has support for a configurable backend for storage
