@@ -287,6 +287,8 @@ the :class:`Limiter` constructor, those will take precedence.
                                           passed to the :class:`Limiter` constructor
                                           as well (the values passed to the constructor take precedence
                                           over those in the config). :ref:`ratelimit-string` for details.
+``RATELIMIT_DEFAULTS_PER_METHOD``         Whether default limits are applied per method, per route or as a
+                                          combination of all method per route.
 ``RATELIMIT_APPLICATION``                 A comma (or some other delimiter) separated string
                                           that will be used to apply limits to the application as a whole (i.e. shared
                                           by all routes).
