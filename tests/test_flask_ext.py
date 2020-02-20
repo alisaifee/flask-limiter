@@ -689,7 +689,7 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.post("/").status_code)
 
     def test_explicit_method_limits(self):
-        app, limiter = self.build_app()
+        app, limiter = self.build_app(default_limits=['2/second'])
 
         @app.route("/", methods=["GET", "POST"])
         @limiter.limit("1/second", methods=["GET"])
@@ -702,6 +702,7 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.get("/").status_code)
                 self.assertEqual(200, cli.post("/").status_code)
                 self.assertEqual(200, cli.post("/").status_code)
+                self.assertEqual(429, cli.post("/").status_code)
 
     def test_decorated_limit_immediate(self):
         app, limiter = self.build_app(default_limits=["1/minute"])
@@ -1037,6 +1038,8 @@ class ViewsTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.get("/d").status_code)
                 self.assertEqual(429, cli.get("/d").status_code)
                 self.assertEqual(200, cli.post("/d").status_code)
+                self.assertEqual(429, cli.post("/d").status_code)
+                timeline.forward(3600)
                 self.assertEqual(200, cli.post("/d").status_code)
 
     def test_flask_restful_resource(self):
