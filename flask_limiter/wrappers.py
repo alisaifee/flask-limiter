@@ -9,7 +9,7 @@ class Limit(object):
 
     def __init__(
         self, limit, key_func, scope, per_method, methods, error_message,
-        exempt_when
+        exempt_when, override_defaults
     ):
         self.limit = limit
         self.key_func = key_func
@@ -18,6 +18,7 @@ class Limit(object):
         self.methods = methods
         self.error_message = error_message
         self.exempt_when = exempt_when
+        self.override_defaults = override_defaults
 
     @property
     def is_exempt(self):
@@ -43,7 +44,7 @@ class LimitGroup(object):
 
     def __init__(
         self, limit_provider, key_function, scope, per_method, methods,
-        error_message, exempt_when
+        error_message, exempt_when, override_defaults
     ):
         self.__limit_provider = limit_provider
         self.__scope = scope
@@ -52,6 +53,7 @@ class LimitGroup(object):
         self.methods = methods and [m.lower() for m in methods] or methods
         self.error_message = error_message
         self.exempt_when = exempt_when
+        self.override_defaults = override_defaults
 
     def __iter__(self):
         limit_items = parse_many(
@@ -61,5 +63,5 @@ class LimitGroup(object):
         for limit in limit_items:
             yield Limit(
                 limit, self.key_function, self.__scope, self.per_method,
-                self.methods, self.error_message, self.exempt_when
+                self.methods, self.error_message, self.exempt_when, self.override_defaults
             )

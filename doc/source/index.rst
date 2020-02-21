@@ -37,11 +37,16 @@ Quick start
    @app.route("/slow")
    @limiter.limit("1 per day")
    def slow():
-       return "24"
+       return ":("
+
+   @app.route("/medium")
+   @limiter.limit("1/second", override_defaults=False)
+   def medium():
+       return ":|"
 
    @app.route("/fast")
    def fast():
-       return "42"
+       return ":)"
 
    @app.route("/ping")
    @limiter.exempt

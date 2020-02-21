@@ -392,6 +392,55 @@ class DecoratorTests(FlaskLimiterTestCase):
             self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
 
+    def test_decorated_limits_with_combined_defaults(self):
+        app, limiter = self.build_app(
+            default_limits=['2/minute']
+        )
+
+        @app.route("/")
+        @limiter.limit("1/second", override_defaults=False)
+        def root():
+            return "root"
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(429, cli.get("/").status_code)
+                timeline.forward(60)
+                self.assertEqual(200, cli.get("/").status_code)
+                timeline.forward(1)
+                self.assertEqual(200, cli.get("/").status_code)
+                timeline.forward(1)
+                self.assertEqual(429, cli.get("/").status_code)
+
+    def test_decorated_limit_with_combined_defaults_per_method(self):
+        app, limiter = self.build_app(
+            default_limits=['2/minute'],
+            default_limits_per_method=True
+        )
+
+        @app.route("/", methods=['GET', 'PUT'])
+        @limiter.limit("1/second", override_defaults=False, methods=['GET'])
+        def root():
+            return "root"
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(429, cli.get("/").status_code)
+                self.assertEqual(200, cli.put("/").status_code)
+                self.assertEqual(200, cli.put("/").status_code)
+                self.assertEqual(429, cli.put("/").status_code)
+                timeline.forward(60)
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(200, cli.put("/").status_code)
+                timeline.forward(1)
+                self.assertEqual(200, cli.get("/").status_code)
+                self.assertEqual(200, cli.put("/").status_code)
+                timeline.forward(1)
+                self.assertEqual(429, cli.get("/").status_code)
+                self.assertEqual(429, cli.put("/").status_code)
+
     def test_decorated_dynamic_limits(self):
         app, limiter = self.build_app({
             "X": "2 per second"
