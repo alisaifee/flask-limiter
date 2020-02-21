@@ -627,7 +627,6 @@ class Limiter(object):
          should skipped.
         :param bool override_defaults:  whether the decorated limit overrides the default
          limits. (default: True)
-        :return:
         """
         return self.__limit_decorator(
             limit_value,
