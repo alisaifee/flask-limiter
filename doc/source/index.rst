@@ -60,6 +60,8 @@ The above Flask app will have the following rate limiting characteristics:
 * A default rate limit of 200 per day, and 50 per hour applied to all routes.
 * The ``slow`` route having an explicit rate limit decorator will bypass the default
   rate limit and only allow 1 request per day.
+* The ``medium`` route inherits the default limits and adds on a decorated limit
+  of 1 request per second.
 * The ``ping`` route will be exempt from any default rate limits.
 
 .. note:: The built in flask static files routes are also exempt from rate limits.
