@@ -3,6 +3,15 @@
 Changelog
 =========
 
+1.2.0 2020-02-25
+----------------
+* Add `override_defaults` argument to decorated limits to allow combinined defaults with decorated limits.
+* Add configuration parameter RATELIMIT_DEFAULTS_PER_METHOD to control whether defaults are applied per method.
+* Add support for in memory fallback without override (`Pull Request 236 <https://github.com/alisaifee/flask-limiter/pull/236>`_)
+* Bug fix
+
+  * Ensure defaults are enforced when decorated limits are skipped (`Issue 238 <https://github.com/alisaifee/flask-limiter/issues/238>`_)
+
 1.1.0 2019-10-02
 ----------------
 * Provide Rate limit information with Exception (`Pull Request 202 <https://github.com/alisaifee/flask-limiter/pull/202>`_)
@@ -239,6 +248,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
