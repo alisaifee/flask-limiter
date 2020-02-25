@@ -2,7 +2,7 @@
 rm -rf build
 echo current version:$(python setup.py --version)
 read -p "new version:" new_version
-last_portion=$(grep -E "^Changelog$" HISTORY.rst -5 | grep -E "^\d+.\d+.\d+")
+last_portion=$(grep -P "^Changelog$" HISTORY.rst -5 | grep -P "^\d+.\d+.\d+")
 changelog_file=/var/tmp/flask-limiter.newchangelog
 new_changelog_heading="${new_version} `date +"%Y-%m-%d"`"
 new_changelog_heading_sep=$(python -c "print('-'*len('$new_changelog_heading'))")
