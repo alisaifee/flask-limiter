@@ -6,6 +6,7 @@ cover/*
 .idea
 build/
 dist/
+doc/_build
 htmlcov
 *egg-info*
 .cache
