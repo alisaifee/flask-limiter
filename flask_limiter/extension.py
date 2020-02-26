@@ -234,7 +234,7 @@ class Limiter(object):
             self._application_limits = [
                 LimitGroup(
                     app_limits, self._key_func, "global", False, None, None,
-                    None
+                    None, None
                 )
             ]
 
@@ -246,7 +246,8 @@ class Limiter(object):
         if not self._default_limits and conf_limits:
             self._default_limits = [
                 LimitGroup(
-                    conf_limits, self._key_func, None, False, None, None, None, None
+                    conf_limits, self._key_func, None, False, None, None, None,
+                    None
                 )
             ]
         for limit in self._default_limits:
