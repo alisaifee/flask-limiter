@@ -3,6 +3,13 @@
 Changelog
 =========
 
+1.2.1 2020-02-26
+----------------
+* Bug fix
+
+  * Syntax error in version 1.2.0 when application limits are provided through
+    configuration file (`Issue 241 <https://github.com/alisaifee/flask-limiter/issues/241>`_)
+
 1.2.0 2020-02-25
 ----------------
 * Add `override_defaults` argument to decorated limits to allow combinined defaults with decorated limits.
@@ -248,6 +255,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
