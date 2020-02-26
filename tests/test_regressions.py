@@ -151,3 +151,39 @@ class RegressionTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.get("/explicit").status_code)
                 self.assertEqual(200, cli.get("/default").status_code)
 
+    def test_application_limits_from_config(self):
+        app, limiter = self.build_app(
+            config={
+                C.APPLICATION_LIMITS: '4/second', C.DEFAULT_LIMITS: '1/second',
+                C.DEFAULT_LIMITS_PER_METHOD: True
+            }
+        )
+
+        @app.route("/root")
+        def root():
+            return "null"
+
+        @app.route("/test", methods=['GET', 'PUT'])
+        @limiter.limit("3/second", methods=['GET'])
+        def test():
+            return "test"
+
+        with app.test_client() as cli:
+            with hiro.Timeline() as timeline:
+                self.assertEqual(cli.get("/root").status_code, 200)
+                self.assertEqual(cli.get("/root").status_code, 429)
+                self.assertEqual(cli.get("/test").status_code, 200)
+                self.assertEqual(cli.get("/test").status_code, 200)
+                self.assertEqual(cli.get("/test").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/test").status_code, 200)
+                self.assertEqual(cli.get("/test").status_code, 200)
+                self.assertEqual(cli.get("/test").status_code, 200)
+                self.assertEqual(cli.get("/test").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.put("/test").status_code, 200)
+                self.assertEqual(cli.put("/test").status_code, 429)
+                self.assertEqual(cli.get("/test").status_code, 200)
+                self.assertEqual(cli.get("/root").status_code, 200)
+                self.assertEqual(cli.get("/test").status_code, 429)
+
