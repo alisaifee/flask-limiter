@@ -1,5 +1,5 @@
 #!/bin/bash
-rm -rf build
+rm -rf build dist
 echo current version:$(python setup.py --version)
 read -p "new version:" new_version
 last_portion=$(grep -P "^Changelog$" HISTORY.rst -5 | grep -P "^\d+.\d+.\d+")
