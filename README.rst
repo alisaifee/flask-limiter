@@ -1,5 +1,5 @@
 .. |travis-ci| image:: https://img.shields.io/travis/alisaifee/flask-limiter/master.svg?style=flat-square
-    :target: https://travis-ci.org/#!/alisaifee/flask-limiter?branch=master
+    :target: https://travis-ci.org/alisaifee/flask-limiter?branch=master
 .. |coveralls| image:: https://img.shields.io/coveralls/alisaifee/flask-limiter/master.svg?style=flat-square
     :target: https://coveralls.io/r/alisaifee/flask-limiter?branch=master
 .. |pypi| image:: https://img.shields.io/pypi/v/Flask-Limiter.svg?style=flat-square
