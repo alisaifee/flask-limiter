@@ -520,6 +520,31 @@ json response instead::
                 , 429
         )
 
+Customizing rate limits based on response
+-----------------------------------------
+For scenarios where the decision to count the current request towards a rate limit
+can only be made after the request has completed, a callable that accepts the current
+:class:`flask.Response` object as its argument can be provided to the :meth:`Limiter.limit` or
+:meth:`Limiter.shared_limit` decorators through the ``deduct_when`` keyword arugment.
+A truthy response from the callable will result in a deduction from the rate limit.
+
+As an example, to only count non `200` responses towards the rate limit
+
+
+.. code-block:: python
+
+        @app.route("..")
+        @limiter.limit(
+            "1/second",
+            deduct_when=lambda response: response.status_code != 200
+        )
+        def route():
+           ...
+
+
+.. note:: All requests will be tested for the rate limit and rejected accordingly
+ if the rate limit is already hit. The providion of the `deduct_when`
+ argument only changes whether the request will count towards depleting the rate limit.
 
 
 Using Flask Pluggable Views
