@@ -182,7 +182,8 @@ instance are
            on the decorated route. For expensive retrievals, consider
            caching the response.
         .. note:: The callable is called from within a
-           :ref:`flask request context <flask:request-context>`.
+           :ref:`flask request context <flask:request-context>` during the
+           `before_request` phase.
 
   Exemption conditions
     Each limit can be exempted when given conditions are fulfilled. These
@@ -296,6 +297,12 @@ the :class:`Limiter` constructor, those will take precedence.
                                           over those in the config). :ref:`ratelimit-string` for details.
 ``RATELIMIT_DEFAULTS_PER_METHOD``         Whether default limits are applied per method, per route or as a
                                           combination of all method per route.
+``RATELIMIT_DEFAULTS_EXEMPT_WHEN``        A function that should return a truthy value if the default rate limit(s)
+                                          should be skipped for the current request. This callback is called in the
+                                          :ref:`flask request context <flask:request-context>` `before_request` phase.
+``RATELIMIT_DEFAULTS_DEDUCT_WHEN``        A function that should return a truthy value if a deduction should be made
+                                          from the default rate limit(s) for the current request. This callback is called
+                                          in the :ref:`flask request context <flask:request-context>` `after_request` phase.
 ``RATELIMIT_APPLICATION``                 A comma (or some other delimiter) separated string
                                           that will be used to apply limits to the application as a whole (i.e. shared
                                           by all routes).

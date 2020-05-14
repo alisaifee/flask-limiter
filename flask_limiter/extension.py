@@ -30,6 +30,8 @@ class C:
     GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
     DEFAULT_LIMITS = "RATELIMIT_DEFAULT"
     DEFAULT_LIMITS_PER_METHOD = "RATELIMIT_DEFAULTS_PER_METHOD"
+    DEFAULT_LIMITS_EXEMPT_WHEN = "RATELIMIT_DEFAULTS_EXEMPT_WHEN"
+    DEFAULT_LIMITS_DEDUCT_WHEN = "RATELIMIT_DEFAULTS_DEDUCT_WHEN"
     APPLICATION_LIMITS = "RATELIMIT_APPLICATION"
     HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
     HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
@@ -60,6 +62,10 @@ class Limiter(object):
      limits to apply to all routes. :ref:`ratelimit-string` for  more details.
     :param bool default_limits_per_method: whether default limits are applied per method, per route or as a combination
      of all method per route.
+    :param function default_limits_exempt_when: a function that should return True/False to decide
+     if the default limits should be skipped
+    :param function default_limits_deduct_when: a function that receives the current :class:`flask.Response`
+     object and returns True/False to decide if a deduction should be made from the default rate limit(s)
     :param list application_limits: a variable list of strings or callables returning strings for limits that
      are applied to the entire application (i.e a shared limit for all routes)
     :param function key_func: a callable that returns the domain to rate limit by.
@@ -86,6 +92,8 @@ class Limiter(object):
         global_limits=[],
         default_limits=[],
         default_limits_per_method=False,
+        default_limits_exempt_when=None,
+        default_limits_deduct_when=None,
         application_limits=[],
         headers_enabled=False,
         strategy=None,
@@ -105,6 +113,8 @@ class Limiter(object):
         self.enabled = enabled
         self._default_limits = []
         self._default_limits_per_method = default_limits_per_method
+        self._default_limits_exempt_when = default_limits_exempt_when
+        self._default_limits_deduct_when = default_limits_deduct_when
         self._application_limits = []
         self._in_memory_fallback = []
         self._in_memory_fallback_enabled = in_memory_fallback_enabled or len(in_memory_fallback) > 0
@@ -185,6 +195,12 @@ class Limiter(object):
         self._default_limits_per_method = app.config.setdefault(
             C.DEFAULT_LIMITS_PER_METHOD, self._default_limits_per_method
         )
+        self._default_limits_exempt_when = app.config.setdefault(
+            C.DEFAULT_LIMITS_EXEMPT_WHEN, self._default_limits_exempt_when
+        )
+        self._default_limits_deduct_when = app.config.setdefault(
+            C.DEFAULT_LIMITS_DEDUCT_WHEN, self._default_limits_deduct_when
+        )
         self._swallow_errors = app.config.setdefault(
             C.SWALLOW_ERRORS, self._swallow_errors
         )
@@ -252,6 +268,8 @@ class Limiter(object):
             ]
         for limit in self._default_limits:
             limit.per_method = self._default_limits_per_method
+            limit.exempt_when = self._default_limits_exempt_when
+            limit.deduct_when = self._default_limits_deduct_when
 
         fallback_enabled = app.config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
         fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)

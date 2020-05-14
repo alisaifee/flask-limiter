@@ -1318,6 +1318,47 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.post("/t1").status_code)
                 self.assertEqual(429, cli.post("/t1").status_code)
 
+    def test_default_limit_with_exemption(self):
+        app, limiter = self.build_app({
+            C.DEFAULT_LIMITS: "1 per hour",
+            C.DEFAULT_LIMITS_EXEMPT_WHEN: lambda: request.headers.get('backdoor') == 'true'
+        })
+
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1", headers={'backdoor': 'true'}).status_code, 200)
+                self.assertEqual(cli.get("/t1", headers={'backdoor': 'true'}).status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                timeline.forward(3600)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+
+    def test_default_limit_with_conditional_deduction(self):
+        app, limiter = self.build_app({
+            C.DEFAULT_LIMITS: "1 per hour",
+            C.DEFAULT_LIMITS_DEDUCT_WHEN: lambda response: response.status_code != 200
+        })
+
+        @app.route("/t1/<path:path>")
+        def t1(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1/1").status_code, 200)
+                self.assertEqual(cli.get("/t1/1").status_code, 200)
+                self.assertEqual(cli.get("/t1/2").status_code, 400)
+                self.assertEqual(cli.get("/t1/1").status_code, 429)
+                self.assertEqual(cli.get("/t1/2").status_code, 429)
+                timeline.forward(3600)
+                self.assertEqual(cli.get("/t1/1").status_code, 200)
+                self.assertEqual(cli.get("/t1/2").status_code, 400)
 
     def test_key_func(self):
         app, limiter = self.build_app()
