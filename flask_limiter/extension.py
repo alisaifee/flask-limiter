@@ -324,8 +324,13 @@ class Limiter(object):
     def __check_conditional_deductions(self, response):
         for lim, args in getattr(g, 'conditional_deductions', {}).items():
             if lim.deduct_when(response):
-                if self.limiter.hit(lim.limit, *args):
-                    g.view_rate_limit = lim
+                self.limiter.hit(lim.limit, *args)
+                if (
+                    not getattr(g, "view_rate_limit")
+                    or lim.limit < g.view_rate_limit[0]
+                ):
+                    g.view_rate_limit = [lim.limit] + args
+
         return response
 
     def __inject_headers(self, response):
@@ -400,14 +405,16 @@ class Limiter(object):
             if all(args):
                 if self._key_prefix:
                     args = [self._key_prefix] + args
-                if not limit_for_header or lim.limit < limit_for_header[0]:
-                    limit_for_header = [lim.limit] + args
 
                 if lim.deduct_when:
                     g.conditional_deductions[lim] = args
                     method = self.limiter.test
                 else:
+                    if not limit_for_header or lim.limit < limit_for_header[0]:
+                        limit_for_header = [lim.limit] + args
+
                     method = self.limiter.hit
+
                 if not method(lim.limit, *args):
                     self.logger.warning(
                         "ratelimit %s (%s) exceeded at endpoint: %s",

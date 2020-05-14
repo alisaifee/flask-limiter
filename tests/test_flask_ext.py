@@ -458,6 +458,51 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/bp/test/1").status_code, 200)
                 self.assertEqual(cli.get("/test/1").status_code, 200)
 
+    def test_header_ordering_with_conditional_deductions(self):
+        app, limiter = self.build_app(default_limits=['3/second'], headers_enabled=True)
+
+
+        @app.route("/test_combined/<path:path>")
+        @limiter.limit("1/hour", override_defaults=False, deduct_when=lambda response: response.status_code != 200)
+        @limiter.limit("4/minute", override_defaults=False, deduct_when=lambda response: response.status_code == 200)
+        def app_test_combined(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        @app.route("/test/<path:path>")
+        @limiter.limit("2/hour", deduct_when=lambda response: response.status_code!=200)
+        def app_test(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/test_combined/1").status_code, 200)
+                resp = cli.get("/test_combined/1")
+                self.assertEqual(resp.status_code, 200)
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '3')
+                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '1')
+                self.assertEqual(cli.get("/test_combined/2").status_code, 400)
+
+                resp = cli.get("/test/1")
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), None)
+                resp = cli.get("/test/2")
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '2')
+                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '1')
+
+                resp = cli.get("/test_combined/1")
+                self.assertEqual(resp.status_code, 429)
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '1')
+                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '0')
+                self.assertEqual(cli.get("/test_combined/2").status_code, 429)
+                timeline.forward(60)
+                self.assertEqual(cli.get("/test_combined/1").status_code, 429)
+                self.assertEqual(cli.get("/test_combined/2").status_code, 429)
+                timeline.forward(3600)
+                self.assertEqual(cli.get("/test_combined/1").status_code, 200)
+
     def test_decorated_limits_with_combined_defaults(self):
         app, limiter = self.build_app(
             default_limits=['2/minute']
