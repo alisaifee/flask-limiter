@@ -1,3 +1,5 @@
--r ci.txt
+-r test.txt
 twine
 keyring
+flake8
+yapf

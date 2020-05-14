@@ -1,5 +1,5 @@
-.. |travis-ci| image:: https://img.shields.io/travis/alisaifee/flask-limiter/master.svg?style=flat-square
-    :target: https://travis-ci.org/alisaifee/flask-limiter?branch=master
+.. |ci| image:: https://github.com/alisaifee/flask-limiter/workflows/CI/badge.svg?branch=master
+    :target: https://github.com/alisaifee/flask-limiter/actions?query=branch%3Amaster+workflow%3ACI
 .. |coveralls| image:: https://img.shields.io/coveralls/alisaifee/flask-limiter/master.svg?style=flat-square
     :target: https://coveralls.io/r/alisaifee/flask-limiter?branch=master
 .. |pypi| image:: https://img.shields.io/pypi/v/Flask-Limiter.svg?style=flat-square
@@ -10,7 +10,7 @@
 *************
 Flask-Limiter
 *************
-|travis-ci| |coveralls| |pypi| |license|
+|ci| |coveralls| |pypi| |license|
 
 Flask-Limiter provides rate limiting features to flask routes.
 It has support for a configurable backend for storage
