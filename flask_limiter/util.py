@@ -5,10 +5,12 @@
 from flask import request
 
 
-def get_ipaddr():
+def get_ipaddr(): # pragma: no cover
     """
     :return: the ip address for the current request (or 127.0.0.1 if none found)
      based on the X-Forwarded-For headers.
+
+    .. deprecated:: 0.9.2
     """
     if request.access_route:
         return request.access_route[0]

@@ -358,19 +358,20 @@ class Limiter(object):
                     or int(reset_in - time.time())
                 )
             except:
-                if self._in_memory_fallback and not self._storage_dead:
+                if self._in_memory_fallback_enabled and not self._storage_dead:
                     self.logger.warn(
                         "Rate limit storage unreachable - falling back to"
                         " in-memory storage"
                     )
                     self._storage_dead = True
                     response = self.__inject_headers(response)
-                if self._swallow_errors:
-                    self.logger.exception(
-                        "Failed to update rate limit headers. Swallowing error"
-                    )
                 else:
-                    six.reraise(*sys.exc_info())
+                    if self._swallow_errors:
+                        self.logger.exception(
+                            "Failed to update rate limit headers. Swallowing error"
+                        )
+                    else:
+                        six.reraise(*sys.exc_info())
         return response
 
     def __evaluate_limits(self, endpoint, limits):
