@@ -1,6 +1,4 @@
 [run]
-include =
-    **/flask_limiter/*
 omit =
     /*/flask_limiter/_version*
     /*/flask_limiter/backports/*
