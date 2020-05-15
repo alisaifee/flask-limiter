@@ -125,7 +125,8 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
     def test_swallow_error(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS: "1 per day",
-            C.SWALLOW_ERRORS: True
+            C.HEADERS_ENABLED: True,
+            C.SWALLOW_ERRORS: True,
         })
 
         @app.route("/")
@@ -142,10 +143,20 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
 
                 hit.side_effect = raiser
                 self.assertTrue("ok" in cli.get("/").data.decode())
+            with mock.patch(
+                    "limits.strategies.FixedWindowRateLimiter.get_window_stats"
+            ) as get_window_stats:
+
+                def raiser(*a, **k):
+                    raise Exception
+
+                get_window_stats.side_effect = raiser
+                self.assertTrue("ok" in cli.get("/").data.decode())
 
     def test_no_swallow_error(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS: "1 per day",
+            C.HEADERS_ENABLED: True
         })
 
         @app.route("/")
@@ -156,15 +167,22 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         def e500(e):
             return str(e.original_exception), 500
 
+        def raiser(*a, **k):
+            raise Exception("underlying")
+
         with app.test_client() as cli:
             with mock.patch(
                 "limits.strategies.FixedWindowRateLimiter.hit"
             ) as hit:
 
-                def raiser(*a, **k):
-                    raise Exception("underlying")
-
                 hit.side_effect = raiser
+                self.assertEqual(500, cli.get("/").status_code)
+                self.assertEqual("underlying", cli.get("/").data.decode())
+            with mock.patch(
+                "limits.strategies.FixedWindowRateLimiter.get_window_stats"
+            ) as get_window_stats:
+
+                get_window_stats.side_effect = raiser
                 self.assertEqual(500, cli.get("/").status_code)
                 self.assertEqual("underlying", cli.get("/").data.decode())
 
@@ -303,7 +321,8 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             config={C.ENABLED: True},
             global_limits=["2/minute"],
             storage_uri="redis://localhost:6379",
-            in_memory_fallback_enabled=True
+            in_memory_fallback_enabled=True,
+            headers_enabled=True
         )
 
         @app.route("/t1")
@@ -325,20 +344,24 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 raise Exception("redis dead")
 
             with mock.patch(
-                "redis.client.Redis.execute_command"
-            ) as exec_command:
-                exec_command.side_effect = raiser
+                'limits.storage.RedisStorage.incr'
+            ) as hit:
+                hit.side_effect = raiser
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
                 self.assertEqual(cli.get("/t2").status_code, 200)
                 self.assertEqual(cli.get("/t2").status_code, 429)
-            # redis back to normal, go back to regular limits
             with hiro.Timeline() as timeline:
                 timeline.forward(1)
                 limiter._storage.storage.flushall()
                 self.assertEqual(cli.get("/t2").status_code, 200)
                 self.assertEqual(cli.get("/t2").status_code, 429)
+            with mock.patch(
+                'limits.storage.RedisStorage.get'
+            ) as get:
+                get.side_effect = raiser
+                self.assertEqual(cli.get("/t1").status_code, 200)
 
 
 class DecoratorTests(FlaskLimiterTestCase):
@@ -1168,6 +1191,22 @@ class FlaskExtTests(FlaskLimiterTestCase):
             self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
             limiter.reset()
             self.assertEqual("Hello Reset", cli.get("/").data.decode())
+            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+
+    def test_reset_unsupported(self):
+        app, limiter = self.build_app({
+            C.GLOBAL_LIMITS: "1 per day", C.STORAGE_URL: 'memcached://localhost:11211'
+        })
+
+        @app.route("/")
+        def null():
+            return "Hello Reset"
+
+        with app.test_client() as cli:
+            cli.get("/")
+            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+            # no op with memcached but no error raised
+            limiter.reset()
             self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
 
     def test_combined_rate_limits(self):
