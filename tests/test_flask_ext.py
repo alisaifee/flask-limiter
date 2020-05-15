@@ -4,21 +4,18 @@
 import json
 import logging
 import time
-import unittest
 from functools import wraps
 
 import functools
 import hiro
 import mock
-import redis
-import datetime
 from flask import Flask, Blueprint, request, current_app, make_response, g
 from flask_restful import Resource, Api as RestfulApi
 from flask.views import View, MethodView
 from limits.errors import ConfigurationError
 from limits.storage import MemcachedStorage
 from limits.strategies import MovingWindowRateLimiter
-from werkzeug.exceptions import BadRequest, InternalServerError
+from werkzeug.exceptions import BadRequest
 
 from flask_limiter.extension import C, Limiter, HEADERS
 from flask_limiter.util import get_remote_address, get_ipaddr
