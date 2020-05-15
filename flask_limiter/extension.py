@@ -56,32 +56,41 @@ MAX_BACKEND_CHECKS = 5
 
 class Limiter(object):
     """
-    :param app: :class:`flask.Flask` instance to initialize the extension
-     with.
-    :param list default_limits: a variable list of strings or callables returning strings denoting global
-     limits to apply to all routes. :ref:`ratelimit-string` for  more details.
-    :param bool default_limits_per_method: whether default limits are applied per method, per route or as a combination
-     of all method per route.
-    :param function default_limits_exempt_when: a function that should return True/False to decide
-     if the default limits should be skipped
-    :param function default_limits_deduct_when: a function that receives the current :class:`flask.Response`
-     object and returns True/False to decide if a deduction should be made from the default rate limit(s)
-    :param list application_limits: a variable list of strings or callables returning strings for limits that
-     are applied to the entire application (i.e a shared limit for all routes)
-    :param function key_func: a callable that returns the domain to rate limit by.
-    :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
-    :param str strategy: the strategy to use. refer to :ref:`ratelimit-strategy`
-    :param str storage_uri: the storage location. refer to :ref:`ratelimit-conf`
-    :param dict storage_options: kwargs to pass to the storage implementation upon
-      instantiation.
-    :param bool auto_check: whether to automatically check the rate limit in the before_request
-     chain of the application. default ``True``
-    :param bool swallow_errors: whether to swallow errors when hitting a rate limit.
-     An exception will still be logged. default ``False``
-    :param list in_memory_fallback: a variable list of strings or callables returning strings denoting fallback
-     limits to apply when the storage is down.
-    :param bool in_memory_fallback_enabled: simply falls back to in memory storage
-     when the main storage is down and inherits the original limits.
+    The :class:`Limiter` class initializes the Flask-Limiter extension.
+
+    :param app: :class:`flask.Flask` instance to initialize the extension with.
+    :param list default_limits: a variable list of strings or callables
+     returning strings denoting global limits to apply to all routes.
+     :ref:`ratelimit-string` for  more details.
+    :param bool default_limits_per_method: whether default limits are applied
+     per method, per route or as a combination of all method per route.
+    :param function default_limits_exempt_when: a function that should return
+     True/False to decide if the default limits should be skipped
+    :param function default_limits_deduct_when: a function that receives the
+     current :class:`flask.Response` object and returns True/False to decide
+     if a deduction should be made from the default rate limit(s)
+    :param list application_limits: a variable list of strings or callables
+     returning strings for limits that are applied to the entire application
+     (i.e a shared limit for all routes)
+    :param function key_func: a callable that returns the domain to rate limit
+      by.
+    :param bool headers_enabled: whether ``X-RateLimit`` response headers are
+     written.
+    :param str strategy: the strategy to use.
+     Refer to :ref:`ratelimit-strategy`
+    :param str storage_uri: the storage location.
+     Refer to :ref:`ratelimit-conf`
+    :param dict storage_options: kwargs to pass to the storage implementation
+     upon instantiation.
+    :param bool auto_check: whether to automatically check the rate limit in
+     the before_request chain of the application. default ``True``
+    :param bool swallow_errors: whether to swallow errors when hitting a rate
+     limit. An exception will still be logged. default ``False``
+    :param list in_memory_fallback: a variable list of strings or callables
+     returning strings denoting fallback limits to apply when the storage is
+     down.
+    :param bool in_memory_fallback_enabled: simply falls back to in memory
+     storage when the main storage is down and inherits the original limits.
     :param str key_prefix: prefix prepended to rate limiter keys.
     """
 
@@ -662,22 +671,24 @@ class Limiter(object):
         """
         decorator to be used for rate limiting individual routes or blueprints.
 
-        :param limit_value: rate limit string or a callable that returns a string.
-         :ref:`ratelimit-string` for more details.
-        :param function key_func: function/lambda to extract the unique identifier for
-         the rate limit. defaults to remote address of the request.
-        :param bool per_method: whether the limit is sub categorized into the http
-         method of the request.
-        :param list methods: if specified, only the methods in this list will be rate
-         limited (default: None).
-        :param error_message: string (or callable that returns one) to override the
-         error message used in the response.
-        :param function exempt_when: function/lambda used to decide if the rate limit
-         should skipped.
-        :param bool override_defaults:  whether the decorated limit overrides the default
-         limits. (default: True)
-        :param function deduct_when: a function that receives the current :class:`flask.Response`
-         object and returns True/False to decide if a deduction should be done from the rate limit
+        :param limit_value: rate limit string or a callable that returns a
+         string. :ref:`ratelimit-string` for more details.
+        :param function key_func: function/lambda to extract the unique
+         identifier for the rate limit. defaults to remote address of the
+         request.
+        :param bool per_method: whether the limit is sub categorized into the
+         http method of the request.
+        :param list methods: if specified, only the methods in this list will
+         be rate limited (default: None).
+        :param error_message: string (or callable that returns one) to override
+         the error message used in the response.
+        :param function exempt_when: function/lambda used to decide if the rate
+         limit should skipped.
+        :param bool override_defaults:  whether the decorated limit overrides
+         the default limits. (default: True)
+        :param function deduct_when: a function that receives the current
+         :class:`flask.Response` object and returns True/False to decide if a
+         deduction should be done from the rate limit
         """
         return self.__limit_decorator(
             limit_value,
@@ -703,20 +714,22 @@ class Limiter(object):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
-        :param limit_value: rate limit string or a callable that returns a string.
-         :ref:`ratelimit-string` for more details.
+        :param limit_value: rate limit string or a callable that returns a
+         string. :ref:`ratelimit-string` for more details.
         :param scope: a string or callable that returns a string
          for defining the rate limiting scope.
-        :param function key_func: function/lambda to extract the unique identifier for
-         the rate limit. defaults to remote address of the request.
-        :param error_message: string (or callable that returns one) to override the
-         error message used in the response.
-        :param function exempt_when: function/lambda used to decide if the rate limit
-         should skipped.
-        :param bool override_defaults:  whether the decorated limit overrides the default
-         limits. (default: True)
-        :param function deduct_when: a function that receives the current :class:`flask.Response`
-         object and returns True/False to decide if a deduction should be done from the rate limit
+        :param function key_func: function/lambda to extract the unique
+         identifier for the rate limit. defaults to remote address of the
+         request.
+        :param error_message: string (or callable that returns one) to override
+         the error message used in the response.
+        :param function exempt_when: function/lambda used to decide if the rate
+         limit should skipped.
+        :param bool override_defaults:  whether the decorated limit overrides
+         the default limits. (default: True)
+        :param function deduct_when: a function that receives the current
+         :class:`flask.Response`  object and returns True/False to decide if a
+         deduction should be done from the rate limit
         """
         return self.__limit_decorator(
             limit_value,
@@ -731,7 +744,8 @@ class Limiter(object):
 
     def exempt(self, obj):
         """
-        decorator to mark a view or all views in a blueprint as exempt from rate limits.
+        decorator to mark a view or all views in a blueprint as exempt from
+        rate limits.
         """
         if not isinstance(obj, Blueprint):
             name = "%s.%s" % (obj.__module__, obj.__name__)

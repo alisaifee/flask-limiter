@@ -40,7 +40,8 @@ class Limit(object):
 
 class LimitGroup(object):
     """
-    represents a group of related limits either from a string or a callable that returns one
+    represents a group of related limits either from a string or a callable
+    that returns one
     """
 
     def __init__(
