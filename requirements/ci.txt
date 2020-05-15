@@ -1,2 +1,2 @@
--r test.txt
+-r dev.txt
 coveralls
