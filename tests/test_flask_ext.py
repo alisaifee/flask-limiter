@@ -378,7 +378,7 @@ class DecoratorTests(FlaskLimiterTestCase):
         def t1():
             return "test"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 for i in range(0, 100):
                     self.assertEqual(
@@ -641,7 +641,7 @@ class DecoratorTests(FlaskLimiterTestCase):
             return "42"
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         # 2 for invalid limit, 1 for warning.
@@ -674,7 +674,7 @@ class DecoratorTests(FlaskLimiterTestCase):
             return "42"
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         self.assertTrue(
@@ -706,7 +706,7 @@ class DecoratorTests(FlaskLimiterTestCase):
         def route3():
             return "route3"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t3").status_code)
@@ -1078,7 +1078,7 @@ class BlueprintTests(FlaskLimiterTestCase):
         app.register_blueprint(bp)
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         self.assertTrue(
@@ -1109,7 +1109,7 @@ class BlueprintTests(FlaskLimiterTestCase):
         app.register_blueprint(bp)
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         self.assertEqual(mock_handler.handle.call_count, 3)
@@ -1335,7 +1335,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
         def t2():
             return "t2"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t2").status_code)
@@ -1351,7 +1351,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
         def t1():
             return "t1"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(429, cli.get("/t1").status_code)
@@ -1408,7 +1408,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
         def t1():
             return "test"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 for i in range(0, 100):
                     self.assertEqual(
