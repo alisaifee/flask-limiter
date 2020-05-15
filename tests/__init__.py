@@ -28,10 +28,6 @@ class FlaskLimiterTestCase(unittest.TestCase):
         return app, limiter
 
 
-def test_import():
-    import flask_limiter  # noqa
-
-
 def test_module_version():
     import flask_limiter
     assert flask_limiter.__version__ is not None
