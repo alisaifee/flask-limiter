@@ -126,7 +126,10 @@ class Limiter(object):
         self._default_limits_deduct_when = default_limits_deduct_when
         self._application_limits = []
         self._in_memory_fallback = []
-        self._in_memory_fallback_enabled = in_memory_fallback_enabled or len(in_memory_fallback) > 0
+        self._in_memory_fallback_enabled = (
+            in_memory_fallback_enabled
+            or len(in_memory_fallback) > 0
+        )
         self._exempt_routes = set()
         self._request_filters = []
         self._headers_enabled = headers_enabled
@@ -140,7 +143,8 @@ class Limiter(object):
         if not key_func:
             warnings.warn(
                 "Use of the default `get_ipaddr` function is discouraged."
-                " Please refer to https://flask-limiter.readthedocs.org/#rate-limit-domain"
+                " Please refer to"
+                " https://flask-limiter.readthedocs.org/#rate-limit-domain"
                 " for the recommended configuration", UserWarning
             )
         if global_limits:
@@ -290,7 +294,10 @@ class Limiter(object):
                 )
             ]
         if not self._in_memory_fallback_enabled:
-            self._in_memory_fallback_enabled = fallback_enabled or len(self._in_memory_fallback) > 0
+            self._in_memory_fallback_enabled = (
+                fallback_enabled
+                or len(self._in_memory_fallback) > 0
+            )
 
         if self._in_memory_fallback_enabled:
             self._fallback_storage = MemoryStorage()
@@ -374,10 +381,14 @@ class Limiter(object):
                 response.headers.add(
                     self._header_mapping[HEADERS.REMAINING], window_stats[1]
                 )
-                response.headers.add(self._header_mapping[HEADERS.RESET], reset_in)
+                response.headers.add(
+                    self._header_mapping[HEADERS.RESET], reset_in
+                )
 
                 # response may have an existing retry after
-                existing_retry_after_header = response.headers.get('Retry-After')
+                existing_retry_after_header = response.headers.get(
+                    'Retry-After'
+                )
 
                 if existing_retry_after_header is not None:
                     # might be in http-date format
@@ -385,7 +396,9 @@ class Limiter(object):
 
                     # parse_date failure returns None
                     if retry_after is None:
-                        retry_after = time.time() + int(existing_retry_after_header)
+                        retry_after = time.time() + int(
+                            existing_retry_after_header
+                        )
 
                     if isinstance(retry_after, datetime.datetime):
                         retry_after = time.mktime(retry_after.timetuple())
@@ -409,7 +422,8 @@ class Limiter(object):
                 else:
                     if self._swallow_errors:
                         self.logger.exception(
-                            "Failed to update rate limit headers. Swallowing error"
+                            "Failed to update rate limit headers. "
+                            "Swallowing error"
                         )
                     else:
                         six.reraise(*sys.exc_info())
@@ -511,7 +525,8 @@ class Limiter(object):
                         dynamic_limits.extend(list(lim))
                     except ValueError as e:
                         self.logger.error(
-                            "failed to load ratelimit for view function %s (%s)",
+                            "failed to load ratelimit for "
+                            "view function %s (%s)",
                             name, e
                         )
         if request.blueprint:
@@ -556,17 +571,25 @@ class Limiter(object):
                         )
             if not all_limits:
                 route_limits = limits + dynamic_limits
-                all_limits = list(itertools.chain(*self._application_limits)) if in_middleware else []
+                all_limits = list(
+                    itertools.chain(*self._application_limits)
+                ) if in_middleware else []
                 all_limits += route_limits
+                explicit_limits_exempt = all(
+                    limit.method_exempt for limit in route_limits
+                )
+                combined_defaults = all(
+                    not limit.override_defaults for limit in route_limits
+                )
+                before_request_context = (
+                    in_middleware and name in self.__marked_for_limiting
+                )
                 if (
-                        (
-                            all(limit.method_exempt for limit in route_limits)
-                            or all(not limit.override_defaults for limit in route_limits)
-                        )
-                        and not (in_middleware and name in self.__marked_for_limiting)
-                        or implicit_decorator
+                    (explicit_limits_exempt or combined_defaults)
+                    and not before_request_context
+                    or implicit_decorator
                 ):
-                        all_limits += list(itertools.chain(*self._default_limits))
+                    all_limits += list(itertools.chain(*self._default_limits))
             self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:
             if isinstance(e, RateLimitExceeded):
@@ -650,7 +673,10 @@ class Limiter(object):
 
                 @wraps(obj)
                 def __inner(*a, **k):
-                    if self._auto_check and not g.get("_rate_limiting_complete"):
+                    if (
+                        self._auto_check
+                        and not g.get("_rate_limiting_complete")
+                    ):
                         self.__check_request_limit(False)
                         g._rate_limiting_complete = True
                     return obj(*a, **k)
@@ -769,7 +795,9 @@ class Limiter(object):
 
     def raise_global_limits_warning(self):
         warnings.warn(
-            "global_limits was a badly name configuration since it is actually a default limit and not a "
-            "globally shared limit. Use default_limits if you want to provide a default or use application_limits "
-            "if you intend to really have a global shared limit", UserWarning
+            "global_limits was a badly name configuration since it is "
+            "actually a default limit and not a globally shared limit. Use "
+            "default_limits if you want to provide a default or use "
+            "application_limits if you intend to really have a global "
+            "shared limit", UserWarning
         )
