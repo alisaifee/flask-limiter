@@ -354,7 +354,6 @@ class Limiter(object):
         else:
             return self._limiter
 
-
     def __check_conditional_deductions(self, response):
         for lim, args in getattr(g, 'conditional_deductions', {}).items():
             if lim.deduct_when(response):
@@ -411,7 +410,7 @@ class Limiter(object):
                     self._retry_after == 'http-date' and http_date(reset_in)
                     or int(reset_in - time.time())
                 )
-            except: # noqa: E722
+            except:  # noqa: E722
                 if self._in_memory_fallback_enabled and not self._storage_dead:
                     self.logger.warn(
                         "Rate limit storage unreachable - falling back to"
@@ -483,7 +482,8 @@ class Limiter(object):
             "%s.%s" % (view_func.__module__, view_func.__name__)
             if view_func else ""
         )
-        if (not request.endpoint
+        if (
+            not request.endpoint
             or not self.enabled
             or view_func == current_app.send_static_file
             or name in self._exempt_routes
@@ -530,7 +530,8 @@ class Limiter(object):
                             name, e
                         )
         if request.blueprint:
-            if (request.blueprint in self._blueprint_dynamic_limits
+            if (
+                request.blueprint in self._blueprint_dynamic_limits
                 and not dynamic_limits
             ):
                 for limit_group in self._blueprint_dynamic_limits[

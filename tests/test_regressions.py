@@ -186,4 +186,3 @@ class RegressionTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/test").status_code, 200)
                 self.assertEqual(cli.get("/root").status_code, 200)
                 self.assertEqual(cli.get("/test").status_code, 429)
-

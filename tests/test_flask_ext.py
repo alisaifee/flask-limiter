@@ -83,8 +83,11 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         def ratelimit_handler(e):
             return make_response(e.description, 429)
 
-        l1 = lambda: "1/second"
-        e1 = lambda: "dos"
+        def l1():
+            return "1/second"
+
+        def e1():
+            return "dos"
 
         @app.route("/t1")
         @limiter.limit("1/second", error_message="uno")
@@ -941,6 +944,7 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         app, limiter = self.build_app(default_limits=['1/minute'])
         shared = limiter.shared_limit(lambda: g.rate_limit, 'shared')
+
         def append_info(fn):
             @wraps(fn)
             def __inner(*args, **kwargs):
@@ -991,7 +995,6 @@ class DecoratorTests(FlaskLimiterTestCase):
         @app.route("/t3", methods=["GET", "POST"])
         def t3():
             return "t3"
-
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
@@ -1153,6 +1156,7 @@ class BlueprintTests(FlaskLimiterTestCase):
             [0].msg
         )
 
+
 class ViewsTests(FlaskLimiterTestCase):
     def test_pluggable_views(self):
         app, limiter = self.build_app(default_limits=["1/hour"])
@@ -1288,7 +1292,6 @@ class ViewsTests(FlaskLimiterTestCase):
 
             def post(self):
                 return request.method.lower()
-
 
         api.add_resource(Va, "/a")
         api.add_resource(Vb, "/b")
@@ -1518,7 +1521,6 @@ class FlaskExtTests(FlaskLimiterTestCase):
             for i in range(0, 10):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
-
 
     def test_multiple_apps(self):
         app1 = Flask(__name__)
@@ -1843,15 +1845,14 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.get("/").status_code)
                 self.assertEqual(429, cli.get("/").status_code)
 
-
     def test_custom_key_prefix(self):
         app1, limiter1 = self.build_app(
             key_prefix="moo", storage_uri="redis://localhost:6379"
         )
-        app2, limiter2 = self.build_app({
-            C.KEY_PREFIX: "cow"
-        },
-                                        storage_uri="redis://localhost:6379")
+        app2, limiter2 = self.build_app(
+            {C.KEY_PREFIX: "cow"},
+            storage_uri="redis://localhost:6379"
+        )
         app3, limiter3 = self.build_app(storage_uri="redis://localhost:6379")
 
         @app1.route("/test")
