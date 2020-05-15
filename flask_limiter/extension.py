@@ -398,7 +398,7 @@ class Limiter(object):
                     self._retry_after == 'http-date' and http_date(reset_in)
                     or int(reset_in - time.time())
                 )
-            except:
+            except: # noqa: E722
                 if self._in_memory_fallback_enabled and not self._storage_dead:
                     self.logger.warn(
                         "Rate limit storage unreachable - falling back to"
@@ -568,7 +568,7 @@ class Limiter(object):
                 ):
                         all_limits += list(itertools.chain(*self._default_limits))
             self.__evaluate_limits(endpoint, all_limits)
-        except Exception as e:  # no qa
+        except Exception as e:
             if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
             if self._in_memory_fallback_enabled and not self._storage_dead:
