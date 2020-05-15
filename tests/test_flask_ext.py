@@ -607,10 +607,9 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.put("/").status_code)
 
     def test_decorated_dynamic_limits(self):
-        app, limiter = self.build_app({
-            "X": "2 per second"
-        },
-                                      default_limits=["1/second"])
+        app, limiter = self.build_app(
+            {"X": "2 per second"}, default_limits=["1/second"]
+        )
 
         def request_context_limit():
             limits = {

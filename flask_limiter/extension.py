@@ -244,7 +244,7 @@ class Limiter(object):
             HEADERS.REMAINING: config.get(
                 C.HEADER_REMAINING, "X-RateLimit-Remaining"
             ),
-            HEADERS.LIMIT:  config.get(
+            HEADERS.LIMIT: config.get(
                 C.HEADER_LIMIT, "X-RateLimit-Limit"
             ),
             HEADERS.RETRY_AFTER: config.get(
