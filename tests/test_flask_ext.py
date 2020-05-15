@@ -1023,7 +1023,7 @@ class BlueprintTests(FlaskLimiterTestCase):
             return "test"
 
         @bp_4.route("/t5")
-        def t4():
+        def t5():
             return "test"
 
         def dy_limit():
@@ -1816,17 +1816,17 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         @app1.route("/test")
         @limiter1.limit("1/day")
-        def t1():
+        def app1_test():
             return "app1 test"
 
         @app2.route("/test")
         @limiter2.limit("1/day")
-        def t1():
+        def app2_test():
             return "app1 test"
 
         @app3.route("/test")
         @limiter3.limit("1/day")
-        def t1():
+        def app3_test():
             return "app1 test"
 
         with app1.test_client() as cli:
