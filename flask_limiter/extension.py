@@ -204,61 +204,60 @@ class Limiter(object):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
-        self.enabled = app.config.setdefault(C.ENABLED, self.enabled)
-        self._default_limits_per_method = app.config.setdefault(
+        config = app.config
+        self.enabled = config.setdefault(C.ENABLED, self.enabled)
+        self._default_limits_per_method = config.setdefault(
             C.DEFAULT_LIMITS_PER_METHOD, self._default_limits_per_method
         )
-        self._default_limits_exempt_when = app.config.setdefault(
+        self._default_limits_exempt_when = config.setdefault(
             C.DEFAULT_LIMITS_EXEMPT_WHEN, self._default_limits_exempt_when
         )
-        self._default_limits_deduct_when = app.config.setdefault(
+        self._default_limits_deduct_when = config.setdefault(
             C.DEFAULT_LIMITS_DEDUCT_WHEN, self._default_limits_deduct_when
         )
-        self._swallow_errors = app.config.setdefault(
+        self._swallow_errors = config.setdefault(
             C.SWALLOW_ERRORS, self._swallow_errors
         )
         self._headers_enabled = (
             self._headers_enabled
-            or app.config.setdefault(C.HEADERS_ENABLED, False)
+            or config.setdefault(C.HEADERS_ENABLED, False)
         )
-        self._storage_options.update(app.config.get(C.STORAGE_OPTIONS, {}))
+        self._storage_options.update(config.get(C.STORAGE_OPTIONS, {}))
         self._storage = storage_from_string(
             self._storage_uri
-            or app.config.setdefault(C.STORAGE_URL, 'memory://'),
+            or config.setdefault(C.STORAGE_URL, 'memory://'),
             **self._storage_options
         )
         strategy = (
             self._strategy
-            or app.config.setdefault(C.STRATEGY, 'fixed-window')
+            or config.setdefault(C.STRATEGY, 'fixed-window')
         )
         if strategy not in STRATEGIES:
             raise ConfigurationError(
                 "Invalid rate limiting strategy %s" % strategy
             )
         self._limiter = STRATEGIES[strategy](self._storage)
-        self._header_mapping.update(
-            {
-                HEADERS.RESET:
-                self._header_mapping.get(HEADERS.RESET, None)
-                or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
-                HEADERS.REMAINING:
-                self._header_mapping.get(HEADERS.REMAINING, None)
-                or app.config.setdefault(
-                    C.HEADER_REMAINING, "X-RateLimit-Remaining"
-                ),
-                HEADERS.LIMIT:
-                self._header_mapping.get(HEADERS.LIMIT, None)
-                or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
-                HEADERS.RETRY_AFTER:
-                self._header_mapping.get(HEADERS.RETRY_AFTER, None)
-                or app.config.setdefault(C.HEADER_RETRY_AFTER, "Retry-After"),
-            }
-        )
+        self._header_mapping = {
+            HEADERS.RESET: config.get(
+                C.HEADER_RESET, "X-RateLimit-Reset"
+            ),
+            HEADERS.REMAINING: config.get(
+                C.HEADER_REMAINING, "X-RateLimit-Remaining"
+            ),
+            HEADERS.LIMIT:  config.get(
+                C.HEADER_LIMIT, "X-RateLimit-Limit"
+            ),
+            HEADERS.RETRY_AFTER: config.get(
+                C.HEADER_RETRY_AFTER, "Retry-After"
+            ),
+        }
         self._retry_after = (
-            self._retry_after or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
+            self._retry_after or config.get(C.HEADER_RETRY_AFTER_VALUE)
         )
-        self._key_prefix = (self._key_prefix or app.config.get(C.KEY_PREFIX))
-        app_limits = app.config.get(C.APPLICATION_LIMITS, None)
+
+        self._key_prefix = (self._key_prefix or config.get(C.KEY_PREFIX))
+
+        app_limits = config.get(C.APPLICATION_LIMITS, None)
         if not self._application_limits and app_limits:
             self._application_limits = [
                 LimitGroup(
@@ -267,10 +266,11 @@ class Limiter(object):
                 )
             ]
 
-        if app.config.get(C.GLOBAL_LIMITS, None):
             self.raise_global_limits_warning()
-        conf_limits = app.config.get(
-            C.GLOBAL_LIMITS, app.config.get(C.DEFAULT_LIMITS, None)
+        if config.get(C.GLOBAL_LIMITS, None):
+
+        conf_limits = config.get(
+            C.GLOBAL_LIMITS, config.get(C.DEFAULT_LIMITS, None)
         )
         if not self._default_limits and conf_limits:
             self._default_limits = [
@@ -284,8 +284,23 @@ class Limiter(object):
             limit.exempt_when = self._default_limits_exempt_when
             limit.deduct_when = self._default_limits_deduct_when
 
-        fallback_enabled = app.config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
-        fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)
+        self.__configure_fallbacks(app, strategy)
+
+        # purely for backward compatibility as stated in flask documentation
+        if not hasattr(app, 'extensions'):
+            app.extensions = {}  # pragma: no cover
+
+        if not app.extensions.get('limiter'):
+            if self._auto_check:
+                app.before_request(self.__check_request_limit)
+            app.after_request(self.__inject_headers)
+
+        app.extensions['limiter'] = self
+
+    def __configure_fallbacks(self, app, strategy):
+        config = app.config
+        fallback_enabled = config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
+        fallback_limits = config.get(C.IN_MEMORY_FALLBACK, None)
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
                 LimitGroup(
@@ -304,17 +319,6 @@ class Limiter(object):
             self._fallback_limiter = STRATEGIES[strategy](
                 self._fallback_storage
             )
-
-        # purely for backward compatibility as stated in flask documentation
-        if not hasattr(app, 'extensions'):
-            app.extensions = {}  # pragma: no cover
-
-        if not app.extensions.get('limiter'):
-            if self._auto_check:
-                app.before_request(self.__check_request_limit)
-            app.after_request(self.__inject_headers)
-
-        app.extensions['limiter'] = self
 
     def __should_check_backend(self):
         if self.__check_backend_count > MAX_BACKEND_CHECKS:
