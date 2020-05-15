@@ -29,7 +29,7 @@ class FlaskLimiterTestCase(unittest.TestCase):
 
 
 def test_import():
-    import flask_limiter
+    import flask_limiter  # noqa
 
 
 def test_module_version():
