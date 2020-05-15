@@ -18,6 +18,7 @@ from flask.views import View, MethodView
 from limits.errors import ConfigurationError
 from limits.storage import MemcachedStorage
 from limits.strategies import MovingWindowRateLimiter
+from werkzeug.exceptions import BadRequest, InternalServerError
 
 from flask_limiter.extension import C, Limiter, HEADERS
 from flask_limiter.util import get_remote_address, get_ipaddr
@@ -418,6 +419,116 @@ class DecoratorTests(FlaskLimiterTestCase):
             self.assertEqual(cli.get("/t1").status_code, 429)
             self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
+
+    def test_decorated_limit_with_conditional_deduction(self):
+        app, limiter = self.build_app()
+
+        @app.route("/t/<path:path>")
+        @limiter.limit("1/second", deduct_when=lambda resp: resp.status_code == 200)
+        @limiter.limit("1/minute", deduct_when=lambda resp: resp.status_code == 400)
+        def t(path):
+            if path == "1":
+                return "test"
+            raise BadRequest()
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t/1").status_code, 200)
+                self.assertEqual(cli.get("/t/1").status_code, 429)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/t/2").status_code, 400)
+                timeline.forward(1)
+                self.assertEqual(cli.get("/t/1").status_code, 429)
+                self.assertEqual(cli.get("/t/2").status_code, 429)
+                timeline.forward(60)
+                self.assertEqual(cli.get("/t/1").status_code, 200)
+
+    def test_shared_limit_with_conditional_deduction(self):
+        app, limiter = self.build_app()
+
+        bp = Blueprint("main", __name__)
+
+        limit = limiter.shared_limit(
+            "2/minute", "not_found",
+            deduct_when=lambda response: response.status_code == 400
+        )
+
+        @app.route("/test/<path:path>")
+        @limit
+        def app_test(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        @bp.route("/test/<path:path>")
+        def bp_test(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        limit(bp)
+
+        app.register_blueprint(bp, url_prefix='/bp')
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/bp/test/1").status_code, 200)
+                self.assertEqual(cli.get("/bp/test/1").status_code, 200)
+                self.assertEqual(cli.get("/test/1").status_code, 200)
+                self.assertEqual(cli.get("/bp/test/2").status_code, 400)
+                self.assertEqual(cli.get("/test/2").status_code, 400)
+                self.assertEqual(cli.get("/bp/test/2").status_code, 429)
+                self.assertEqual(cli.get("/bp/test/1").status_code, 429)
+                self.assertEqual(cli.get("/test/1").status_code, 429)
+                self.assertEqual(cli.get("/test/2").status_code, 429)
+                timeline.forward(60)
+                self.assertEqual(cli.get("/bp/test/1").status_code, 200)
+                self.assertEqual(cli.get("/test/1").status_code, 200)
+
+    def test_header_ordering_with_conditional_deductions(self):
+        app, limiter = self.build_app(default_limits=['3/second'], headers_enabled=True)
+
+
+        @app.route("/test_combined/<path:path>")
+        @limiter.limit("1/hour", override_defaults=False, deduct_when=lambda response: response.status_code != 200)
+        @limiter.limit("4/minute", override_defaults=False, deduct_when=lambda response: response.status_code == 200)
+        def app_test_combined(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        @app.route("/test/<path:path>")
+        @limiter.limit("2/hour", deduct_when=lambda response: response.status_code!=200)
+        def app_test(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/test_combined/1").status_code, 200)
+                resp = cli.get("/test_combined/1")
+                self.assertEqual(resp.status_code, 200)
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '3')
+                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '1')
+                self.assertEqual(cli.get("/test_combined/2").status_code, 400)
+
+                resp = cli.get("/test/1")
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), None)
+                resp = cli.get("/test/2")
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '2')
+                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '1')
+
+                resp = cli.get("/test_combined/1")
+                self.assertEqual(resp.status_code, 429)
+                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '1')
+                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '0')
+                self.assertEqual(cli.get("/test_combined/2").status_code, 429)
+                timeline.forward(60)
+                self.assertEqual(cli.get("/test_combined/1").status_code, 429)
+                self.assertEqual(cli.get("/test_combined/2").status_code, 429)
+                timeline.forward(3600)
+                self.assertEqual(cli.get("/test_combined/1").status_code, 200)
 
     def test_decorated_limits_with_combined_defaults(self):
         app, limiter = self.build_app(
@@ -1250,6 +1361,47 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.post("/t1").status_code)
                 self.assertEqual(429, cli.post("/t1").status_code)
 
+    def test_default_limit_with_exemption(self):
+        app, limiter = self.build_app({
+            C.DEFAULT_LIMITS: "1 per hour",
+            C.DEFAULT_LIMITS_EXEMPT_WHEN: lambda: request.headers.get('backdoor') == 'true'
+        })
+
+        @app.route("/t1")
+        def t1():
+            return "test"
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1", headers={'backdoor': 'true'}).status_code, 200)
+                self.assertEqual(cli.get("/t1", headers={'backdoor': 'true'}).status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+                self.assertEqual(cli.get("/t1").status_code, 429)
+                timeline.forward(3600)
+                self.assertEqual(cli.get("/t1").status_code, 200)
+
+    def test_default_limit_with_conditional_deduction(self):
+        app, limiter = self.build_app({
+            C.DEFAULT_LIMITS: "1 per hour",
+            C.DEFAULT_LIMITS_DEDUCT_WHEN: lambda response: response.status_code != 200
+        })
+
+        @app.route("/t1/<path:path>")
+        def t1(path):
+            if path != "1":
+                raise BadRequest()
+            return path
+
+        with hiro.Timeline() as timeline:
+            with app.test_client() as cli:
+                self.assertEqual(cli.get("/t1/1").status_code, 200)
+                self.assertEqual(cli.get("/t1/1").status_code, 200)
+                self.assertEqual(cli.get("/t1/2").status_code, 400)
+                self.assertEqual(cli.get("/t1/1").status_code, 429)
+                self.assertEqual(cli.get("/t1/2").status_code, 429)
+                timeline.forward(3600)
+                self.assertEqual(cli.get("/t1/1").status_code, 200)
+                self.assertEqual(cli.get("/t1/2").status_code, 400)
 
     def test_key_func(self):
         app, limiter = self.build_app()

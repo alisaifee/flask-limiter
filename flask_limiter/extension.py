@@ -30,6 +30,8 @@ class C:
     GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
     DEFAULT_LIMITS = "RATELIMIT_DEFAULT"
     DEFAULT_LIMITS_PER_METHOD = "RATELIMIT_DEFAULTS_PER_METHOD"
+    DEFAULT_LIMITS_EXEMPT_WHEN = "RATELIMIT_DEFAULTS_EXEMPT_WHEN"
+    DEFAULT_LIMITS_DEDUCT_WHEN = "RATELIMIT_DEFAULTS_DEDUCT_WHEN"
     APPLICATION_LIMITS = "RATELIMIT_APPLICATION"
     HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
     HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
@@ -60,6 +62,10 @@ class Limiter(object):
      limits to apply to all routes. :ref:`ratelimit-string` for  more details.
     :param bool default_limits_per_method: whether default limits are applied per method, per route or as a combination
      of all method per route.
+    :param function default_limits_exempt_when: a function that should return True/False to decide
+     if the default limits should be skipped
+    :param function default_limits_deduct_when: a function that receives the current :class:`flask.Response`
+     object and returns True/False to decide if a deduction should be made from the default rate limit(s)
     :param list application_limits: a variable list of strings or callables returning strings for limits that
      are applied to the entire application (i.e a shared limit for all routes)
     :param function key_func: a callable that returns the domain to rate limit by.
@@ -86,6 +92,8 @@ class Limiter(object):
         global_limits=[],
         default_limits=[],
         default_limits_per_method=False,
+        default_limits_exempt_when=None,
+        default_limits_deduct_when=None,
         application_limits=[],
         headers_enabled=False,
         strategy=None,
@@ -105,6 +113,8 @@ class Limiter(object):
         self.enabled = enabled
         self._default_limits = []
         self._default_limits_per_method = default_limits_per_method
+        self._default_limits_exempt_when = default_limits_exempt_when
+        self._default_limits_deduct_when = default_limits_deduct_when
         self._application_limits = []
         self._in_memory_fallback = []
         self._in_memory_fallback_enabled = in_memory_fallback_enabled or len(in_memory_fallback) > 0
@@ -134,8 +144,8 @@ class Limiter(object):
             self._default_limits.extend(
                 [
                     LimitGroup(
-                        limit, self._key_func, None, False, None, None, None,
-                        None
+                        limit, self._key_func, None, False, None, None,
+                        None, None, None
                     )
                 ]
             )
@@ -144,7 +154,7 @@ class Limiter(object):
                 [
                     LimitGroup(
                         limit, self._key_func, "global", False, None, None,
-                        None, None
+                        None, None, None
                     )
                 ]
             )
@@ -152,8 +162,8 @@ class Limiter(object):
             self._in_memory_fallback.extend(
                 [
                     LimitGroup(
-                        limit, self._key_func, None, False, None, None, None,
-                        None
+                        limit, self._key_func, None, False, None, None,
+                        None, None, None
                     )
                 ]
             )
@@ -184,6 +194,12 @@ class Limiter(object):
         self.enabled = app.config.setdefault(C.ENABLED, self.enabled)
         self._default_limits_per_method = app.config.setdefault(
             C.DEFAULT_LIMITS_PER_METHOD, self._default_limits_per_method
+        )
+        self._default_limits_exempt_when = app.config.setdefault(
+            C.DEFAULT_LIMITS_EXEMPT_WHEN, self._default_limits_exempt_when
+        )
+        self._default_limits_deduct_when = app.config.setdefault(
+            C.DEFAULT_LIMITS_DEDUCT_WHEN, self._default_limits_deduct_when
         )
         self._swallow_errors = app.config.setdefault(
             C.SWALLOW_ERRORS, self._swallow_errors
@@ -234,7 +250,7 @@ class Limiter(object):
             self._application_limits = [
                 LimitGroup(
                     app_limits, self._key_func, "global", False, None, None,
-                    None, None
+                    None, None, None
                 )
             ]
 
@@ -246,12 +262,14 @@ class Limiter(object):
         if not self._default_limits and conf_limits:
             self._default_limits = [
                 LimitGroup(
-                    conf_limits, self._key_func, None, False, None, None, None,
-                    None
+                    conf_limits, self._key_func, None, False, None, None,
+                    None, None, None
                 )
             ]
         for limit in self._default_limits:
             limit.per_method = self._default_limits_per_method
+            limit.exempt_when = self._default_limits_exempt_when
+            limit.deduct_when = self._default_limits_deduct_when
 
         fallback_enabled = app.config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
         fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)
@@ -259,7 +277,7 @@ class Limiter(object):
             self._in_memory_fallback = [
                 LimitGroup(
                     fallback_limits, self._key_func, None, False, None, None,
-                    None, None
+                    None, None, None
                 )
             ]
         if not self._in_memory_fallback_enabled:
@@ -320,7 +338,21 @@ class Limiter(object):
         else:
             return self._limiter
 
+
+    def __check_conditional_deductions(self, response):
+        for lim, args in getattr(g, 'conditional_deductions', {}).items():
+            if lim.deduct_when(response):
+                self.limiter.hit(lim.limit, *args)
+                if (
+                    not getattr(g, "view_rate_limit")
+                    or lim.limit < g.view_rate_limit[0]
+                ):
+                    g.view_rate_limit = [lim.limit] + args
+
+        return response
+
     def __inject_headers(self, response):
+        self.__check_conditional_deductions(response)
         current_limit = getattr(g, 'view_rate_limit', None)
         if self.enabled and self._headers_enabled and current_limit:
             try:
@@ -377,6 +409,9 @@ class Limiter(object):
     def __evaluate_limits(self, endpoint, limits):
         failed_limit = None
         limit_for_header = None
+        if not getattr(g, "conditional_deductions", None):
+            g.conditional_deductions = {}
+
         for lim in limits:
             limit_scope = lim.scope or endpoint
             if lim.is_exempt or lim.method_exempt:
@@ -389,9 +424,17 @@ class Limiter(object):
             if all(args):
                 if self._key_prefix:
                     args = [self._key_prefix] + args
-                if not limit_for_header or lim.limit < limit_for_header[0]:
-                    limit_for_header = [lim.limit] + args
-                if not self.limiter.hit(lim.limit, *args):
+
+                if lim.deduct_when:
+                    g.conditional_deductions[lim] = args
+                    method = self.limiter.test
+                else:
+                    if not limit_for_header or lim.limit < limit_for_header[0]:
+                        limit_for_header = [lim.limit] + args
+
+                    method = self.limiter.hit
+
+                if not method(lim.limit, *args):
                     self.logger.warning(
                         "ratelimit %s (%s) exceeded at endpoint: %s",
                         lim.limit, limit_key, limit_scope
@@ -476,7 +519,7 @@ class Limiter(object):
                                     limit.limit, limit.key_func, limit.scope,
                                     limit.per_method, limit.methods,
                                     limit.error_message, limit.exempt_when,
-                                    limit.override_defaults
+                                    limit.override_defaults, limit.deduct_when,
                                 ) for limit in limit_group
                             ]
                         )
@@ -545,6 +588,7 @@ class Limiter(object):
         error_message=None,
         exempt_when=None,
         override_defaults=True,
+        deduct_when=None
     ):
         _scope = scope if shared else None
 
@@ -558,14 +602,16 @@ class Limiter(object):
             if callable(limit_value):
                 dynamic_limit = LimitGroup(
                     limit_value, func, _scope, per_method, methods,
-                    error_message, exempt_when, override_defaults
+                    error_message, exempt_when, override_defaults,
+                    deduct_when
                 )
             else:
                 try:
                     static_limits = list(
                         LimitGroup(
                             limit_value, func, _scope, per_method, methods,
-                            error_message, exempt_when, override_defaults
+                            error_message, exempt_when, override_defaults,
+                            deduct_when
                         )
                     )
                 except ValueError as e:
@@ -610,7 +656,8 @@ class Limiter(object):
         methods=None,
         error_message=None,
         exempt_when=None,
-        override_defaults=True
+        override_defaults=True,
+        deduct_when=None,
     ):
         """
         decorator to be used for rate limiting individual routes or blueprints.
@@ -629,6 +676,8 @@ class Limiter(object):
          should skipped.
         :param bool override_defaults:  whether the decorated limit overrides the default
          limits. (default: True)
+        :param function deduct_when: a function that receives the current :class:`flask.Response`
+         object and returns True/False to decide if a deduction should be done from the rate limit
         """
         return self.__limit_decorator(
             limit_value,
@@ -637,7 +686,8 @@ class Limiter(object):
             methods=methods,
             error_message=error_message,
             exempt_when=exempt_when,
-            override_defaults=override_defaults
+            override_defaults=override_defaults,
+            deduct_when=deduct_when,
         )
 
     def shared_limit(
@@ -647,7 +697,8 @@ class Limiter(object):
         key_func=None,
         error_message=None,
         exempt_when=None,
-        override_defaults=True
+        override_defaults=True,
+        deduct_when=None,
     ):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -664,6 +715,8 @@ class Limiter(object):
          should skipped.
         :param bool override_defaults:  whether the decorated limit overrides the default
          limits. (default: True)
+        :param function deduct_when: a function that receives the current :class:`flask.Response`
+         object and returns True/False to decide if a deduction should be done from the rate limit
         """
         return self.__limit_decorator(
             limit_value,
@@ -672,7 +725,8 @@ class Limiter(object):
             scope,
             error_message=error_message,
             exempt_when=exempt_when,
-            override_defaults=override_defaults
+            override_defaults=override_defaults,
+            deduct_when=deduct_when,
         )
 
     def exempt(self, obj):
