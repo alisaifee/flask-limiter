@@ -238,23 +238,25 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
 
             with hiro.Timeline() as timeline:
                 with mock.patch(
-                    "redis.client.Redis.execute_command"
-                ) as exec_command:
-                    exec_command.side_effect = raiser
-                    self.assertEqual(cli.get("/t1").status_code, 200)
-                    self.assertEqual(cli.get("/t1").status_code, 429)
-                    timeline.forward(1)
-                    self.assertEqual(cli.get("/t1").status_code, 429)
-                    timeline.forward(2)
-                    self.assertEqual(cli.get("/t1").status_code, 429)
-                    timeline.forward(4)
-                    self.assertEqual(cli.get("/t1").status_code, 429)
-                    timeline.forward(8)
-                    self.assertEqual(cli.get("/t1").status_code, 429)
-                    timeline.forward(16)
-                    self.assertEqual(cli.get("/t1").status_code, 429)
-                    timeline.forward(32)
-                    self.assertEqual(cli.get("/t1").status_code, 200)
+                    'limits.storage.RedisStorage.incr'
+                ) as incr:
+                    with mock.patch('limits.storage.RedisStorage.check') as check:
+                        check.return_value = False
+                        incr.side_effect = raiser
+                        self.assertEqual(cli.get("/t1").status_code, 200)
+                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        timeline.forward(1)
+                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        timeline.forward(2)
+                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        timeline.forward(4)
+                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        timeline.forward(8)
+                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        timeline.forward(16)
+                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        timeline.forward(32)
+                        self.assertEqual(cli.get("/t1").status_code, 200)
                 # redis back to normal, but exponential backoff will only
                 # result in it being marked after pow(2,0) seconds and next
                 # check
@@ -300,13 +302,15 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 raise Exception("redis dead")
 
             with mock.patch(
-                "redis.client.Redis.execute_command"
-            ) as exec_command:
-                exec_command.side_effect = raiser
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                'limits.storage.RedisStorage.incr'
+            ) as incr:
+                with mock.patch('limits.storage.RedisStorage.check') as check:
+                    check.return_value = False
+                    incr.side_effect = raiser
+                    self.assertEqual(cli.get("/t1").status_code, 200)
+                    self.assertEqual(cli.get("/t1").status_code, 429)
+                    self.assertEqual(cli.get("/t2").status_code, 200)
+                    self.assertEqual(cli.get("/t2").status_code, 429)
             # redis back to normal, go back to regular limits
             with hiro.Timeline() as timeline:
                 timeline.forward(2)
