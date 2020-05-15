@@ -148,7 +148,7 @@ class Limiter(object):
                 " for the recommended configuration", UserWarning
             )
         if global_limits:
-            self.raise_global_limits_warning()
+            self.__raise_global_limits_warning()
 
         self._key_func = key_func or get_ipaddr
         self._key_prefix = key_prefix
@@ -266,8 +266,8 @@ class Limiter(object):
                 )
             ]
 
-            self.raise_global_limits_warning()
         if config.get(C.GLOBAL_LIMITS, None):
+            self.__raise_global_limits_warning()
 
         conf_limits = config.get(
             C.GLOBAL_LIMITS, config.get(C.DEFAULT_LIMITS, None)
@@ -798,7 +798,7 @@ class Limiter(object):
         self._request_filters.append(fn)
         return fn
 
-    def raise_global_limits_warning(self):
+    def __raise_global_limits_warning(self):
         warnings.warn(
             "global_limits was a badly name configuration since it is "
             "actually a default limit and not a globally shared limit. Use "
