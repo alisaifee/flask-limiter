@@ -4,21 +4,18 @@
 import json
 import logging
 import time
-import unittest
 from functools import wraps
 
 import functools
 import hiro
 import mock
-import redis
-import datetime
 from flask import Flask, Blueprint, request, current_app, make_response, g
 from flask_restful import Resource, Api as RestfulApi
 from flask.views import View, MethodView
 from limits.errors import ConfigurationError
 from limits.storage import MemcachedStorage
 from limits.strategies import MovingWindowRateLimiter
-from werkzeug.exceptions import BadRequest, InternalServerError
+from werkzeug.exceptions import BadRequest
 
 from flask_limiter.extension import C, Limiter, HEADERS
 from flask_limiter.util import get_remote_address, get_ipaddr
@@ -86,8 +83,11 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         def ratelimit_handler(e):
             return make_response(e.description, 429)
 
-        l1 = lambda: "1/second"
-        e1 = lambda: "dos"
+        def l1():
+            return "1/second"
+
+        def e1():
+            return "dos"
 
         @app.route("/t1")
         @limiter.limit("1/second", error_message="uno")
@@ -241,7 +241,9 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 with mock.patch(
                     'limits.storage.RedisStorage.incr'
                 ) as incr:
-                    with mock.patch('limits.storage.RedisStorage.check') as check:
+                    with mock.patch(
+                            'limits.storage.RedisStorage.check'
+                    ) as check:
                         check.return_value = False
                         incr.side_effect = raiser
                         self.assertEqual(cli.get("/t1").status_code, 200)
@@ -381,7 +383,7 @@ class DecoratorTests(FlaskLimiterTestCase):
         def t1():
             return "test"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 for i in range(0, 100):
                     self.assertEqual(
@@ -424,8 +426,12 @@ class DecoratorTests(FlaskLimiterTestCase):
         app, limiter = self.build_app()
 
         @app.route("/t/<path:path>")
-        @limiter.limit("1/second", deduct_when=lambda resp: resp.status_code == 200)
-        @limiter.limit("1/minute", deduct_when=lambda resp: resp.status_code == 400)
+        @limiter.limit(
+            "1/second", deduct_when=lambda resp: resp.status_code == 200
+        )
+        @limiter.limit(
+            "1/minute", deduct_when=lambda resp: resp.status_code == 400
+        )
         def t(path):
             if path == "1":
                 return "test"
@@ -486,19 +492,28 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/test/1").status_code, 200)
 
     def test_header_ordering_with_conditional_deductions(self):
-        app, limiter = self.build_app(default_limits=['3/second'], headers_enabled=True)
-
+        app, limiter = self.build_app(
+            default_limits=['3/second'], headers_enabled=True
+        )
 
         @app.route("/test_combined/<path:path>")
-        @limiter.limit("1/hour", override_defaults=False, deduct_when=lambda response: response.status_code != 200)
-        @limiter.limit("4/minute", override_defaults=False, deduct_when=lambda response: response.status_code == 200)
+        @limiter.limit(
+            "1/hour", override_defaults=False,
+            deduct_when=lambda response: response.status_code != 200
+        )
+        @limiter.limit(
+            "4/minute", override_defaults=False,
+            deduct_when=lambda response: response.status_code == 200
+        )
         def app_test_combined(path):
             if path != "1":
                 raise BadRequest()
             return path
 
         @app.route("/test/<path:path>")
-        @limiter.limit("2/hour", deduct_when=lambda response: response.status_code!=200)
+        @limiter.limit(
+            "2/hour", deduct_when=lambda response: response.status_code != 200
+        )
         def app_test(path):
             if path != "1":
                 raise BadRequest()
@@ -509,20 +524,32 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(cli.get("/test_combined/1").status_code, 200)
                 resp = cli.get("/test_combined/1")
                 self.assertEqual(resp.status_code, 200)
-                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '3')
-                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '1')
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'), '3'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'), '1'
+                )
                 self.assertEqual(cli.get("/test_combined/2").status_code, 400)
 
                 resp = cli.get("/test/1")
                 self.assertEqual(resp.headers.get('X-RateLimit-Limit'), None)
                 resp = cli.get("/test/2")
-                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '2')
-                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '1')
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'), '2'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'), '1'
+                )
 
                 resp = cli.get("/test_combined/1")
                 self.assertEqual(resp.status_code, 429)
-                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '1')
-                self.assertEqual(resp.headers.get('X-RateLimit-Remaining'), '0')
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Limit'), '1'
+                )
+                self.assertEqual(
+                    resp.headers.get('X-RateLimit-Remaining'), '0'
+                )
                 self.assertEqual(cli.get("/test_combined/2").status_code, 429)
                 timeline.forward(60)
                 self.assertEqual(cli.get("/test_combined/1").status_code, 429)
@@ -580,10 +607,9 @@ class DecoratorTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.put("/").status_code)
 
     def test_decorated_dynamic_limits(self):
-        app, limiter = self.build_app({
-            "X": "2 per second"
-        },
-                                      default_limits=["1/second"])
+        app, limiter = self.build_app(
+            {"X": "2 per second"}, default_limits=["1/second"]
+        )
 
         def request_context_limit():
             limits = {
@@ -644,7 +670,7 @@ class DecoratorTests(FlaskLimiterTestCase):
             return "42"
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         # 2 for invalid limit, 1 for warning.
@@ -677,7 +703,7 @@ class DecoratorTests(FlaskLimiterTestCase):
             return "42"
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         self.assertTrue(
@@ -709,7 +735,7 @@ class DecoratorTests(FlaskLimiterTestCase):
         def route3():
             return "route3"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t3").status_code)
@@ -917,6 +943,7 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         app, limiter = self.build_app(default_limits=['1/minute'])
         shared = limiter.shared_limit(lambda: g.rate_limit, 'shared')
+
         def append_info(fn):
             @wraps(fn)
             def __inner(*args, **kwargs):
@@ -967,7 +994,6 @@ class DecoratorTests(FlaskLimiterTestCase):
         @app.route("/t3", methods=["GET", "POST"])
         def t3():
             return "t3"
-
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
@@ -1026,7 +1052,7 @@ class BlueprintTests(FlaskLimiterTestCase):
             return "test"
 
         @bp_4.route("/t5")
-        def t4():
+        def t5():
             return "test"
 
         def dy_limit():
@@ -1081,7 +1107,7 @@ class BlueprintTests(FlaskLimiterTestCase):
         app.register_blueprint(bp)
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         self.assertTrue(
@@ -1112,7 +1138,7 @@ class BlueprintTests(FlaskLimiterTestCase):
         app.register_blueprint(bp)
 
         with app.test_client() as cli:
-            with hiro.Timeline().freeze() as timeline:
+            with hiro.Timeline().freeze():
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
         self.assertEqual(mock_handler.handle.call_count, 3)
@@ -1128,6 +1154,7 @@ class BlueprintTests(FlaskLimiterTestCase):
             "exceeded at endpoint" in mock_handler.handle.call_args_list[2][0]
             [0].msg
         )
+
 
 class ViewsTests(FlaskLimiterTestCase):
     def test_pluggable_views(self):
@@ -1265,7 +1292,6 @@ class ViewsTests(FlaskLimiterTestCase):
             def post(self):
                 return request.method.lower()
 
-
         api.add_resource(Va, "/a")
         api.add_resource(Vb, "/b")
         api.add_resource(Vc, "/c")
@@ -1310,7 +1336,8 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
     def test_reset_unsupported(self):
         app, limiter = self.build_app({
-            C.GLOBAL_LIMITS: "1 per day", C.STORAGE_URL: 'memcached://localhost:11211'
+            C.GLOBAL_LIMITS: "1 per day",
+            C.STORAGE_URL: 'memcached://localhost:11211'
         })
 
         @app.route("/")
@@ -1338,7 +1365,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
         def t2():
             return "t2"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(200, cli.get("/t2").status_code)
@@ -1354,7 +1381,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
         def t1():
             return "t1"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 self.assertEqual(200, cli.get("/t1").status_code)
                 self.assertEqual(429, cli.get("/t1").status_code)
@@ -1362,9 +1389,12 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(429, cli.post("/t1").status_code)
 
     def test_default_limit_with_exemption(self):
+        def is_backdoor():
+            return request.headers.get('backdoor') == 'true'
+
         app, limiter = self.build_app({
             C.DEFAULT_LIMITS: "1 per hour",
-            C.DEFAULT_LIMITS_EXEMPT_WHEN: lambda: request.headers.get('backdoor') == 'true'
+            C.DEFAULT_LIMITS_EXEMPT_WHEN: is_backdoor
         })
 
         @app.route("/t1")
@@ -1373,17 +1403,26 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/t1", headers={'backdoor': 'true'}).status_code, 200)
-                self.assertEqual(cli.get("/t1", headers={'backdoor': 'true'}).status_code, 200)
+                self.assertEqual(
+                    cli.get("/t1", headers={'backdoor': 'true'}).status_code,
+                    200
+                )
+                self.assertEqual(
+                    cli.get("/t1", headers={'backdoor': 'true'}).status_code,
+                    200
+                )
                 self.assertEqual(cli.get("/t1").status_code, 200)
                 self.assertEqual(cli.get("/t1").status_code, 429)
                 timeline.forward(3600)
                 self.assertEqual(cli.get("/t1").status_code, 200)
 
     def test_default_limit_with_conditional_deduction(self):
+        def failed_request(response):
+            return response.status_code != 200
+
         app, limiter = self.build_app({
             C.DEFAULT_LIMITS: "1 per hour",
-            C.DEFAULT_LIMITS_DEDUCT_WHEN: lambda response: response.status_code != 200
+            C.DEFAULT_LIMITS_DEDUCT_WHEN: failed_request
         })
 
         @app.route("/t1/<path:path>")
@@ -1411,7 +1450,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
         def t1():
             return "test"
 
-        with hiro.Timeline().freeze() as timeline:
+        with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 for i in range(0, 100):
                     self.assertEqual(
@@ -1481,7 +1520,6 @@ class FlaskExtTests(FlaskLimiterTestCase):
             for i in range(0, 10):
                 self.assertEqual(cli.get("/t2").status_code, 200)
             self.assertEqual(cli.get("/t2").status_code, 200)
-
 
     def test_multiple_apps(self):
         app1 = Flask(__name__)
@@ -1806,30 +1844,29 @@ class FlaskExtTests(FlaskLimiterTestCase):
                 self.assertEqual(200, cli.get("/").status_code)
                 self.assertEqual(429, cli.get("/").status_code)
 
-
     def test_custom_key_prefix(self):
         app1, limiter1 = self.build_app(
             key_prefix="moo", storage_uri="redis://localhost:6379"
         )
-        app2, limiter2 = self.build_app({
-            C.KEY_PREFIX: "cow"
-        },
-                                        storage_uri="redis://localhost:6379")
+        app2, limiter2 = self.build_app(
+            {C.KEY_PREFIX: "cow"},
+            storage_uri="redis://localhost:6379"
+        )
         app3, limiter3 = self.build_app(storage_uri="redis://localhost:6379")
 
         @app1.route("/test")
         @limiter1.limit("1/day")
-        def t1():
+        def app1_test():
             return "app1 test"
 
         @app2.route("/test")
         @limiter2.limit("1/day")
-        def t1():
+        def app2_test():
             return "app1 test"
 
         @app3.route("/test")
         @limiter3.limit("1/day")
-        def t1():
+        def app3_test():
             return "app1 test"
 
         with app1.test_client() as cli:

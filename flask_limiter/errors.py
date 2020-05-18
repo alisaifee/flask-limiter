@@ -1,6 +1,4 @@
-"""
-errors and exceptions
-"""
+"""errors and exceptions."""
 
 from distutils.version import LooseVersion
 from pkg_resources import get_distribution
@@ -20,8 +18,8 @@ else:
 
 
 class RateLimitExceeded(werkzeug_exception):
-    """
-    exception raised when a rate limit is hit.
+    """exception raised when a rate limit is hit.
+
     The exception results in ``abort(429)`` being called.
     """
     code = 429

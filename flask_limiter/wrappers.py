@@ -35,12 +35,16 @@ class Limit(object):
     @property
     def method_exempt(self):
         """Check if the limit is not applicable for this method"""
-        return self.methods is not None and request.method.lower() not in self.methods
+        return (
+            self.methods is not None
+            and request.method.lower() not in self.methods
+        )
 
 
 class LimitGroup(object):
     """
-    represents a group of related limits either from a string or a callable that returns one
+    represents a group of related limits either from a string or a callable
+    that returns one
     """
 
     def __init__(
@@ -65,6 +69,6 @@ class LimitGroup(object):
         for limit in limit_items:
             yield Limit(
                 limit, self.key_function, self.__scope, self.per_method,
-                self.methods, self.error_message, self.exempt_when, self.override_defaults,
-                self.deduct_when
+                self.methods, self.error_message, self.exempt_when,
+                self.override_defaults, self.deduct_when
             )

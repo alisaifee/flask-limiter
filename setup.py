@@ -9,12 +9,12 @@ __copyright__ = "Copyright 2014, Ali-Akber Saifee"
 
 from setuptools import setup, find_packages
 import os
+import versioneer
 
 this_dir = os.path.abspath(os.path.dirname(__file__))
 REQUIREMENTS = filter(None, open(
     os.path.join(this_dir, 'requirements', 'main.txt')).read().splitlines())
 
-import versioneer
 
 setup(
     name='Flask-Limiter',
@@ -31,4 +31,3 @@ setup(
     long_description=open('README.rst').read() + open('HISTORY.rst').read(),
     packages=find_packages(exclude=["tests*"]),
 )
-

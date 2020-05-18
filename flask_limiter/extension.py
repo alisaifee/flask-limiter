@@ -56,32 +56,41 @@ MAX_BACKEND_CHECKS = 5
 
 class Limiter(object):
     """
-    :param app: :class:`flask.Flask` instance to initialize the extension
-     with.
-    :param list default_limits: a variable list of strings or callables returning strings denoting global
-     limits to apply to all routes. :ref:`ratelimit-string` for  more details.
-    :param bool default_limits_per_method: whether default limits are applied per method, per route or as a combination
-     of all method per route.
-    :param function default_limits_exempt_when: a function that should return True/False to decide
-     if the default limits should be skipped
-    :param function default_limits_deduct_when: a function that receives the current :class:`flask.Response`
-     object and returns True/False to decide if a deduction should be made from the default rate limit(s)
-    :param list application_limits: a variable list of strings or callables returning strings for limits that
-     are applied to the entire application (i.e a shared limit for all routes)
-    :param function key_func: a callable that returns the domain to rate limit by.
-    :param bool headers_enabled: whether ``X-RateLimit`` response headers are written.
-    :param str strategy: the strategy to use. refer to :ref:`ratelimit-strategy`
-    :param str storage_uri: the storage location. refer to :ref:`ratelimit-conf`
-    :param dict storage_options: kwargs to pass to the storage implementation upon
-      instantiation.
-    :param bool auto_check: whether to automatically check the rate limit in the before_request
-     chain of the application. default ``True``
-    :param bool swallow_errors: whether to swallow errors when hitting a rate limit.
-     An exception will still be logged. default ``False``
-    :param list in_memory_fallback: a variable list of strings or callables returning strings denoting fallback
-     limits to apply when the storage is down.
-    :param bool in_memory_fallback_enabled: simply falls back to in memory storage
-     when the main storage is down and inherits the original limits.
+    The :class:`Limiter` class initializes the Flask-Limiter extension.
+
+    :param app: :class:`flask.Flask` instance to initialize the extension with.
+    :param list default_limits: a variable list of strings or callables
+     returning strings denoting global limits to apply to all routes.
+     :ref:`ratelimit-string` for  more details.
+    :param bool default_limits_per_method: whether default limits are applied
+     per method, per route or as a combination of all method per route.
+    :param function default_limits_exempt_when: a function that should return
+     True/False to decide if the default limits should be skipped
+    :param function default_limits_deduct_when: a function that receives the
+     current :class:`flask.Response` object and returns True/False to decide
+     if a deduction should be made from the default rate limit(s)
+    :param list application_limits: a variable list of strings or callables
+     returning strings for limits that are applied to the entire application
+     (i.e a shared limit for all routes)
+    :param function key_func: a callable that returns the domain to rate limit
+      by.
+    :param bool headers_enabled: whether ``X-RateLimit`` response headers are
+     written.
+    :param str strategy: the strategy to use.
+     Refer to :ref:`ratelimit-strategy`
+    :param str storage_uri: the storage location.
+     Refer to :ref:`ratelimit-conf`
+    :param dict storage_options: kwargs to pass to the storage implementation
+     upon instantiation.
+    :param bool auto_check: whether to automatically check the rate limit in
+     the before_request chain of the application. default ``True``
+    :param bool swallow_errors: whether to swallow errors when hitting a rate
+     limit. An exception will still be logged. default ``False``
+    :param list in_memory_fallback: a variable list of strings or callables
+     returning strings denoting fallback limits to apply when the storage is
+     down.
+    :param bool in_memory_fallback_enabled: simply falls back to in memory
+     storage when the main storage is down and inherits the original limits.
     :param str key_prefix: prefix prepended to rate limiter keys.
     """
 
@@ -117,7 +126,10 @@ class Limiter(object):
         self._default_limits_deduct_when = default_limits_deduct_when
         self._application_limits = []
         self._in_memory_fallback = []
-        self._in_memory_fallback_enabled = in_memory_fallback_enabled or len(in_memory_fallback) > 0
+        self._in_memory_fallback_enabled = (
+            in_memory_fallback_enabled
+            or len(in_memory_fallback) > 0
+        )
         self._exempt_routes = set()
         self._request_filters = []
         self._headers_enabled = headers_enabled
@@ -131,11 +143,12 @@ class Limiter(object):
         if not key_func:
             warnings.warn(
                 "Use of the default `get_ipaddr` function is discouraged."
-                " Please refer to https://flask-limiter.readthedocs.org/#rate-limit-domain"
+                " Please refer to"
+                " https://flask-limiter.readthedocs.org/#rate-limit-domain"
                 " for the recommended configuration", UserWarning
             )
         if global_limits:
-            self.raise_global_limits_warning()
+            self.__raise_global_limits_warning()
 
         self._key_func = key_func or get_ipaddr
         self._key_prefix = key_prefix
@@ -191,61 +204,60 @@ class Limiter(object):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
-        self.enabled = app.config.setdefault(C.ENABLED, self.enabled)
-        self._default_limits_per_method = app.config.setdefault(
+        config = app.config
+        self.enabled = config.setdefault(C.ENABLED, self.enabled)
+        self._default_limits_per_method = config.setdefault(
             C.DEFAULT_LIMITS_PER_METHOD, self._default_limits_per_method
         )
-        self._default_limits_exempt_when = app.config.setdefault(
+        self._default_limits_exempt_when = config.setdefault(
             C.DEFAULT_LIMITS_EXEMPT_WHEN, self._default_limits_exempt_when
         )
-        self._default_limits_deduct_when = app.config.setdefault(
+        self._default_limits_deduct_when = config.setdefault(
             C.DEFAULT_LIMITS_DEDUCT_WHEN, self._default_limits_deduct_when
         )
-        self._swallow_errors = app.config.setdefault(
+        self._swallow_errors = config.setdefault(
             C.SWALLOW_ERRORS, self._swallow_errors
         )
         self._headers_enabled = (
             self._headers_enabled
-            or app.config.setdefault(C.HEADERS_ENABLED, False)
+            or config.setdefault(C.HEADERS_ENABLED, False)
         )
-        self._storage_options.update(app.config.get(C.STORAGE_OPTIONS, {}))
+        self._storage_options.update(config.get(C.STORAGE_OPTIONS, {}))
         self._storage = storage_from_string(
             self._storage_uri
-            or app.config.setdefault(C.STORAGE_URL, 'memory://'),
+            or config.setdefault(C.STORAGE_URL, 'memory://'),
             **self._storage_options
         )
         strategy = (
             self._strategy
-            or app.config.setdefault(C.STRATEGY, 'fixed-window')
+            or config.setdefault(C.STRATEGY, 'fixed-window')
         )
         if strategy not in STRATEGIES:
             raise ConfigurationError(
                 "Invalid rate limiting strategy %s" % strategy
             )
         self._limiter = STRATEGIES[strategy](self._storage)
-        self._header_mapping.update(
-            {
-                HEADERS.RESET:
-                self._header_mapping.get(HEADERS.RESET, None)
-                or app.config.setdefault(C.HEADER_RESET, "X-RateLimit-Reset"),
-                HEADERS.REMAINING:
-                self._header_mapping.get(HEADERS.REMAINING, None)
-                or app.config.setdefault(
-                    C.HEADER_REMAINING, "X-RateLimit-Remaining"
-                ),
-                HEADERS.LIMIT:
-                self._header_mapping.get(HEADERS.LIMIT, None)
-                or app.config.setdefault(C.HEADER_LIMIT, "X-RateLimit-Limit"),
-                HEADERS.RETRY_AFTER:
-                self._header_mapping.get(HEADERS.RETRY_AFTER, None)
-                or app.config.setdefault(C.HEADER_RETRY_AFTER, "Retry-After"),
-            }
-        )
+        self._header_mapping = {
+            HEADERS.RESET: config.get(
+                C.HEADER_RESET, "X-RateLimit-Reset"
+            ),
+            HEADERS.REMAINING: config.get(
+                C.HEADER_REMAINING, "X-RateLimit-Remaining"
+            ),
+            HEADERS.LIMIT: config.get(
+                C.HEADER_LIMIT, "X-RateLimit-Limit"
+            ),
+            HEADERS.RETRY_AFTER: config.get(
+                C.HEADER_RETRY_AFTER, "Retry-After"
+            ),
+        }
         self._retry_after = (
-            self._retry_after or app.config.get(C.HEADER_RETRY_AFTER_VALUE)
+            self._retry_after or config.get(C.HEADER_RETRY_AFTER_VALUE)
         )
-        self._key_prefix = (self._key_prefix or app.config.get(C.KEY_PREFIX))
-        app_limits = app.config.get(C.APPLICATION_LIMITS, None)
+
+        self._key_prefix = (self._key_prefix or config.get(C.KEY_PREFIX))
+
+        app_limits = config.get(C.APPLICATION_LIMITS, None)
         if not self._application_limits and app_limits:
             self._application_limits = [
                 LimitGroup(
@@ -254,10 +266,11 @@ class Limiter(object):
                 )
             ]
 
-        if app.config.get(C.GLOBAL_LIMITS, None):
-            self.raise_global_limits_warning()
-        conf_limits = app.config.get(
-            C.GLOBAL_LIMITS, app.config.get(C.DEFAULT_LIMITS, None)
+        if config.get(C.GLOBAL_LIMITS, None):
+            self.__raise_global_limits_warning()
+
+        conf_limits = config.get(
+            C.GLOBAL_LIMITS, config.get(C.DEFAULT_LIMITS, None)
         )
         if not self._default_limits and conf_limits:
             self._default_limits = [
@@ -271,23 +284,7 @@ class Limiter(object):
             limit.exempt_when = self._default_limits_exempt_when
             limit.deduct_when = self._default_limits_deduct_when
 
-        fallback_enabled = app.config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
-        fallback_limits = app.config.get(C.IN_MEMORY_FALLBACK, None)
-        if not self._in_memory_fallback and fallback_limits:
-            self._in_memory_fallback = [
-                LimitGroup(
-                    fallback_limits, self._key_func, None, False, None, None,
-                    None, None, None
-                )
-            ]
-        if not self._in_memory_fallback_enabled:
-            self._in_memory_fallback_enabled = fallback_enabled or len(self._in_memory_fallback) > 0
-
-        if self._in_memory_fallback_enabled:
-            self._fallback_storage = MemoryStorage()
-            self._fallback_limiter = STRATEGIES[strategy](
-                self._fallback_storage
-            )
+        self.__configure_fallbacks(app, strategy)
 
         # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, 'extensions'):
@@ -299,6 +296,29 @@ class Limiter(object):
             app.after_request(self.__inject_headers)
 
         app.extensions['limiter'] = self
+
+    def __configure_fallbacks(self, app, strategy):
+        config = app.config
+        fallback_enabled = config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
+        fallback_limits = config.get(C.IN_MEMORY_FALLBACK, None)
+        if not self._in_memory_fallback and fallback_limits:
+            self._in_memory_fallback = [
+                LimitGroup(
+                    fallback_limits, self._key_func, None, False, None, None,
+                    None, None, None
+                )
+            ]
+        if not self._in_memory_fallback_enabled:
+            self._in_memory_fallback_enabled = (
+                fallback_enabled
+                or len(self._in_memory_fallback) > 0
+            )
+
+        if self._in_memory_fallback_enabled:
+            self._fallback_storage = MemoryStorage()
+            self._fallback_limiter = STRATEGIES[strategy](
+                self._fallback_storage
+            )
 
     def __should_check_backend(self):
         if self.__check_backend_count > MAX_BACKEND_CHECKS:
@@ -338,7 +358,6 @@ class Limiter(object):
         else:
             return self._limiter
 
-
     def __check_conditional_deductions(self, response):
         for lim, args in getattr(g, 'conditional_deductions', {}).items():
             if lim.deduct_when(response):
@@ -365,10 +384,14 @@ class Limiter(object):
                 response.headers.add(
                     self._header_mapping[HEADERS.REMAINING], window_stats[1]
                 )
-                response.headers.add(self._header_mapping[HEADERS.RESET], reset_in)
+                response.headers.add(
+                    self._header_mapping[HEADERS.RESET], reset_in
+                )
 
                 # response may have an existing retry after
-                existing_retry_after_header = response.headers.get('Retry-After')
+                existing_retry_after_header = response.headers.get(
+                    'Retry-After'
+                )
 
                 if existing_retry_after_header is not None:
                     # might be in http-date format
@@ -376,7 +399,9 @@ class Limiter(object):
 
                     # parse_date failure returns None
                     if retry_after is None:
-                        retry_after = time.time() + int(existing_retry_after_header)
+                        retry_after = time.time() + int(
+                            existing_retry_after_header
+                        )
 
                     if isinstance(retry_after, datetime.datetime):
                         retry_after = time.mktime(retry_after.timetuple())
@@ -389,7 +414,7 @@ class Limiter(object):
                     self._retry_after == 'http-date' and http_date(reset_in)
                     or int(reset_in - time.time())
                 )
-            except:
+            except:  # noqa: E722
                 if self._in_memory_fallback_enabled and not self._storage_dead:
                     self.logger.warn(
                         "Rate limit storage unreachable - falling back to"
@@ -400,7 +425,8 @@ class Limiter(object):
                 else:
                     if self._swallow_errors:
                         self.logger.exception(
-                            "Failed to update rate limit headers. Swallowing error"
+                            "Failed to update rate limit headers. "
+                            "Swallowing error"
                         )
                     else:
                         six.reraise(*sys.exc_info())
@@ -460,7 +486,8 @@ class Limiter(object):
             "%s.%s" % (view_func.__module__, view_func.__name__)
             if view_func else ""
         )
-        if (not request.endpoint
+        if (
+            not request.endpoint
             or not self.enabled
             or view_func == current_app.send_static_file
             or name in self._exempt_routes
@@ -502,11 +529,13 @@ class Limiter(object):
                         dynamic_limits.extend(list(lim))
                     except ValueError as e:
                         self.logger.error(
-                            "failed to load ratelimit for view function %s (%s)",
+                            "failed to load ratelimit for "
+                            "view function %s (%s)",
                             name, e
                         )
         if request.blueprint:
-            if (request.blueprint in self._blueprint_dynamic_limits
+            if (
+                request.blueprint in self._blueprint_dynamic_limits
                 and not dynamic_limits
             ):
                 for limit_group in self._blueprint_dynamic_limits[
@@ -547,19 +576,27 @@ class Limiter(object):
                         )
             if not all_limits:
                 route_limits = limits + dynamic_limits
-                all_limits = list(itertools.chain(*self._application_limits)) if in_middleware else []
+                all_limits = list(
+                    itertools.chain(*self._application_limits)
+                ) if in_middleware else []
                 all_limits += route_limits
+                explicit_limits_exempt = all(
+                    limit.method_exempt for limit in route_limits
+                )
+                combined_defaults = all(
+                    not limit.override_defaults for limit in route_limits
+                )
+                before_request_context = (
+                    in_middleware and name in self.__marked_for_limiting
+                )
                 if (
-                        (
-                            all(limit.method_exempt for limit in route_limits)
-                            or all(not limit.override_defaults for limit in route_limits)
-                        )
-                        and not (in_middleware and name in self.__marked_for_limiting)
-                        or implicit_decorator
+                    (explicit_limits_exempt or combined_defaults)
+                    and not before_request_context
+                    or implicit_decorator
                 ):
-                        all_limits += list(itertools.chain(*self._default_limits))
+                    all_limits += list(itertools.chain(*self._default_limits))
             self.__evaluate_limits(endpoint, all_limits)
-        except Exception as e:  # no qa
+        except Exception as e:
             if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
             if self._in_memory_fallback_enabled and not self._storage_dead:
@@ -641,7 +678,10 @@ class Limiter(object):
 
                 @wraps(obj)
                 def __inner(*a, **k):
-                    if self._auto_check and not g.get("_rate_limiting_complete"):
+                    if (
+                        self._auto_check
+                        and not g.get("_rate_limiting_complete")
+                    ):
                         self.__check_request_limit(False)
                         g._rate_limiting_complete = True
                     return obj(*a, **k)
@@ -662,22 +702,24 @@ class Limiter(object):
         """
         decorator to be used for rate limiting individual routes or blueprints.
 
-        :param limit_value: rate limit string or a callable that returns a string.
-         :ref:`ratelimit-string` for more details.
-        :param function key_func: function/lambda to extract the unique identifier for
-         the rate limit. defaults to remote address of the request.
-        :param bool per_method: whether the limit is sub categorized into the http
-         method of the request.
-        :param list methods: if specified, only the methods in this list will be rate
-         limited (default: None).
-        :param error_message: string (or callable that returns one) to override the
-         error message used in the response.
-        :param function exempt_when: function/lambda used to decide if the rate limit
-         should skipped.
-        :param bool override_defaults:  whether the decorated limit overrides the default
-         limits. (default: True)
-        :param function deduct_when: a function that receives the current :class:`flask.Response`
-         object and returns True/False to decide if a deduction should be done from the rate limit
+        :param limit_value: rate limit string or a callable that returns a
+         string. :ref:`ratelimit-string` for more details.
+        :param function key_func: function/lambda to extract the unique
+         identifier for the rate limit. defaults to remote address of the
+         request.
+        :param bool per_method: whether the limit is sub categorized into the
+         http method of the request.
+        :param list methods: if specified, only the methods in this list will
+         be rate limited (default: None).
+        :param error_message: string (or callable that returns one) to override
+         the error message used in the response.
+        :param function exempt_when: function/lambda used to decide if the rate
+         limit should skipped.
+        :param bool override_defaults:  whether the decorated limit overrides
+         the default limits. (default: True)
+        :param function deduct_when: a function that receives the current
+         :class:`flask.Response` object and returns True/False to decide if a
+         deduction should be done from the rate limit
         """
         return self.__limit_decorator(
             limit_value,
@@ -703,20 +745,22 @@ class Limiter(object):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
-        :param limit_value: rate limit string or a callable that returns a string.
-         :ref:`ratelimit-string` for more details.
+        :param limit_value: rate limit string or a callable that returns a
+         string. :ref:`ratelimit-string` for more details.
         :param scope: a string or callable that returns a string
          for defining the rate limiting scope.
-        :param function key_func: function/lambda to extract the unique identifier for
-         the rate limit. defaults to remote address of the request.
-        :param error_message: string (or callable that returns one) to override the
-         error message used in the response.
-        :param function exempt_when: function/lambda used to decide if the rate limit
-         should skipped.
-        :param bool override_defaults:  whether the decorated limit overrides the default
-         limits. (default: True)
-        :param function deduct_when: a function that receives the current :class:`flask.Response`
-         object and returns True/False to decide if a deduction should be done from the rate limit
+        :param function key_func: function/lambda to extract the unique
+         identifier for the rate limit. defaults to remote address of the
+         request.
+        :param error_message: string (or callable that returns one) to override
+         the error message used in the response.
+        :param function exempt_when: function/lambda used to decide if the rate
+         limit should skipped.
+        :param bool override_defaults:  whether the decorated limit overrides
+         the default limits. (default: True)
+        :param function deduct_when: a function that receives the current
+         :class:`flask.Response`  object and returns True/False to decide if a
+         deduction should be done from the rate limit
         """
         return self.__limit_decorator(
             limit_value,
@@ -731,7 +775,8 @@ class Limiter(object):
 
     def exempt(self, obj):
         """
-        decorator to mark a view or all views in a blueprint as exempt from rate limits.
+        decorator to mark a view or all views in a blueprint as exempt from
+        rate limits.
         """
         if not isinstance(obj, Blueprint):
             name = "%s.%s" % (obj.__module__, obj.__name__)
@@ -753,9 +798,11 @@ class Limiter(object):
         self._request_filters.append(fn)
         return fn
 
-    def raise_global_limits_warning(self):
+    def __raise_global_limits_warning(self):
         warnings.warn(
-            "global_limits was a badly name configuration since it is actually a default limit and not a "
-            "globally shared limit. Use default_limits if you want to provide a default or use application_limits "
-            "if you intend to really have a global shared limit", UserWarning
+            "global_limits was a badly name configuration since it is "
+            "actually a default limit and not a globally shared limit. Use "
+            "default_limits if you want to provide a default or use "
+            "application_limits if you intend to really have a global "
+            "shared limit", UserWarning
         )
