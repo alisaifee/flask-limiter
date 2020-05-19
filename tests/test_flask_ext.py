@@ -44,10 +44,10 @@ class ConfigurationTests(FlaskLimiterTestCase):
             strategy='moving-window', key_func=get_remote_address
         )
         limiter.init_app(app)
-        app.config.setdefault(C.STORAGE_URL, "redis://localhost:6379")
+        app.config.setdefault(C.STORAGE_URL, "redis://localhost:36379")
         self.assertEqual(type(limiter._limiter), MovingWindowRateLimiter)
         limiter = Limiter(
-            storage_uri='memcached://localhost:11211',
+            storage_uri='memcached://localhost:31211',
             key_func=get_remote_address
         )
         limiter.init_app(app)
@@ -191,7 +191,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         _, limiter = self.build_app(
             config={C.ENABLED: True},
             default_limits=["5/minute"],
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
             in_memory_fallback=["1/minute"]
         )
         self.assertEqual(len(limiter._in_memory_fallback), 1)
@@ -201,7 +201,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             config={C.ENABLED: True,
                     C.IN_MEMORY_FALLBACK: "1/minute"},
             default_limits=["5/minute"],
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
         )
         self.assertEqual(len(limiter._in_memory_fallback), 1)
         self.assertEqual(limiter._in_memory_fallback_enabled, True)
@@ -209,14 +209,14 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         _, limiter = self.build_app(
             config={C.ENABLED: True, C.IN_MEMORY_FALLBACK_ENABLED: True},
             global_limits=["5/minute"],
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
         )
         self.assertEqual(limiter._in_memory_fallback_enabled, True)
 
         _, limiter = self.build_app(
             config={C.ENABLED: True},
             global_limits=["5/minute"],
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
             in_memory_fallback_enabled=True
         )
 
@@ -224,7 +224,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
             default_limits=["5/minute"],
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
             in_memory_fallback=["1/minute"]
         )
 
@@ -276,7 +276,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
             default_limits=["5/minute"],
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
             in_memory_fallback=["1/minute"]
         )
 
@@ -327,7 +327,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
             global_limits=["2/minute"],
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
             in_memory_fallback_enabled=True,
             headers_enabled=True
         )
@@ -1337,7 +1337,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
     def test_reset_unsupported(self):
         app, limiter = self.build_app({
             C.GLOBAL_LIMITS: "1 per day",
-            C.STORAGE_URL: 'memcached://localhost:11211'
+            C.STORAGE_URL: 'memcached://localhost:31211'
         })
 
         @app.route("/")
@@ -1846,13 +1846,13 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
     def test_custom_key_prefix(self):
         app1, limiter1 = self.build_app(
-            key_prefix="moo", storage_uri="redis://localhost:6379"
+            key_prefix="moo", storage_uri="redis://localhost:36379"
         )
         app2, limiter2 = self.build_app(
             {C.KEY_PREFIX: "cow"},
-            storage_uri="redis://localhost:6379"
+            storage_uri="redis://localhost:36379"
         )
-        app3, limiter3 = self.build_app(storage_uri="redis://localhost:6379")
+        app3, limiter3 = self.build_app(storage_uri="redis://localhost:36379")
 
         @app1.route("/test")
         @limiter1.limit("1/day")

@@ -14,7 +14,7 @@ class RegressionTests(FlaskLimiterTestCase):
         app, limiter = self.build_app(
             {
                 C.GLOBAL_LIMITS: "5 per second",
-                C.STORAGE_URL: "redis://localhost:6379",
+                C.STORAGE_URL: "redis://localhost:36379",
                 C.STRATEGY: "fixed-window",
                 C.HEADERS_ENABLED: True
             }
@@ -33,7 +33,7 @@ class RegressionTests(FlaskLimiterTestCase):
         app, limiter = self.build_app(
             {
                 C.GLOBAL_LIMITS: "5 per second",
-                C.STORAGE_URL: "redis://localhost:6379",
+                C.STORAGE_URL: "redis://localhost:36379",
                 C.STRATEGY: "moving-window",
                 C.HEADERS_ENABLED: True
             }
@@ -95,12 +95,12 @@ class RegressionTests(FlaskLimiterTestCase):
     def test_custom_key_prefix_with_headers(self):
         app1, limiter1 = self.build_app(
             key_prefix="moo",
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
             headers_enabled=True
         )
         app2, limiter2 = self.build_app(
             key_prefix="cow",
-            storage_uri="redis://localhost:6379",
+            storage_uri="redis://localhost:36379",
             headers_enabled=True
         )
 
