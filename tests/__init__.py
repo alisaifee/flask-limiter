@@ -1,12 +1,9 @@
 import logging
 import unittest
-from functools import wraps
-import platform
 
 import redis
 from flask import Flask
 from mock import mock
-from nose.plugins.skip import SkipTest
 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
@@ -26,18 +23,3 @@ class FlaskLimiterTestCase(unittest.TestCase):
         mock_handler.level = logging.INFO
         limiter.logger.addHandler(mock_handler)
         return app, limiter
-
-
-def test_module_version():
-    import flask_limiter
-    assert flask_limiter.__version__ is not None
-
-
-def skip_if_pypy(fn):
-    @wraps(fn)
-    def __inner(*a, **k):
-        if platform.python_implementation().lower() == "pypy":
-            raise SkipTest
-        return fn(*a, **k)
-
-    return __inner
