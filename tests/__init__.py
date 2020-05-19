@@ -11,7 +11,7 @@ from flask_limiter.util import get_remote_address
 
 class FlaskLimiterTestCase(unittest.TestCase):
     def setUp(self):
-        redis.Redis().flushall()
+        redis.from_url("redis://localhost:36379").flushall()
 
     def build_app(self, config={}, **limiter_args):
         app = Flask(__name__)
