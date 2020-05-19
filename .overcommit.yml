@@ -1,5 +1,5 @@
 PreCommit:
-  PythonFlake8RuboCop:
+  PythonFlake8:
     enabled: true
     on_warn: fail
   TrailingWhitespace:
