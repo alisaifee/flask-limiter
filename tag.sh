@@ -2,12 +2,13 @@
 rm -rf build dist
 echo current version:$(python setup.py --version)
 read -p "new version:" new_version
-last_portion=$(grep -P "^Changelog$" HISTORY.rst -5 | grep -P "^\d+.\d+.\d+")
+last_portion=$(grep -P "^Changelog$" HISTORY.rst -5 | grep -P "^v\d+.\d+")
 changelog_file=/var/tmp/flask-limiter.newchangelog
-new_changelog_heading="${new_version} `date +"%Y-%m-%d"`"
+new_changelog_heading="v${new_version}"
 new_changelog_heading_sep=$(python -c "print('-'*len('$new_changelog_heading'))")
 echo $new_changelog_heading > $changelog_file
 echo $new_changelog_heading_sep >> $changelog_file
+echo "Release Date: `date +"%Y-%m-%d"`" >> $changelog_file
 python -c "print(open('HISTORY.rst').read().replace('$last_portion', open('$changelog_file').read() +'\n' +  '$last_portion'))" > HISTORY.rst.new
 cp HISTORY.rst.new HISTORY.rst
 vim HISTORY.rst
@@ -19,6 +20,7 @@ then
     git tag -s ${new_version} -m "tagging version ${new_version}"
     python setup.py build sdist bdist_egg bdist_wheel
     twine upload dist/*
+    rm HISTORY.rst.new
 else
     echo changelog has errors. skipping tag.
 fi;
