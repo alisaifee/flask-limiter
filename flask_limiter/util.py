@@ -19,6 +19,7 @@ def get_ipaddr():  # pragma: no cover
 def get_remote_address():
     """
     :return: the ip address for the current request
-    (or 127.0.0.1 if none found)
+     (or 127.0.0.1 if none found)
+
     """
     return request.remote_addr or '127.0.0.1'
