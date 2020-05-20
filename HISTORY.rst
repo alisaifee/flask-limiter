@@ -3,6 +3,30 @@
 Changelog
 =========
 
+1.3 2020-05-20
+--------------
+* Features
+
+  * Add new ``deduct_when`` argument that accepts a function to decorated limits
+    to conditionally perform depletion of a rate limit (`Pull Request 248 <https://github.com/alisaifee/flask-limiter/pull/248>`_)
+  * Add new ``default_limits_deduct_when`` argument to Limiter constructor to
+    conditionally perform depletion of default rate limits
+  * Add ``default_limits_exempt_when`` argument that accepts a function to
+    allow skipping the default limits in the ``before_request`` phase
+
+* Bug Fix
+
+  * Fix handling of storage failures during ``after_request`` phase.
+
+* Code Quality
+
+  * Use github-actions instead of travis for CI
+  * Use pytest instaad of nosetests
+  * Add docker configuration for test dependencies
+  * Increase code coverage to 100%
+  * Ensure pyflake8 compliance
+
+
 1.2.1 2020-02-26
 ----------------
 * Bug fix
@@ -255,6 +279,7 @@ Changelog
 0.1.0 2014-02-13
 ----------------
 * first release.
+
 
 
 
