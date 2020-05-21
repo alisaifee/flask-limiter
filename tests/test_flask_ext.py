@@ -1769,6 +1769,31 @@ class FlaskExtTests(FlaskLimiterTestCase):
                     resp.headers.get('X-Reset'), str(int(time.time() + 50))
                 )
 
+    def test_custom_headers_from_setter_and_config(self):
+        app = Flask(__name__)
+        app.config.setdefault(C.HEADER_LIMIT, "Limit")
+        app.config.setdefault(C.HEADER_REMAINING, "Remaining")
+        app.config.setdefault(C.HEADER_RESET, "Reset")
+        limiter = Limiter(
+            default_limits=["10/minute"],
+            headers_enabled=True,
+            key_func=get_remote_address
+        )
+        limiter._header_mapping[HEADERS.REMAINING] = 'Available'
+        limiter.init_app(app)
+
+        @app.route("/t1")
+        def t():
+            return "test"
+
+        with app.test_client() as cli:
+            for i in range(11):
+                resp = cli.get("/t1")
+
+            self.assertEqual(resp.headers.get('Limit'), '10')
+            self.assertEqual(resp.headers.get('Available'), '0')
+            self.assertIsNotNone(resp.headers.get('Reset'))
+
     def test_application_shared_limit(self):
         app, limiter = self.build_app(application_limits=["2/minute"])
 
