@@ -237,18 +237,29 @@ class Limiter(object):
                 "Invalid rate limiting strategy %s" % strategy
             )
         self._limiter = STRATEGIES[strategy](self._storage)
+
+        # TODO: this should be made consistent with the rest of the
+        #  configuration
         self._header_mapping = {
-            HEADERS.RESET: config.get(
-                C.HEADER_RESET, "X-RateLimit-Reset"
+            HEADERS.RESET: self._header_mapping.get(
+                HEADERS.RESET, config.get(
+                    C.HEADER_RESET, "X-RateLimit-Reset"
+                )
             ),
-            HEADERS.REMAINING: config.get(
-                C.HEADER_REMAINING, "X-RateLimit-Remaining"
+            HEADERS.REMAINING: self._header_mapping.get(
+                HEADERS.REMAINING, config.get(
+                    C.HEADER_REMAINING, "X-RateLimit-Remaining"
+                )
             ),
-            HEADERS.LIMIT: config.get(
-                C.HEADER_LIMIT, "X-RateLimit-Limit"
+            HEADERS.LIMIT: self._header_mapping.get(
+                HEADERS.LIMIT, config.get(
+                    C.HEADER_LIMIT, "X-RateLimit-Limit"
+                )
             ),
-            HEADERS.RETRY_AFTER: config.get(
-                C.HEADER_RETRY_AFTER, "Retry-After"
+            HEADERS.RETRY_AFTER: self._header_mapping.get(
+                HEADERS.RETRY_AFTER, config.get(
+                    C.HEADER_RETRY_AFTER, "Retry-After"
+                )
             ),
         }
         self._retry_after = (
