@@ -1,5 +1,7 @@
 -r test.txt
-twine
-keyring
+-r doc.txt
 flake8
+keyring
+sphinx-autobuild
+twine
 yapf
