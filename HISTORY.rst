@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v1.3.1
+------
+Release Date: 2020-05-21
+
+* Bug Fix
+
+  * Ensure headers provided explictely by setting `_header_mapping`
+    take precedence over configuration values.
+
 v1.3
 ----
 Release Date: 2020-05-20
@@ -371,6 +380,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
