@@ -8,6 +8,7 @@ exemptLabels:
   - pinned
   - security
   - enhancement
+  - bug
 
 # Set to true to ignore issues in a project (defaults to false)
 exemptProjects: false
