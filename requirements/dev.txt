@@ -1,5 +1,5 @@
 -r test.txt
--r doc.txt
+-r docs.txt
 flake8
 keyring
 sphinx-autobuild
