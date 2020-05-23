@@ -427,7 +427,7 @@ class Limiter(object):
                 )
             except:  # noqa: E722
                 if self._in_memory_fallback_enabled and not self._storage_dead:
-                    self.logger.warn(
+                    self.logger.warning(
                         "Rate limit storage unreachable - falling back to"
                         " in-memory storage"
                     )
@@ -611,7 +611,7 @@ class Limiter(object):
             if isinstance(e, RateLimitExceeded):
                 six.reraise(*sys.exc_info())
             if self._in_memory_fallback_enabled and not self._storage_dead:
-                self.logger.warn(
+                self.logger.warning(
                     "Rate limit storage unreachable - falling back to"
                     " in-memory storage"
                 )
