@@ -28,5 +28,5 @@ class DeprecationTests(unittest.TestCase):
             )
             self.assertRegex(
                 record[0].message.args[0],
-                "global limits was a badly named configuration"
+                "global_limits was a badly named configuration",
             )
