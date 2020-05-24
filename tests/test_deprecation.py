@@ -2,22 +2,31 @@
 
 """
 import unittest
-import warnings
+
+import pytest
+
+from flask import Flask
+from flask_limiter import Limiter
 
 
 class DeprecationTests(unittest.TestCase):
     def test_insecure_setup(self):
-        with warnings.catch_warnings(record=True) as w:
-            from flask import Flask
-            from flask_limiter import Limiter
-            app = Flask(__name__)
+        app = Flask(__name__)
+        with pytest.warns(UserWarning) as record:
             Limiter(app)
-            self.assertEqual(len(w), 1)
+            self.assertRegex(
+                record[0].message.args[0],
+                "Use of the default `get_ipaddr`"
+            )
 
     def test_with_global_limits(self):
-        with warnings.catch_warnings(record=True) as w:
-            from flask import Flask
-            from flask_limiter import Limiter
-            app = Flask(__name__)
-            Limiter(app, key_func=lambda x: 'test', global_limits=['1/second'])
-            self.assertEqual(len(w), 1)
+        app = Flask(__name__)
+        with pytest.warns(UserWarning) as record:
+            Limiter(
+                app,
+                key_func=lambda x: 'test', global_limits=['1/second']
+            )
+            self.assertRegex(
+                record[0].message.args[0],
+                "global limits was a badly named configuration"
+            )
