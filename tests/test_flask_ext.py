@@ -20,22 +20,21 @@ from werkzeug.exceptions import BadRequest
 from flask_limiter.extension import C, Limiter, HEADERS
 from flask_limiter.util import get_remote_address, get_ipaddr
 from tests import FlaskLimiterTestCase
+import pytest
 
 
 class ConfigurationTests(FlaskLimiterTestCase):
     def test_invalid_strategy(self):
         app = Flask(__name__)
         app.config.setdefault(C.STRATEGY, "fubar")
-        self.assertRaises(
-            ConfigurationError, Limiter, app, key_func=get_remote_address
-        )
+        with pytest.raises(ConfigurationError):
+            Limiter(app, key_func=get_remote_address)
 
     def test_invalid_storage_string(self):
         app = Flask(__name__)
         app.config.setdefault(C.STORAGE_URL, "fubar://localhost:1234")
-        self.assertRaises(
-            ConfigurationError, Limiter, app, key_func=get_remote_address
-        )
+        with pytest.raises(ConfigurationError):
+            Limiter(app, key_func=get_remote_address)
 
     def test_constructor_arguments_over_config(self):
         app = Flask(__name__)
@@ -45,13 +44,13 @@ class ConfigurationTests(FlaskLimiterTestCase):
         )
         limiter.init_app(app)
         app.config.setdefault(C.STORAGE_URL, "redis://localhost:36379")
-        self.assertEqual(type(limiter._limiter), MovingWindowRateLimiter)
+        assert type(limiter._limiter) == MovingWindowRateLimiter
         limiter = Limiter(
             storage_uri='memcached://localhost:31211',
             key_func=get_remote_address
         )
         limiter.init_app(app)
-        self.assertEqual(type(limiter._storage), MemcachedStorage)
+        assert type(limiter._storage) == MemcachedStorage
 
 
 class ErrorHandlingTests(FlaskLimiterTestCase):
@@ -64,7 +63,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             cli.get("/")
-            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+            assert "1 per 1 day" in cli.get("/").data.decode()
 
             @app.errorhandler(429)
             def ratelimit_handler(e):
@@ -72,9 +71,9 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                     '{"error" : "rate limit %s"}' % str(e.description), 429
                 )
 
-            self.assertEqual({
+            assert {
                 'error': 'rate limit 1 per 1 day'
-            }, json.loads(cli.get("/").data.decode()))
+            } == json.loads(cli.get("/").data.decode())
 
     def test_custom_error_message(self):
         app, limiter = self.build_app()
@@ -112,16 +111,16 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             with app.test_client() as cli:
                 cli.get("/t1")
                 resp = cli.get("/t1")
-                self.assertEqual(429, resp.status_code)
-                self.assertEqual(resp.data, b'uno')
+                assert 429 == resp.status_code
+                assert resp.data == b'uno'
                 cli.get("/t2")
                 resp = cli.get("/t2")
-                self.assertEqual(429, resp.status_code)
-                self.assertEqual(resp.data, b'dos')
+                assert 429 == resp.status_code
+                assert resp.data == b'dos'
                 cli.get("/t3")
                 resp = cli.get("/t3")
-                self.assertEqual(429, resp.status_code)
-                self.assertEqual(resp.data, b'tres')
+                assert 429 == resp.status_code
+                assert resp.data == b'tres'
 
     def test_swallow_error(self):
         app, limiter = self.build_app({
@@ -143,7 +142,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                     raise Exception
 
                 hit.side_effect = raiser
-                self.assertTrue("ok" in cli.get("/").data.decode())
+                assert "ok" in cli.get("/").data.decode()
             with mock.patch(
                     "limits.strategies.FixedWindowRateLimiter.get_window_stats"
             ) as get_window_stats:
@@ -152,7 +151,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                     raise Exception
 
                 get_window_stats.side_effect = raiser
-                self.assertTrue("ok" in cli.get("/").data.decode())
+                assert "ok" in cli.get("/").data.decode()
 
     def test_no_swallow_error(self):
         app, limiter = self.build_app({
@@ -177,15 +176,15 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             ) as hit:
 
                 hit.side_effect = raiser
-                self.assertEqual(500, cli.get("/").status_code)
-                self.assertEqual("underlying", cli.get("/").data.decode())
+                assert 500 == cli.get("/").status_code
+                assert "underlying" == cli.get("/").data.decode()
             with mock.patch(
                 "limits.strategies.FixedWindowRateLimiter.get_window_stats"
             ) as get_window_stats:
 
                 get_window_stats.side_effect = raiser
-                self.assertEqual(500, cli.get("/").status_code)
-                self.assertEqual("underlying", cli.get("/").data.decode())
+                assert 500 == cli.get("/").status_code
+                assert "underlying" == cli.get("/").data.decode()
 
     def test_fallback_to_memory_config(self):
         _, limiter = self.build_app(
@@ -194,8 +193,8 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             storage_uri="redis://localhost:36379",
             in_memory_fallback=["1/minute"]
         )
-        self.assertEqual(len(limiter._in_memory_fallback), 1)
-        self.assertEqual(limiter._in_memory_fallback_enabled, True)
+        assert len(limiter._in_memory_fallback) == 1
+        assert limiter._in_memory_fallback_enabled
 
         _, limiter = self.build_app(
             config={C.ENABLED: True,
@@ -203,15 +202,15 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             default_limits=["5/minute"],
             storage_uri="redis://localhost:36379",
         )
-        self.assertEqual(len(limiter._in_memory_fallback), 1)
-        self.assertEqual(limiter._in_memory_fallback_enabled, True)
+        assert len(limiter._in_memory_fallback) == 1
+        assert limiter._in_memory_fallback_enabled
 
         _, limiter = self.build_app(
             config={C.ENABLED: True, C.IN_MEMORY_FALLBACK_ENABLED: True},
             global_limits=["5/minute"],
             storage_uri="redis://localhost:36379",
         )
-        self.assertEqual(limiter._in_memory_fallback_enabled, True)
+        assert limiter._in_memory_fallback_enabled
 
         _, limiter = self.build_app(
             config={C.ENABLED: True},
@@ -246,31 +245,31 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                     ) as check:
                         check.return_value = False
                         incr.side_effect = raiser
-                        self.assertEqual(cli.get("/t1").status_code, 200)
-                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        assert cli.get("/t1").status_code == 200
+                        assert cli.get("/t1").status_code == 429
                         timeline.forward(1)
-                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        assert cli.get("/t1").status_code == 429
                         timeline.forward(2)
-                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        assert cli.get("/t1").status_code == 429
                         timeline.forward(4)
-                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        assert cli.get("/t1").status_code == 429
                         timeline.forward(8)
-                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        assert cli.get("/t1").status_code == 429
                         timeline.forward(16)
-                        self.assertEqual(cli.get("/t1").status_code, 429)
+                        assert cli.get("/t1").status_code == 429
                         timeline.forward(32)
-                        self.assertEqual(cli.get("/t1").status_code, 200)
+                        assert cli.get("/t1").status_code == 200
                 # redis back to normal, but exponential backoff will only
                 # result in it being marked after pow(2,0) seconds and next
                 # check
-                self.assertEqual(cli.get("/t1").status_code, 429)
+                assert cli.get("/t1").status_code == 429
                 timeline.forward(2)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
 
     def test_fallback_to_memory_with_global_override(self):
         app, limiter = self.build_app(
@@ -290,16 +289,16 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
             return "test"
 
         with app.test_client() as cli:
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 429)
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 429)
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 429
 
             def raiser(*a):
                 raise Exception("redis dead")
@@ -310,18 +309,18 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 with mock.patch('limits.storage.RedisStorage.check') as check:
                     check.return_value = False
                     incr.side_effect = raiser
-                    self.assertEqual(cli.get("/t1").status_code, 200)
-                    self.assertEqual(cli.get("/t1").status_code, 429)
-                    self.assertEqual(cli.get("/t2").status_code, 200)
-                    self.assertEqual(cli.get("/t2").status_code, 429)
+                    assert cli.get("/t1").status_code == 200
+                    assert cli.get("/t1").status_code == 429
+                    assert cli.get("/t2").status_code == 200
+                    assert cli.get("/t2").status_code == 429
             # redis back to normal, go back to regular limits
             with hiro.Timeline() as timeline:
                 timeline.forward(2)
                 limiter._storage.storage.flushall()
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 429
 
     def test_fallback_to_memory(self):
         app, limiter = self.build_app(
@@ -341,11 +340,11 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
         def t2():
             return "test"
         with app.test_client() as cli:
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 429)
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 429)
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 429
 
             def raiser(*a):
                 raise Exception("redis dead")
@@ -354,21 +353,21 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 'limits.storage.RedisStorage.incr'
             ) as hit:
                 hit.side_effect = raiser
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 429
             with hiro.Timeline() as timeline:
                 timeline.forward(1)
                 limiter._storage.storage.flushall()
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 429
             with mock.patch(
                 'limits.storage.RedisStorage.get'
             ) as get:
                 get.side_effect = raiser
-                self.assertEqual(cli.get("/t1").status_code, 200)
+                assert cli.get("/t1").status_code == 200
 
 
 class DecoratorTests(FlaskLimiterTestCase):
@@ -386,23 +385,18 @@ class DecoratorTests(FlaskLimiterTestCase):
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 for i in range(0, 100):
-                    self.assertEqual(
-                        200 if i < 50 else 429,
-                        cli.get(
-                            "/t1", headers={
-                                "X_FORWARDED_FOR": "127.0.0.2"
-                            }
-                        ).status_code
-                    )
+                    assert (200 if i < 50 else 429) == cli.get(
+                        "/t1", headers={
+                            "X_FORWARDED_FOR": "127.0.0.2"
+                        }
+                    ).status_code
                 for i in range(50):
-                    self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(429, cli.get("/t1").status_code)
-                self.assertEqual(
-                    429,
+                    assert 200 == cli.get("/t1").status_code
+                assert 429 == cli.get("/t1").status_code
+                assert 429 == \
                     cli.get("/t1", headers={
                         "X_FORWARDED_FOR": "127.0.0.3"
                     }).status_code
-                )
 
     def test_exempt_routes(self):
         app, limiter = self.build_app(default_limits=["1/minute"])
@@ -417,10 +411,10 @@ class DecoratorTests(FlaskLimiterTestCase):
             return "test"
 
         with app.test_client() as cli:
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 429)
-            self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 200)
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 200
 
     def test_decorated_limit_with_conditional_deduction(self):
         app, limiter = self.build_app()
@@ -439,15 +433,15 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/t/1").status_code, 200)
-                self.assertEqual(cli.get("/t/1").status_code, 429)
+                assert cli.get("/t/1").status_code == 200
+                assert cli.get("/t/1").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/t/2").status_code, 400)
+                assert cli.get("/t/2").status_code == 400
                 timeline.forward(1)
-                self.assertEqual(cli.get("/t/1").status_code, 429)
-                self.assertEqual(cli.get("/t/2").status_code, 429)
+                assert cli.get("/t/1").status_code == 429
+                assert cli.get("/t/2").status_code == 429
                 timeline.forward(60)
-                self.assertEqual(cli.get("/t/1").status_code, 200)
+                assert cli.get("/t/1").status_code == 200
 
     def test_shared_limit_with_conditional_deduction(self):
         app, limiter = self.build_app()
@@ -478,18 +472,18 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/bp/test/1").status_code, 200)
-                self.assertEqual(cli.get("/bp/test/1").status_code, 200)
-                self.assertEqual(cli.get("/test/1").status_code, 200)
-                self.assertEqual(cli.get("/bp/test/2").status_code, 400)
-                self.assertEqual(cli.get("/test/2").status_code, 400)
-                self.assertEqual(cli.get("/bp/test/2").status_code, 429)
-                self.assertEqual(cli.get("/bp/test/1").status_code, 429)
-                self.assertEqual(cli.get("/test/1").status_code, 429)
-                self.assertEqual(cli.get("/test/2").status_code, 429)
+                assert cli.get("/bp/test/1").status_code == 200
+                assert cli.get("/bp/test/1").status_code == 200
+                assert cli.get("/test/1").status_code == 200
+                assert cli.get("/bp/test/2").status_code == 400
+                assert cli.get("/test/2").status_code == 400
+                assert cli.get("/bp/test/2").status_code == 429
+                assert cli.get("/bp/test/1").status_code == 429
+                assert cli.get("/test/1").status_code == 429
+                assert cli.get("/test/2").status_code == 429
                 timeline.forward(60)
-                self.assertEqual(cli.get("/bp/test/1").status_code, 200)
-                self.assertEqual(cli.get("/test/1").status_code, 200)
+                assert cli.get("/bp/test/1").status_code == 200
+                assert cli.get("/test/1").status_code == 200
 
     def test_header_ordering_with_conditional_deductions(self):
         app, limiter = self.build_app(
@@ -521,41 +515,29 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/test_combined/1").status_code, 200)
+                assert cli.get("/test_combined/1").status_code == 200
                 resp = cli.get("/test_combined/1")
-                self.assertEqual(resp.status_code, 200)
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Limit'), '3'
-                )
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Remaining'), '1'
-                )
-                self.assertEqual(cli.get("/test_combined/2").status_code, 400)
+                assert resp.status_code == 200
+                assert resp.headers.get('X-RateLimit-Limit') == '3'
+                assert resp.headers.get('X-RateLimit-Remaining') == '1'
+                assert cli.get("/test_combined/2").status_code == 400
 
                 resp = cli.get("/test/1")
-                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), None)
+                assert resp.headers.get('X-RateLimit-Limit') is None
                 resp = cli.get("/test/2")
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Limit'), '2'
-                )
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Remaining'), '1'
-                )
+                assert resp.headers.get('X-RateLimit-Limit') == '2'
+                assert resp.headers.get('X-RateLimit-Remaining') == '1'
 
                 resp = cli.get("/test_combined/1")
-                self.assertEqual(resp.status_code, 429)
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Limit'), '1'
-                )
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Remaining'), '0'
-                )
-                self.assertEqual(cli.get("/test_combined/2").status_code, 429)
+                assert resp.status_code == 429
+                assert resp.headers.get('X-RateLimit-Limit') == '1'
+                assert resp.headers.get('X-RateLimit-Remaining') == '0'
+                assert cli.get("/test_combined/2").status_code == 429
                 timeline.forward(60)
-                self.assertEqual(cli.get("/test_combined/1").status_code, 429)
-                self.assertEqual(cli.get("/test_combined/2").status_code, 429)
+                assert cli.get("/test_combined/1").status_code == 429
+                assert cli.get("/test_combined/2").status_code == 429
                 timeline.forward(3600)
-                self.assertEqual(cli.get("/test_combined/1").status_code, 200)
+                assert cli.get("/test_combined/1").status_code == 200
 
     def test_decorated_limits_with_combined_defaults(self):
         app, limiter = self.build_app(
@@ -569,14 +551,14 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 429 == cli.get("/").status_code
                 timeline.forward(60)
-                self.assertEqual(200, cli.get("/").status_code)
+                assert 200 == cli.get("/").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/").status_code)
+                assert 200 == cli.get("/").status_code
                 timeline.forward(1)
-                self.assertEqual(429, cli.get("/").status_code)
+                assert 429 == cli.get("/").status_code
 
     def test_decorated_limit_with_combined_defaults_per_method(self):
         app, limiter = self.build_app(
@@ -591,20 +573,20 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
-                self.assertEqual(200, cli.put("/").status_code)
-                self.assertEqual(200, cli.put("/").status_code)
-                self.assertEqual(429, cli.put("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 429 == cli.get("/").status_code
+                assert 200 == cli.put("/").status_code
+                assert 200 == cli.put("/").status_code
+                assert 429 == cli.put("/").status_code
                 timeline.forward(60)
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(200, cli.put("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 200 == cli.put("/").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(200, cli.put("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 200 == cli.put("/").status_code
                 timeline.forward(1)
-                self.assertEqual(429, cli.get("/").status_code)
-                self.assertEqual(429, cli.put("/").status_code)
+                assert 429 == cli.get("/").status_code
+                assert 429 == cli.put("/").status_code
 
     def test_decorated_dynamic_limits(self):
         app, limiter = self.build_app(
@@ -639,30 +621,25 @@ class DecoratorTests(FlaskLimiterTestCase):
         with app.test_client() as cli:
             with hiro.Timeline().freeze() as timeline:
                 for i in range(0, 10):
-                    self.assertEqual(
-                        cli.get("/t1", headers=R1).status_code, 200
-                    )
+                    assert cli.get("/t1", headers=R1).status_code == 200
                     timeline.forward(1)
-                self.assertEqual(cli.get("/t1", headers=R1).status_code, 429)
-                self.assertEqual(cli.get("/t1", headers=R2).status_code, 200)
-                self.assertEqual(cli.get("/t1", headers=R2).status_code, 429)
+                assert cli.get("/t1", headers=R1).status_code == 429
+                assert cli.get("/t1", headers=R2).status_code == 200
+                assert cli.get("/t1", headers=R2).status_code == 429
                 timeline.forward(60)
-                self.assertEqual(cli.get("/t1", headers=R2).status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t1", headers=R2).status_code == 200
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/t2").status_code, 200)
+                assert cli.get("/t2").status_code == 200
 
-    def test_invalid_decorated_dynamic_limits(self):
+    def test_invalid_decorated_dynamic_limits(self, caplog):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per sec")
         limiter = Limiter(
             app, default_limits=["1/second"], key_func=get_remote_address
         )
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
 
         @app.route("/t1")
         @limiter.limit(lambda: current_app.config.get("X"))
@@ -671,31 +648,29 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             with hiro.Timeline().freeze():
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
         # 2 for invalid limit, 1 for warning.
-        self.assertEqual(mock_handler.handle.call_count, 3)
-        self.assertTrue(
-            "failed to load ratelimit" in mock_handler.handle.call_args_list[0]
-            [0][0].msg
+        assert len(caplog.records) == 3
+        assert (
+            "failed to load ratelimit"
+            in caplog.records[0].msg
         )
-        self.assertTrue(
-            "failed to load ratelimit" in mock_handler.handle.call_args_list[1]
-            [0][0].msg
+        assert (
+            "failed to load ratelimit"
+            in caplog.records[1].msg
         )
-        self.assertTrue(
-            "exceeded at endpoint" in mock_handler.handle.call_args_list[2][0]
-            [0].msg
+        assert (
+            "exceeded at endpoint"
+            in caplog.records[2].msg
         )
+        assert caplog.records[2].levelname == 'WARNING'
 
-    def test_invalid_decorated_static_limits(self):
+    def test_invalid_decorated_static_limits(self, caplog):
         app = Flask(__name__)
         limiter = Limiter(
             app, default_limits=["1/second"], key_func=get_remote_address
         )
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
 
         @app.route("/t1")
         @limiter.limit("2/sec")
@@ -704,15 +679,15 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             with hiro.Timeline().freeze():
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertTrue(
-            "failed to configure" in mock_handler.handle.call_args_list[0][0]
-            [0].msg
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
+        assert (
+            "failed to configure"
+            in caplog.records[0].msg
         )
-        self.assertTrue(
-            "exceeded at endpoint" in mock_handler.handle.call_args_list[1][0]
-            [0].msg
+        assert (
+            "exceeded at endpoint"
+            in caplog.records[1].msg
         )
 
     def test_named_shared_limit(self):
@@ -737,9 +712,9 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(200, cli.get("/t3").status_code)
-                self.assertEqual(429, cli.get("/t2").status_code)
+                assert 200 == cli.get("/t1").status_code
+                assert 200 == cli.get("/t3").status_code
+                assert 429 == cli.get("/t2").status_code
 
     def test_dynamic_shared_limit(self):
         app, limiter = self.build_app()
@@ -768,12 +743,12 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(200, cli.get("/t3").status_code)
-                self.assertEqual(429, cli.get("/t2").status_code)
-                self.assertEqual(429, cli.get("/t3").status_code)
-                self.assertEqual(2, fn_a.call_count)
-                self.assertEqual(2, fn_b.call_count)
+                assert 200 == cli.get("/t1").status_code
+                assert 200 == cli.get("/t3").status_code
+                assert 429 == cli.get("/t2").status_code
+                assert 429 == cli.get("/t3").status_code
+                assert 2 == fn_a.call_count
+                assert 2 == fn_b.call_count
                 fn_b.assert_called_with("t3")
                 fn_a.assert_has_calls([mock.call("t1"), mock.call("t2")])
 
@@ -800,18 +775,18 @@ class DecoratorTests(FlaskLimiterTestCase):
             return "conditional"
 
         with app.test_client() as cli:
-            self.assertEqual(cli.get("/limited").status_code, 200)
-            self.assertEqual(cli.get("/limited").status_code, 429)
+            assert cli.get("/limited").status_code == 200
+            assert cli.get("/limited").status_code == 429
 
-            self.assertEqual(cli.get("/unlimited").status_code, 200)
-            self.assertEqual(cli.get("/unlimited").status_code, 200)
+            assert cli.get("/unlimited").status_code == 200
+            assert cli.get("/unlimited").status_code == 200
 
-            self.assertEqual(cli.get("/conditional").status_code, 200)
-            self.assertEqual(cli.get("/conditional").status_code, 429)
+            assert cli.get("/conditional").status_code == 200
+            assert cli.get("/conditional").status_code == 429
             is_exempt = True
-            self.assertEqual(cli.get("/conditional").status_code, 200)
+            assert cli.get("/conditional").status_code == 200
             is_exempt = False
-            self.assertEqual(cli.get("/conditional").status_code, 429)
+            assert cli.get("/conditional").status_code == 429
 
     def test_conditional_shared_limits(self):
         """Test that conditional shared limits work."""
@@ -840,17 +815,17 @@ class DecoratorTests(FlaskLimiterTestCase):
             return "conditional"
 
         with app.test_client() as cli:
-            self.assertEqual(cli.get("/unlimited").status_code, 200)
-            self.assertEqual(cli.get("/unlimited").status_code, 200)
+            assert cli.get("/unlimited").status_code == 200
+            assert cli.get("/unlimited").status_code == 200
 
-            self.assertEqual(cli.get("/limited").status_code, 200)
-            self.assertEqual(cli.get("/limited").status_code, 429)
+            assert cli.get("/limited").status_code == 200
+            assert cli.get("/limited").status_code == 429
 
-            self.assertEqual(cli.get("/conditional").status_code, 429)
+            assert cli.get("/conditional").status_code == 429
             is_exempt = True
-            self.assertEqual(cli.get("/conditional").status_code, 200)
+            assert cli.get("/conditional").status_code == 200
             is_exempt = False
-            self.assertEqual(cli.get("/conditional").status_code, 429)
+            assert cli.get("/conditional").status_code == 429
 
     def test_whitelisting(self):
 
@@ -874,17 +849,15 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/").status_code, 200)
-                self.assertEqual(cli.get("/").status_code, 429)
+                assert cli.get("/").status_code == 200
+                assert cli.get("/").status_code == 429
                 timeline.forward(60)
-                self.assertEqual(cli.get("/").status_code, 200)
+                assert cli.get("/").status_code == 200
 
                 for i in range(0, 10):
-                    self.assertEqual(
-                        cli.get("/", headers={
-                            "internal": "true"
-                        }).status_code, 200
-                    )
+                    assert cli.get(
+                        "/", headers={"internal": "true"}
+                    ).status_code == 200
 
     def test_separate_method_limits(self):
         app, limiter = self.build_app()
@@ -896,10 +869,10 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
-                self.assertEqual(200, cli.post("/").status_code)
-                self.assertEqual(429, cli.post("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 429 == cli.get("/").status_code
+                assert 200 == cli.post("/").status_code
+                assert 429 == cli.post("/").status_code
 
     def test_explicit_method_limits(self):
         app, limiter = self.build_app(default_limits=['2/second'])
@@ -911,11 +884,11 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
-                self.assertEqual(200, cli.post("/").status_code)
-                self.assertEqual(200, cli.post("/").status_code)
-                self.assertEqual(429, cli.post("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 429 == cli.get("/").status_code
+                assert 200 == cli.post("/").status_code
+                assert 200 == cli.post("/").status_code
+                assert 429 == cli.post("/").status_code
 
     def test_decorated_limit_immediate(self):
         app, limiter = self.build_app(default_limits=["1/minute"])
@@ -935,9 +908,9 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 200 == cli.get("/").status_code
+                assert 429 == cli.get("/").status_code
 
     def test_decorated_shared_limit_immediate(self):
 
@@ -963,11 +936,11 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/other").status_code)
-                self.assertEqual(429, cli.get("/other").status_code)
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
+                assert 200 == cli.get("/other").status_code
+                assert 429 == cli.get("/other").status_code
+                assert 200 == cli.get("/").status_code
+                assert 200 == cli.get("/").status_code
+                assert 429 == cli.get("/").status_code
 
     def test_backward_compatibility_with_incorrect_ordering(self):
         app, limiter = self.build_app()
@@ -997,12 +970,12 @@ class DecoratorTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(429, cli.get("/t1").status_code)
-                self.assertEqual(200, cli.get("/t2").status_code)
-                self.assertEqual(429, cli.get("/t2").status_code)
-                self.assertEqual(200, cli.get("/t3").status_code)
-                self.assertEqual(429, cli.get("/t3").status_code)
+                assert 200 == cli.get("/t1").status_code
+                assert 429 == cli.get("/t1").status_code
+                assert 200 == cli.get("/t2").status_code
+                assert 429 == cli.get("/t2").status_code
+                assert 200 == cli.get("/t3").status_code
+                assert 429 == cli.get("/t3").status_code
 
 
 class BlueprintTests(FlaskLimiterTestCase):
@@ -1022,11 +995,11 @@ class BlueprintTests(FlaskLimiterTestCase):
         app.register_blueprint(bp)
 
         with app.test_client() as cli:
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 429)
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
             for i in range(0, 10):
-                self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 429
 
     def test_register_blueprint(self):
         app, limiter = self.build_app(default_limits=["1/minute"])
@@ -1069,34 +1042,31 @@ class BlueprintTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t2").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/t2").status_code, 200)
+                assert cli.get("/t2").status_code == 200
 
-                self.assertEqual(cli.get("/t3").status_code, 200)
+                assert cli.get("/t3").status_code == 200
                 for i in range(0, 10):
                     timeline.forward(1)
-                    self.assertEqual(cli.get("/t3").status_code, 429)
+                    assert cli.get("/t3").status_code == 429
 
                 for i in range(0, 10):
-                    self.assertEqual(cli.get("/t4").status_code, 200)
+                    assert cli.get("/t4").status_code == 200
 
-                self.assertEqual(cli.get("/t5").status_code, 200)
-                self.assertEqual(cli.get("/t5").status_code, 429)
+                assert cli.get("/t5").status_code == 200
+                assert cli.get("/t5").status_code == 429
 
-    def test_invalid_decorated_static_limit_blueprint(self):
+    def test_invalid_decorated_static_limit_blueprint(self, caplog):
         app = Flask(__name__)
         limiter = Limiter(
             app, default_limits=["1/second"], key_func=get_remote_address
         )
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
         bp = Blueprint("bp1", __name__)
 
         @bp.route("/t1")
@@ -1108,26 +1078,23 @@ class BlueprintTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             with hiro.Timeline().freeze():
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertTrue(
-            "failed to configure" in mock_handler.handle.call_args_list[0][0]
-            [0].msg
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
+        assert (
+            "failed to configure"
+            in caplog.records[0].msg
         )
-        self.assertTrue(
-            "exceeded at endpoint" in mock_handler.handle.call_args_list[1][0]
-            [0].msg
+        assert (
+            "exceeded at endpoint"
+            in caplog.records[1].msg
         )
 
-    def test_invalid_decorated_dynamic_limits_blueprint(self):
+    def test_invalid_decorated_dynamic_limits_blueprint(self, caplog):
         app = Flask(__name__)
         app.config.setdefault("X", "2 per sec")
         limiter = Limiter(
             app, default_limits=["1/second"], key_func=get_remote_address
         )
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
         bp = Blueprint("bp1", __name__)
 
         @bp.route("/t1")
@@ -1139,21 +1106,13 @@ class BlueprintTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             with hiro.Timeline().freeze():
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
-        self.assertEqual(mock_handler.handle.call_count, 3)
-        self.assertTrue(
-            "failed to load ratelimit" in mock_handler.handle.call_args_list[0]
-            [0][0].msg
-        )
-        self.assertTrue(
-            "failed to load ratelimit" in mock_handler.handle.call_args_list[1]
-            [0][0].msg
-        )
-        self.assertTrue(
-            "exceeded at endpoint" in mock_handler.handle.call_args_list[2][0]
-            [0].msg
-        )
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
+
+        assert len(caplog.records) == 3
+        assert "failed to load ratelimit" in caplog.records[0].msg
+        assert "failed to load ratelimit" in caplog.records[1].msg
+        assert "exceeded at endpoint" in caplog.records[2].msg
 
 
 class ViewsTests(FlaskLimiterTestCase):
@@ -1185,18 +1144,18 @@ class ViewsTests(FlaskLimiterTestCase):
         app.add_url_rule("/c", view_func=Vc.as_view("c"))
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/a").status_code)
-                self.assertEqual(200, cli.get("/a").status_code)
-                self.assertEqual(429, cli.post("/a").status_code)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/a").status_code
+                assert 200 == cli.get("/a").status_code
+                assert 429 == cli.post("/a").status_code
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(429, cli.get("/b").status_code)
-                self.assertEqual(200, cli.get("/c").status_code)
-                self.assertEqual(429, cli.get("/c").status_code)
+                assert 429 == cli.get("/b").status_code
+                assert 200 == cli.get("/c").status_code
+                assert 429 == cli.get("/c").status_code
 
     def test_pluggable_method_views(self):
         app, limiter = self.build_app(default_limits=["1/hour"])
@@ -1236,25 +1195,25 @@ class ViewsTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/a").status_code)
-                self.assertEqual(200, cli.get("/a").status_code)
-                self.assertEqual(429, cli.get("/a").status_code)
-                self.assertEqual(429, cli.post("/a").status_code)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/a").status_code
+                assert 200 == cli.get("/a").status_code
+                assert 429 == cli.get("/a").status_code
+                assert 429 == cli.post("/a").status_code
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(429, cli.get("/b").status_code)
-                self.assertEqual(200, cli.get("/c").status_code)
-                self.assertEqual(429, cli.get("/c").status_code)
-                self.assertEqual(200, cli.get("/d").status_code)
-                self.assertEqual(429, cli.get("/d").status_code)
-                self.assertEqual(200, cli.post("/d").status_code)
-                self.assertEqual(429, cli.post("/d").status_code)
+                assert 429 == cli.get("/b").status_code
+                assert 200 == cli.get("/c").status_code
+                assert 429 == cli.get("/c").status_code
+                assert 200 == cli.get("/d").status_code
+                assert 429 == cli.get("/d").status_code
+                assert 200 == cli.post("/d").status_code
+                assert 429 == cli.post("/d").status_code
                 timeline.forward(3600)
-                self.assertEqual(200, cli.post("/d").status_code)
+                assert 200 == cli.post("/d").status_code
 
     def test_flask_restful_resource(self):
         app, limiter = self.build_app(default_limits=["1/hour"])
@@ -1299,24 +1258,24 @@ class ViewsTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/a").status_code)
-                self.assertEqual(200, cli.get("/a").status_code)
-                self.assertEqual(429, cli.get("/a").status_code)
-                self.assertEqual(429, cli.post("/a").status_code)
-                self.assertEqual(200, cli.get("/b").status_code)
-                self.assertEqual(200, cli.get("/d").status_code)
-                self.assertEqual(200, cli.get("/d").status_code)
-                self.assertEqual(429, cli.get("/d").status_code)
-                self.assertEqual(200, cli.post("/d").status_code)
-                self.assertEqual(429, cli.post("/d").status_code)
+                assert 200 == cli.get("/a").status_code
+                assert 200 == cli.get("/a").status_code
+                assert 429 == cli.get("/a").status_code
+                assert 429 == cli.post("/a").status_code
+                assert 200 == cli.get("/b").status_code
+                assert 200 == cli.get("/d").status_code
+                assert 200 == cli.get("/d").status_code
+                assert 429 == cli.get("/d").status_code
+                assert 200 == cli.post("/d").status_code
+                assert 429 == cli.post("/d").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(200, cli.get("/b").status_code)
+                assert 200 == cli.get("/b").status_code
                 timeline.forward(1)
-                self.assertEqual(429, cli.get("/b").status_code)
-                self.assertEqual(200, cli.get("/c").status_code)
-                self.assertEqual(429, cli.get("/c").status_code)
+                assert 429 == cli.get("/b").status_code
+                assert 200 == cli.get("/c").status_code
+                assert 429 == cli.get("/c").status_code
 
 
 class FlaskExtTests(FlaskLimiterTestCase):
@@ -1329,10 +1288,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             cli.get("/")
-            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+            assert "1 per 1 day" in cli.get("/").data.decode()
             limiter.reset()
-            self.assertEqual("Hello Reset", cli.get("/").data.decode())
-            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+            assert "Hello Reset" == cli.get("/").data.decode()
+            assert "1 per 1 day" in cli.get("/").data.decode()
 
     def test_reset_unsupported(self):
         app, limiter = self.build_app({
@@ -1346,10 +1305,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             cli.get("/")
-            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+            assert "1 per 1 day" in cli.get("/").data.decode()
             # no op with memcached but no error raised
             limiter.reset()
-            self.assertTrue("1 per 1 day" in cli.get("/").data.decode())
+            assert "1 per 1 day" in cli.get("/").data.decode()
 
     def test_combined_rate_limits(self):
         app, limiter = self.build_app({
@@ -1367,9 +1326,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(200, cli.get("/t2").status_code)
-                self.assertEqual(429, cli.get("/t2").status_code)
+                assert 200 == cli.get("/t1").status_code
+                assert 200 == cli.get("/t2").status_code
+                assert 429 == cli.get("/t2").status_code
 
     def test_defaults_per_method(self):
         app, limiter = self.build_app({
@@ -1383,10 +1342,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(429, cli.get("/t1").status_code)
-                self.assertEqual(200, cli.post("/t1").status_code)
-                self.assertEqual(429, cli.post("/t1").status_code)
+                assert 200 == cli.get("/t1").status_code
+                assert 429 == cli.get("/t1").status_code
+                assert 200 == cli.post("/t1").status_code
+                assert 429 == cli.post("/t1").status_code
 
     def test_default_limit_with_exemption(self):
         def is_backdoor():
@@ -1403,18 +1362,16 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(
-                    cli.get("/t1", headers={'backdoor': 'true'}).status_code,
-                    200
-                )
-                self.assertEqual(
-                    cli.get("/t1", headers={'backdoor': 'true'}).status_code,
-                    200
-                )
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
+                assert cli.get(
+                    "/t1", headers={'backdoor': 'true'}
+                ).status_code == 200
+                assert cli.get(
+                    "/t1", headers={'backdoor': 'true'}
+                ).status_code == 200
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
                 timeline.forward(3600)
-                self.assertEqual(cli.get("/t1").status_code, 200)
+                assert cli.get("/t1").status_code == 200
 
     def test_default_limit_with_conditional_deduction(self):
         def failed_request(response):
@@ -1433,14 +1390,14 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/t1/1").status_code, 200)
-                self.assertEqual(cli.get("/t1/1").status_code, 200)
-                self.assertEqual(cli.get("/t1/2").status_code, 400)
-                self.assertEqual(cli.get("/t1/1").status_code, 429)
-                self.assertEqual(cli.get("/t1/2").status_code, 429)
+                assert cli.get("/t1/1").status_code == 200
+                assert cli.get("/t1/1").status_code == 200
+                assert cli.get("/t1/2").status_code == 400
+                assert cli.get("/t1/1").status_code == 429
+                assert cli.get("/t1/2").status_code == 429
                 timeline.forward(3600)
-                self.assertEqual(cli.get("/t1/1").status_code, 200)
-                self.assertEqual(cli.get("/t1/2").status_code, 400)
+                assert cli.get("/t1/1").status_code == 200
+                assert cli.get("/t1/2").status_code == 400
 
     def test_key_func(self):
         app, limiter = self.build_app()
@@ -1453,22 +1410,17 @@ class FlaskExtTests(FlaskLimiterTestCase):
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 for i in range(0, 100):
-                    self.assertEqual(
-                        200,
+                    assert 200 == \
                         cli.get(
                             "/t1", headers={
                                 "X_FORWARDED_FOR": "127.0.0.2"
                             }
                         ).status_code
-                    )
-                self.assertEqual(429, cli.get("/t1").status_code)
+                assert 429 == cli.get("/t1").status_code
 
-    def test_logging(self):
+    def test_logging(self, caplog):
         app = Flask(__name__)
         limiter = Limiter(app, key_func=get_remote_address)
-        mock_handler = mock.Mock()
-        mock_handler.level = logging.INFO
-        limiter.logger.addHandler(mock_handler)
 
         @app.route("/t1")
         @limiter.limit("1/minute")
@@ -1476,9 +1428,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
             return "test"
 
         with app.test_client() as cli:
-            self.assertEqual(200, cli.get("/t1").status_code)
-            self.assertEqual(429, cli.get("/t1").status_code)
-        self.assertEqual(mock_handler.handle.call_count, 1)
+            assert 200 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t1").status_code
+        assert len(caplog.records) == 1
+        assert caplog.records[0].levelname == 'WARNING'
 
     def test_reuse_logging(self):
         app = Flask(__name__)
@@ -1498,7 +1451,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
             cli.get("/t1")
             cli.get("/t1")
 
-        self.assertEqual(app_handler.handle.call_count, 1)
+        assert app_handler.handle.call_count == 1
 
     def test_disabled_flag(self):
         app, limiter = self.build_app(
@@ -1515,11 +1468,11 @@ class FlaskExtTests(FlaskLimiterTestCase):
             return "test"
 
         with app.test_client() as cli:
-            self.assertEqual(cli.get("/t1").status_code, 200)
-            self.assertEqual(cli.get("/t1").status_code, 200)
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
             for i in range(0, 10):
-                self.assertEqual(cli.get("/t2").status_code, 200)
-            self.assertEqual(cli.get("/t2").status_code, 200)
+                assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 200
 
     def test_multiple_apps(self):
         app1 = Flask(__name__)
@@ -1552,27 +1505,27 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze() as timeline:
             with app1.test_client() as cli:
-                self.assertEqual(cli.get("/ping").status_code, 200)
-                self.assertEqual(cli.get("/ping").status_code, 429)
+                assert cli.get("/ping").status_code == 200
+                assert cli.get("/ping").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/ping").status_code, 200)
-                self.assertEqual(cli.get("/slowping").status_code, 200)
+                assert cli.get("/ping").status_code == 200
+                assert cli.get("/slowping").status_code == 200
                 timeline.forward(59)
-                self.assertEqual(cli.get("/slowping").status_code, 429)
+                assert cli.get("/slowping").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/slowping").status_code, 200)
+                assert cli.get("/slowping").status_code == 200
             with app2.test_client() as cli:
-                self.assertEqual(cli.get("/ping").status_code, 200)
-                self.assertEqual(cli.get("/ping").status_code, 200)
-                self.assertEqual(cli.get("/ping").status_code, 429)
+                assert cli.get("/ping").status_code == 200
+                assert cli.get("/ping").status_code == 200
+                assert cli.get("/ping").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/ping").status_code, 200)
-                self.assertEqual(cli.get("/slowping").status_code, 200)
+                assert cli.get("/ping").status_code == 200
+                assert cli.get("/slowping").status_code == 200
                 timeline.forward(59)
-                self.assertEqual(cli.get("/slowping").status_code, 200)
-                self.assertEqual(cli.get("/slowping").status_code, 429)
+                assert cli.get("/slowping").status_code == 200
+                assert cli.get("/slowping").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/slowping").status_code, 200)
+                assert cli.get("/slowping").status_code == 200
 
     def test_headers_no_breach(self):
         app = Flask(__name__)
@@ -1595,26 +1548,18 @@ class FlaskExtTests(FlaskLimiterTestCase):
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
                 resp = cli.get("/t1")
-                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '10')
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Remaining'), '9'
-                )
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Reset'),
+                assert resp.headers.get('X-RateLimit-Limit') == '10'
+                assert resp.headers.get('X-RateLimit-Remaining') == '9'
+                assert resp.headers.get('X-RateLimit-Reset') == \
                     str(int(time.time() + 61))
-                )
-                self.assertEqual(resp.headers.get('Retry-After'), str(60))
+                assert resp.headers.get('Retry-After') == str(60)
                 resp = cli.get("/t2")
-                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '2')
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Remaining'), '1'
-                )
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Reset'),
+                assert resp.headers.get('X-RateLimit-Limit') == '2'
+                assert resp.headers.get('X-RateLimit-Remaining') == '1'
+                assert resp.headers.get('X-RateLimit-Reset') == \
                     str(int(time.time() + 2))
-                )
 
-                self.assertEqual(resp.headers.get('Retry-After'), str(1))
+                assert resp.headers.get('Retry-After') == str(1)
 
     def test_headers_breach(self):
         app = Flask(__name__)
@@ -1636,15 +1581,11 @@ class FlaskExtTests(FlaskLimiterTestCase):
                     resp = cli.get("/t1")
                     timeline.forward(1)
 
-                self.assertEqual(resp.headers.get('X-RateLimit-Limit'), '10')
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Remaining'), '0'
-                )
-                self.assertEqual(
-                    resp.headers.get('X-RateLimit-Reset'),
+                assert resp.headers.get('X-RateLimit-Limit') == '10'
+                assert resp.headers.get('X-RateLimit-Remaining') == '0'
+                assert resp.headers.get('X-RateLimit-Reset') == \
                     str(int(time.time() + 50))
-                )
-                self.assertEqual(resp.headers.get('Retry-After'), str(int(50)))
+                assert resp.headers.get('Retry-After') == str(int(50))
 
     def test_retry_after(self):
         app = Flask(__name__)
@@ -1663,10 +1604,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
             with app.test_client() as cli:
                 resp = cli.get("/t1")
                 retry_after = int(resp.headers.get('Retry-After'))
-                self.assertTrue(retry_after > 0)
+                assert retry_after > 0
                 timeline.forward(retry_after)
                 resp = cli.get("/t1")
-                self.assertEqual(resp.status_code, 200)
+                assert resp.status_code == 200
 
     def test_retry_after_exists_seconds(self):
         app = Flask(__name__)
@@ -1685,7 +1626,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
             resp = cli.get("/t1")
 
             retry_after = int(resp.headers.get('Retry-After'))
-            self.assertTrue(retry_after > 1000)
+            assert retry_after > 1000
 
     def test_retry_after_exists_rfc1123(self):
         app = Flask(__name__)
@@ -1704,7 +1645,7 @@ class FlaskExtTests(FlaskLimiterTestCase):
             resp = cli.get("/t1")
 
             retry_after = int(resp.headers.get('Retry-After'))
-            self.assertTrue(retry_after > 1000)
+            assert retry_after > 1000
 
     def test_custom_headers_from_setter(self):
         app = Flask(__name__)
@@ -1730,15 +1671,14 @@ class FlaskExtTests(FlaskLimiterTestCase):
                     resp = cli.get("/t1")
                     timeline.forward(1)
 
-                self.assertEqual(resp.headers.get('X-Limit'), '10')
-                self.assertEqual(resp.headers.get('X-Remaining'), '0')
-                self.assertEqual(
-                    resp.headers.get('X-Reset'), str(int(time.time() + 50))
-                )
-                self.assertEqual(
-                    resp.headers.get('Retry-After'),
-                    'Thu, 01 Jan 1970 00:01:01 GMT'
-                )
+                assert resp.headers.get('X-Limit') == '10'
+                assert resp.headers.get('X-Remaining') == '0'
+                assert resp.headers.get(
+                    'X-Reset'
+                ) == str(int(time.time() + 50))
+                assert resp.headers.get(
+                    'Retry-After'
+                ) == 'Thu, 01 Jan 1970 00:01:01 GMT'
 
     def test_custom_headers_from_config(self):
         app = Flask(__name__)
@@ -1763,11 +1703,11 @@ class FlaskExtTests(FlaskLimiterTestCase):
                     resp = cli.get("/t1")
                     timeline.forward(1)
 
-                self.assertEqual(resp.headers.get('X-Limit'), '10')
-                self.assertEqual(resp.headers.get('X-Remaining'), '0')
-                self.assertEqual(
-                    resp.headers.get('X-Reset'), str(int(time.time() + 50))
-                )
+                assert resp.headers.get('X-Limit') == '10'
+                assert resp.headers.get('X-Remaining') == '0'
+                assert resp.headers.get(
+                    'X-Reset'
+                ) == str(int(time.time() + 50))
 
     def test_custom_headers_from_setter_and_config(self):
         app = Flask(__name__)
@@ -1790,9 +1730,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
             for i in range(11):
                 resp = cli.get("/t1")
 
-            self.assertEqual(resp.headers.get('Limit'), '10')
-            self.assertEqual(resp.headers.get('Available'), '0')
-            self.assertIsNotNone(resp.headers.get('Reset'))
+            assert resp.headers.get('Limit') == '10'
+            assert resp.headers.get('Available') == '0'
+            assert resp.headers.get('Reset') is not None
 
     def test_application_shared_limit(self):
         app, limiter = self.build_app(application_limits=["2/minute"])
@@ -1807,9 +1747,9 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/t1").status_code)
-                self.assertEqual(200, cli.get("/t2").status_code)
-                self.assertEqual(429, cli.get("/t1").status_code)
+                assert 200 == cli.get("/t1").status_code
+                assert 200 == cli.get("/t2").status_code
+                assert 429 == cli.get("/t1").status_code
 
     def test_callable_default_limit(self):
         app, limiter = self.build_app(default_limits=[lambda: "1/minute"])
@@ -1824,10 +1764,10 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t2").status_code == 200
+                assert cli.get("/t1").status_code == 429
+                assert cli.get("/t2").status_code == 429
 
     def test_callable_application_limit(self):
 
@@ -1843,8 +1783,8 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t2").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t2").status_code == 429
 
     def test_no_auto_check(self):
         app, limiter = self.build_app(auto_check=False)
@@ -1856,8 +1796,8 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(200, cli.get("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 200 == cli.get("/").status_code
 
         # attach before_request to perform check
         @app.before_request
@@ -1866,8 +1806,8 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze():
             with app.test_client() as cli:
-                self.assertEqual(200, cli.get("/").status_code)
-                self.assertEqual(429, cli.get("/").status_code)
+                assert 200 == cli.get("/").status_code
+                assert 429 == cli.get("/").status_code
 
     def test_custom_key_prefix(self):
         app1, limiter1 = self.build_app(
@@ -1896,16 +1836,16 @@ class FlaskExtTests(FlaskLimiterTestCase):
 
         with app1.test_client() as cli:
             resp = cli.get("/test")
-            self.assertEqual(200, resp.status_code)
+            assert 200 == resp.status_code
             resp = cli.get("/test")
-            self.assertEqual(429, resp.status_code)
+            assert 429 == resp.status_code
         with app2.test_client() as cli:
             resp = cli.get("/test")
-            self.assertEqual(200, resp.status_code)
+            assert 200 == resp.status_code
             resp = cli.get("/test")
-            self.assertEqual(429, resp.status_code)
+            assert 429 == resp.status_code
         with app3.test_client() as cli:
             resp = cli.get("/test")
-            self.assertEqual(200, resp.status_code)
+            assert 200 == resp.status_code
             resp = cli.get("/test")
-            self.assertEqual(429, resp.status_code)
+            assert 429 == resp.status_code

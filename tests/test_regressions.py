@@ -27,7 +27,7 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             resp = cli.get("/t1")
-            self.assertEqual(resp.headers["X-RateLimit-Remaining"], '5')
+            assert resp.headers["X-RateLimit-Remaining"] == '5'
 
     def test_redis_request_slower_than_moving_window(self):
         app, limiter = self.build_app(
@@ -46,7 +46,7 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             resp = cli.get("/t1")
-            self.assertEqual(resp.headers["X-RateLimit-Remaining"], '5')
+            assert resp.headers["X-RateLimit-Remaining"] == '5'
 
     def test_dynamic_limits(self):
         app, limiter = self.build_app(
@@ -66,11 +66,11 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with hiro.Timeline().freeze() as timeline:
             with app.test_client() as cli:
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
                 timeline.forward(2)
-                self.assertEqual(cli.get("/t1").status_code, 200)
-                self.assertEqual(cli.get("/t1").status_code, 429)
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
 
     def test_invalid_ratelimit_key(self):
         app, limiter = self.build_app({C.HEADERS_ENABLED: True})
@@ -87,10 +87,10 @@ class RegressionTests(FlaskLimiterTestCase):
             cli.get("/t1")
             cli.get("/t1")
             cli.get("/t1")
-            self.assertEqual(cli.get("/t1").status_code, 200)
+            assert cli.get("/t1").status_code == 200
             limiter.limit("1/second", key_func=lambda: "key")(t1)
             cli.get("/t1")
-            self.assertEqual(cli.get("/t1").status_code, 429)
+            assert cli.get("/t1").status_code == 429
 
     def test_custom_key_prefix_with_headers(self):
         app1, limiter1 = self.build_app(
@@ -116,16 +116,16 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with app1.test_client() as cli:
             resp = cli.get("/test")
-            self.assertEqual(200, resp.status_code)
+            assert 200 == resp.status_code
             resp = cli.get("/test")
-            self.assertEqual(resp.headers.get('Retry-After'), str(60))
-            self.assertEqual(429, resp.status_code)
+            assert resp.headers.get('Retry-After') == str(60)
+            assert 429 == resp.status_code
         with app2.test_client() as cli:
             resp = cli.get("/test")
-            self.assertEqual(200, resp.status_code)
+            assert 200 == resp.status_code
             resp = cli.get("/test")
-            self.assertEqual(resp.headers.get('Retry-After'), str(60))
-            self.assertEqual(429, resp.status_code)
+            assert resp.headers.get('Retry-After') == str(60)
+            assert 429 == resp.status_code
 
     def test_default_limits_with_per_route_limit(self):
         app, limiter = self.build_app(
@@ -143,13 +143,13 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             with hiro.Timeline().freeze() as timeline:
-                self.assertEqual(200, cli.get("/explicit").status_code)
-                self.assertEqual(429, cli.get("/explicit").status_code)
-                self.assertEqual(200, cli.get("/default").status_code)
-                self.assertEqual(429, cli.get("/default").status_code)
+                assert 200 == cli.get("/explicit").status_code
+                assert 429 == cli.get("/explicit").status_code
+                assert 200 == cli.get("/default").status_code
+                assert 429 == cli.get("/default").status_code
                 timeline.forward(60)
-                self.assertEqual(200, cli.get("/explicit").status_code)
-                self.assertEqual(200, cli.get("/default").status_code)
+                assert 200 == cli.get("/explicit").status_code
+                assert 200 == cli.get("/default").status_code
 
     def test_application_limits_from_config(self):
         app, limiter = self.build_app(
@@ -170,19 +170,19 @@ class RegressionTests(FlaskLimiterTestCase):
 
         with app.test_client() as cli:
             with hiro.Timeline() as timeline:
-                self.assertEqual(cli.get("/root").status_code, 200)
-                self.assertEqual(cli.get("/root").status_code, 429)
-                self.assertEqual(cli.get("/test").status_code, 200)
-                self.assertEqual(cli.get("/test").status_code, 200)
-                self.assertEqual(cli.get("/test").status_code, 429)
+                assert cli.get("/root").status_code == 200
+                assert cli.get("/root").status_code == 429
+                assert cli.get("/test").status_code == 200
+                assert cli.get("/test").status_code == 200
+                assert cli.get("/test").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.get("/test").status_code, 200)
-                self.assertEqual(cli.get("/test").status_code, 200)
-                self.assertEqual(cli.get("/test").status_code, 200)
-                self.assertEqual(cli.get("/test").status_code, 429)
+                assert cli.get("/test").status_code == 200
+                assert cli.get("/test").status_code == 200
+                assert cli.get("/test").status_code == 200
+                assert cli.get("/test").status_code == 429
                 timeline.forward(1)
-                self.assertEqual(cli.put("/test").status_code, 200)
-                self.assertEqual(cli.put("/test").status_code, 429)
-                self.assertEqual(cli.get("/test").status_code, 200)
-                self.assertEqual(cli.get("/root").status_code, 200)
-                self.assertEqual(cli.get("/test").status_code, 429)
+                assert cli.put("/test").status_code == 200
+                assert cli.put("/test").status_code == 429
+                assert cli.get("/test").status_code == 200
+                assert cli.get("/root").status_code == 200
+                assert cli.get("/test").status_code == 429

@@ -7,6 +7,7 @@ import pytest
 
 from flask import Flask
 from flask_limiter import Limiter
+import re
 
 
 class DeprecationTests(unittest.TestCase):
@@ -14,9 +15,9 @@ class DeprecationTests(unittest.TestCase):
         app = Flask(__name__)
         with pytest.warns(UserWarning) as record:
             Limiter(app)
-            self.assertRegex(
-                record[0].message.args[0],
-                "Use of the default `get_ipaddr`"
+            assert re.search(
+                "Use of the default `get_ipaddr`",
+                record[0].message.args[0]
             )
 
     def test_with_global_limits(self):
@@ -26,7 +27,7 @@ class DeprecationTests(unittest.TestCase):
                 app,
                 key_func=lambda x: 'test', global_limits=['1/second']
             )
-            self.assertRegex(
-                record[0].message.args[0],
+            assert re.search(
                 "global_limits was a badly named configuration",
+                record[0].message.args[0]
             )
