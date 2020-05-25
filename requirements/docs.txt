@@ -1,3 +1,5 @@
 -r main.txt
-sphinx>3
+sphinx>3; python_version>"3"
+sphinx; python_version<"3"
+
 
