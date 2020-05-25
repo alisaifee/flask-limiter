@@ -1,6 +1,5 @@
 import logging
 
-import redis
 from flask import Flask
 from mock import mock
 
@@ -9,8 +8,6 @@ from flask_limiter.util import get_remote_address
 
 
 class FlaskLimiterTestCase:
-    def setup_method(self):
-        redis.from_url("redis://localhost:36379").flushall()
 
     def build_app(self, config={}, **limiter_args):
         app = Flask(__name__)

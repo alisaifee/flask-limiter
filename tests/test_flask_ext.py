@@ -36,7 +36,7 @@ class TestConfiguration(FlaskLimiterTestCase):
         with pytest.raises(ConfigurationError):
             Limiter(app, key_func=get_remote_address)
 
-    def test_constructor_arguments_over_config(self):
+    def test_constructor_arguments_over_config(self, redis_connection):
         app = Flask(__name__)
         app.config.setdefault(C.STRATEGY, "fixed-window-elastic-expiry")
         limiter = Limiter(
@@ -186,7 +186,7 @@ class TestErrorHandling(FlaskLimiterTestCase):
                 assert 500 == cli.get("/").status_code
                 assert "underlying" == cli.get("/").data.decode()
 
-    def test_fallback_to_memory_config(self):
+    def test_fallback_to_memory_config(self, redis_connection):
         _, limiter = self.build_app(
             config={C.ENABLED: True},
             default_limits=["5/minute"],
@@ -219,7 +219,7 @@ class TestErrorHandling(FlaskLimiterTestCase):
             in_memory_fallback_enabled=True
         )
 
-    def test_fallback_to_memory_backoff_check(self):
+    def test_fallback_to_memory_backoff_check(self, redis_connection):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
             default_limits=["5/minute"],
@@ -271,7 +271,7 @@ class TestErrorHandling(FlaskLimiterTestCase):
                 assert cli.get("/t1").status_code == 200
                 assert cli.get("/t1").status_code == 429
 
-    def test_fallback_to_memory_with_global_override(self):
+    def test_fallback_to_memory_with_global_override(self, redis_connection):
         app, limiter = self.build_app(
             config={C.ENABLED: True},
             default_limits=["5/minute"],
@@ -1809,7 +1809,7 @@ class TestExtension(FlaskLimiterTestCase):
                 assert 200 == cli.get("/").status_code
                 assert 429 == cli.get("/").status_code
 
-    def test_custom_key_prefix(self):
+    def test_custom_key_prefix(self, redis_connection):
         app1, limiter1 = self.build_app(
             key_prefix="moo", storage_uri="redis://localhost:36379"
         )

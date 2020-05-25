@@ -10,7 +10,7 @@ from tests import FlaskLimiterTestCase
 
 
 class TestRegression(FlaskLimiterTestCase):
-    def test_redis_request_slower_than_fixed_window(self):
+    def test_redis_request_slower_than_fixed_window(self, redis_connection):
         app, limiter = self.build_app(
             {
                 C.GLOBAL_LIMITS: "5 per second",
@@ -29,7 +29,7 @@ class TestRegression(FlaskLimiterTestCase):
             resp = cli.get("/t1")
             assert resp.headers["X-RateLimit-Remaining"] == '5'
 
-    def test_redis_request_slower_than_moving_window(self):
+    def test_redis_request_slower_than_moving_window(self, redis_connection):
         app, limiter = self.build_app(
             {
                 C.GLOBAL_LIMITS: "5 per second",
@@ -92,7 +92,7 @@ class TestRegression(FlaskLimiterTestCase):
             cli.get("/t1")
             assert cli.get("/t1").status_code == 429
 
-    def test_custom_key_prefix_with_headers(self):
+    def test_custom_key_prefix_with_headers(self, redis_connection):
         app1, limiter1 = self.build_app(
             key_prefix="moo",
             storage_uri="redis://localhost:36379",
