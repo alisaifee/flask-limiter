@@ -1,8 +1,6 @@
 """
 
 """
-import unittest
-
 import pytest
 
 from flask import Flask
@@ -10,7 +8,7 @@ from flask_limiter import Limiter
 import re
 
 
-class DeprecationTests(unittest.TestCase):
+class TestDeprecations(object):
     def test_insecure_setup(self):
         app = Flask(__name__)
         with pytest.warns(UserWarning) as record:

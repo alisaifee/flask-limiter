@@ -9,7 +9,7 @@ from flask_limiter.extension import C
 from tests import FlaskLimiterTestCase
 
 
-class RegressionTests(FlaskLimiterTestCase):
+class TestRegression(FlaskLimiterTestCase):
     def test_redis_request_slower_than_fixed_window(self):
         app, limiter = self.build_app(
             {

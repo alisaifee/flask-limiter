@@ -23,7 +23,7 @@ from tests import FlaskLimiterTestCase
 import pytest
 
 
-class ConfigurationTests(FlaskLimiterTestCase):
+class TestConfiguration(FlaskLimiterTestCase):
     def test_invalid_strategy(self):
         app = Flask(__name__)
         app.config.setdefault(C.STRATEGY, "fubar")
@@ -53,7 +53,7 @@ class ConfigurationTests(FlaskLimiterTestCase):
         assert type(limiter._storage) == MemcachedStorage
 
 
-class ErrorHandlingTests(FlaskLimiterTestCase):
+class TestErrorHandling(FlaskLimiterTestCase):
     def test_error_message(self):
         app, limiter = self.build_app({C.GLOBAL_LIMITS: "1 per day"})
 
@@ -370,7 +370,7 @@ class ErrorHandlingTests(FlaskLimiterTestCase):
                 assert cli.get("/t1").status_code == 200
 
 
-class DecoratorTests(FlaskLimiterTestCase):
+class TestDecorators(FlaskLimiterTestCase):
     def test_multiple_decorators(self):
         app, limiter = self.build_app(key_func=get_ipaddr)
 
@@ -978,7 +978,7 @@ class DecoratorTests(FlaskLimiterTestCase):
                 assert 429 == cli.get("/t3").status_code
 
 
-class BlueprintTests(FlaskLimiterTestCase):
+class TestBlueprints(FlaskLimiterTestCase):
     def test_blueprint(self):
         app, limiter = self.build_app(default_limits=["1/minute"])
         bp = Blueprint("main", __name__)
@@ -1115,7 +1115,7 @@ class BlueprintTests(FlaskLimiterTestCase):
         assert "exceeded at endpoint" in caplog.records[2].msg
 
 
-class ViewsTests(FlaskLimiterTestCase):
+class TestViews(FlaskLimiterTestCase):
     def test_pluggable_views(self):
         app, limiter = self.build_app(default_limits=["1/hour"])
 
@@ -1278,7 +1278,7 @@ class ViewsTests(FlaskLimiterTestCase):
                 assert 429 == cli.get("/c").status_code
 
 
-class FlaskExtTests(FlaskLimiterTestCase):
+class TestExtension(FlaskLimiterTestCase):
     def test_reset(self):
         app, limiter = self.build_app({C.GLOBAL_LIMITS: "1 per day"})
 
