@@ -632,17 +632,21 @@ Logging
 -------
 Each :class:`Limiter` instance has a ``logger`` instance variable that is by
 default **not** configured with a handler. You can add your own handler to obtain
-log messages emitted by :mod:`flask_limiter`.
+log messages emitted by :mod:`flask_limiter`. **Note** you will also need to set the
+log level for this handler, as by default it uses the ``NOTSET`` level. This logger is an instance of the 
+[Python Logger](https://docs.python.org/3/library/logging.html).
 
 Simple stdout handler::
 
     limiter = Limiter(app, key_func=get_remote_address)
+    limiter.logger.setLevel("WARNING")
     limiter.logger.addHandler(StreamHandler())
 
 Reusing all the handlers of the ``logger`` instance of the :class:`flask.Flask` app::
 
     app = Flask(__name__)
     limiter = Limiter(app, key_func=get_remote_address)
+    limiter.logger.setLevel("WARNING")
     for handler in app.logger.handlers:
         limiter.logger.addHandler(handler)
 
