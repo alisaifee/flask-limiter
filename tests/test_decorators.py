@@ -166,7 +166,8 @@ def test_header_ordering_with_conditional_deductions(extension_factory):
             assert cli.get("/test_combined/2").status_code == 400
 
             resp = cli.get("/test/1")
-            assert resp.headers.get('X-RateLimit-Limit') is None
+            assert resp.headers.get('X-RateLimit-Limit') == '2'
+            assert resp.headers.get('X-RateLimit-Remaining') == '2'
             resp = cli.get("/test/2")
             assert resp.headers.get('X-RateLimit-Limit') == '2'
             assert resp.headers.get('X-RateLimit-Remaining') == '1'
