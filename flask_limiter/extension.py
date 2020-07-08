@@ -451,40 +451,42 @@ class Limiter(object):
 
         for lim in limits:
             limit_scope = lim.scope or endpoint
+
             if lim.is_exempt or lim.method_exempt:
                 continue
+
             if lim.per_method:
                 limit_scope += ":%s" % request.method
             limit_key = lim.key_func()
-
             args = [limit_key, limit_scope]
-            if all(args):
-                if self._key_prefix:
-                    args = [self._key_prefix] + args
-
-                if lim.deduct_when:
-                    g.conditional_deductions[lim] = args
-                    method = self.limiter.test
-                else:
-                    if not limit_for_header or lim.limit < limit_for_header[0]:
-                        limit_for_header = [lim.limit] + args
-
-                    method = self.limiter.hit
-
-                if not method(lim.limit, *args):
-                    self.logger.warning(
-                        "ratelimit %s (%s) exceeded at endpoint: %s",
-                        lim.limit, limit_key, limit_scope
-                    )
-                    failed_limit = lim
-                    limit_for_header = [lim.limit] + args
-                    break
-            else:
+            if not all(args):
                 self.logger.error(
                     "Skipping limit: %s. Empty value found in parameters.",
                     lim.limit
                 )
                 continue
+
+            if self._key_prefix:
+                args = [self._key_prefix] + args
+
+            if lim.deduct_when:
+                g.conditional_deductions[lim] = args
+                method = self.limiter.test
+            else:
+                if not limit_for_header or lim.limit < limit_for_header[0]:
+                    limit_for_header = [lim.limit] + args
+
+                method = self.limiter.hit
+
+            if not method(lim.limit, *args):
+                self.logger.warning(
+                    "ratelimit %s (%s) exceeded at endpoint: %s",
+                    lim.limit, limit_key, limit_scope
+                )
+                failed_limit = lim
+                limit_for_header = [lim.limit] + args
+                break
+
         g.view_rate_limit = limit_for_header
 
         if failed_limit:
