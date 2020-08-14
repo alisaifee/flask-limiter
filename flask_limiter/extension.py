@@ -120,6 +120,7 @@ class Limiter(object):
         self.logger = logging.getLogger("flask-limiter")
 
         self.enabled = enabled
+        self.initialized = False
         self._default_limits = []
         self._default_limits_per_method = default_limits_per_method
         self._default_limits_exempt_when = default_limits_exempt_when
@@ -206,6 +207,9 @@ class Limiter(object):
         """
         config = app.config
         self.enabled = config.setdefault(C.ENABLED, self.enabled)
+        if not self.enabled:
+            return
+
         self._default_limits_per_method = config.setdefault(
             C.DEFAULT_LIMITS_PER_METHOD, self._default_limits_per_method
         )
@@ -307,6 +311,7 @@ class Limiter(object):
             app.after_request(self.__inject_headers)
 
         app.extensions['limiter'] = self
+        self.initialized = True
 
     def __configure_fallbacks(self, app, strategy):
         config = app.config
@@ -496,7 +501,7 @@ class Limiter(object):
         )
         if (
             not request.endpoint
-            or not self.enabled
+            or not (self.enabled and self.initialized)
             or view_func == current_app.send_static_file
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
