@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v1.4
+----
+Release Date: 2020-08-25
+
+* Bug Fix
+
+  * Always set headers for conditional limits
+  * Skip init_app sequence when the rate limiter is disabled
+
 v1.3.1
 ------
 Release Date: 2020-05-21
@@ -380,6 +389,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
