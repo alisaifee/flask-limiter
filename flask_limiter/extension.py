@@ -91,6 +91,8 @@ class Limiter(object):
      down.
     :param bool in_memory_fallback_enabled: simply falls back to in memory
      storage when the main storage is down and inherits the original limits.
+    :param str retry_after: Allows configuration of how the value of the
+     `Retry-After` header is rendered. One of `http-date` or `delta-seconds`.
     :param str key_prefix: prefix prepended to rate limiter keys.
     """
 
