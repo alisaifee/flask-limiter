@@ -448,6 +448,7 @@ class Limiter(object):
     def __evaluate_limits(self, endpoint, limits):
         failed_limit = None
         limit_for_header = None
+        limits_escape = []
         if not getattr(g, "conditional_deductions", None):
             g.conditional_deductions = {}
 
@@ -489,7 +490,10 @@ class Limiter(object):
                 limit_for_header = [lim.limit] + args
                 break
 
+            limits_escape.append([lim.limit] + args)
+
         g.view_rate_limit = limit_for_header
+        g.view_limits = limits_escape
 
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
