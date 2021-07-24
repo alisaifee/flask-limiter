@@ -377,7 +377,7 @@ class Limiter(object):
             return self._limiter
 
     def __check_conditional_deductions(self, response):
-        for lim, args in getattr(g, 'conditional_deductions', {}).items():
+        for lim, args in getattr(g, '%s_conditional_deductions' % self._key_prefix, {}).items():
             if lim.deduct_when(response):
                 self.limiter.hit(lim.limit, *args)
 
@@ -385,7 +385,7 @@ class Limiter(object):
 
     def __inject_headers(self, response):
         self.__check_conditional_deductions(response)
-        current_limit = getattr(g, 'view_rate_limit', None)
+        current_limit = getattr(g, '%s_view_rate_limit' % self._key_prefix, None)
         if self.enabled and self._headers_enabled and current_limit:
             try:
                 window_stats = self.limiter.get_window_stats(*current_limit)
@@ -449,8 +449,8 @@ class Limiter(object):
         failed_limit = None
         limit_for_header = None
         limits_escape = []
-        if not getattr(g, "conditional_deductions", None):
-            g.conditional_deductions = {}
+        if not getattr(g, "%s_conditional_deductions" % self._key_prefix, None):
+            setattr(g, "%s_conditional_deductions" % self._key_prefix, {})
 
         for lim in limits:
             limit_scope = lim.scope or endpoint
@@ -473,7 +473,7 @@ class Limiter(object):
                 args = [self._key_prefix] + args
 
             if lim.deduct_when:
-                g.conditional_deductions[lim] = args
+                getattr(g, "%s_conditional_deductions" % self._key_prefix)[lim] = args
                 method = self.limiter.test
             else:
                 method = self.limiter.hit
@@ -492,8 +492,8 @@ class Limiter(object):
 
             limits_escape.append([lim.limit] + args)
 
-        g.view_rate_limit = limit_for_header
-        g.view_limits = limits_escape
+        setattr(g, "%s_view_rate_limit" % self._key_prefix, limit_for_header)
+        setattr(g, "%s_view_limits" % self._key_prefix, limits_escape)
 
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
