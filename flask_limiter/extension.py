@@ -512,7 +512,7 @@ class Limiter(object):
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
             or any(fn() for fn in self._request_filters)
-            or g.get("_rate_limiting_complete")
+            or g.get("%s_rate_limiting_complete" % self._key_prefix)
         ):
             return
         limits, dynamic_limits = [], []
@@ -699,10 +699,10 @@ class Limiter(object):
                 def __inner(*a, **k):
                     if (
                         self._auto_check
-                        and not g.get("_rate_limiting_complete")
+                        and not g.get("%s_rate_limiting_complete" % self._key_prefix)
                     ):
                         self.__check_request_limit(False)
-                        g._rate_limiting_complete = True
+                        setattr(g, "%s_rate_limiting_complete" % self._key_prefix, True)
                     return obj(*a, **k)
                 return __inner
         return _inner
