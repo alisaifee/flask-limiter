@@ -377,7 +377,9 @@ class Limiter(object):
             return self._limiter
 
     def __check_conditional_deductions(self, response):
-        for lim, args in getattr(g, '%s_conditional_deductions' % self._key_prefix, {}).items():
+        for lim, args in getattr(g,
+                                 '%s_conditional_deductions'
+                                 % self._key_prefix, {}).items():
             if lim.deduct_when(response):
                 self.limiter.hit(lim.limit, *args)
 
@@ -385,7 +387,9 @@ class Limiter(object):
 
     def __inject_headers(self, response):
         self.__check_conditional_deductions(response)
-        current_limit = getattr(g, '%s_view_rate_limit' % self._key_prefix, None)
+        current_limit = getattr(g,
+                                '%s_view_rate_limit' % self._key_prefix,
+                                None)
         if self.enabled and self._headers_enabled and current_limit:
             try:
                 window_stats = self.limiter.get_window_stats(*current_limit)
@@ -449,7 +453,9 @@ class Limiter(object):
         failed_limit = None
         limit_for_header = None
         limits_escape = []
-        if not getattr(g, "%s_conditional_deductions" % self._key_prefix, None):
+        if not getattr(g,
+                       "%s_conditional_deductions" % self._key_prefix,
+                       None):
             setattr(g, "%s_conditional_deductions" % self._key_prefix, {})
 
         for lim in limits:
@@ -473,7 +479,9 @@ class Limiter(object):
                 args = [self._key_prefix] + args
 
             if lim.deduct_when:
-                getattr(g, "%s_conditional_deductions" % self._key_prefix)[lim] = args
+                getattr(g,
+                        "%s_conditional_deductions" % self._key_prefix
+                        )[lim] = args
                 method = self.limiter.test
             else:
                 method = self.limiter.hit
@@ -699,10 +707,13 @@ class Limiter(object):
                 def __inner(*a, **k):
                     if (
                         self._auto_check
-                        and not g.get("%s_rate_limiting_complete" % self._key_prefix)
+                        and not
+                        g.get("%s_rate_limiting_complete" % self._key_prefix)
                     ):
                         self.__check_request_limit(False)
-                        setattr(g, "%s_rate_limiting_complete" % self._key_prefix, True)
+                        setattr(g,
+                                "%s_rate_limiting_complete" % self._key_prefix,
+                                True)
                     return obj(*a, **k)
                 return __inner
         return _inner
