@@ -93,7 +93,7 @@ class Limiter(object):
      storage when the main storage is down and inherits the original limits.
     :param str retry_after: Allows configuration of how the value of the
      `Retry-After` header is rendered. One of `http-date` or `delta-seconds`.
-    :param str key_prefix: prefix prepended to rate limiter keys.
+    :param str key_prefix: prefix prepended to rate limiter keys and app context global names.
     """
 
     def __init__(
