@@ -8,3 +8,5 @@ ordereddict
 flask-restful
 redis
 pymemcache
+Flask>=2.0.0
+asgiref>=3.2
