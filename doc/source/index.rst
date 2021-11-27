@@ -338,8 +338,9 @@ the :class:`Limiter` constructor, those will take precedence.
                                           will not be inherited and the values provided in
 ``RATELIMIT_IN_MEMORY_FALLBACK``          A comma (or some other delimiter) separated string
                                           that will be used when the configured storage is down.
-``RATELIMIT_KEY_PREFIX``                  Prefix that is prepended to each stored rate limit key. This can be useful when using a
-                                          shared storage for multiple applications or rate limit domains.
+``RATELIMIT_KEY_PREFIX``                  Prefix that is prepended to each stored rate limit key and app context global name. This can be useful when using a
+                                          shared storage for multiple applications or rate limit domains. For multi-instance use cases,
+                                          explicitly pass ``key_prefix`` keyword argument to :class:`Limiter` constructor instead.
 ========================================= ================================================
 
 .. _ratelimit-string:

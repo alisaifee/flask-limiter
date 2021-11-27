@@ -93,7 +93,7 @@ class Limiter(object):
      storage when the main storage is down and inherits the original limits.
     :param str retry_after: Allows configuration of how the value of the
      `Retry-After` header is rendered. One of `http-date` or `delta-seconds`.
-    :param str key_prefix: prefix prepended to rate limiter keys.
+    :param str key_prefix: prefix prepended to rate limiter keys and app context global names.
     """
 
     def __init__(
@@ -376,7 +376,10 @@ class Limiter(object):
             return self._limiter
 
     def __check_conditional_deductions(self, response):
-        for lim, args in getattr(g, "conditional_deductions", {}).items():
+
+        for lim, args in getattr(g,
+                                 '%s_conditional_deductions'
+                                 % self._key_prefix, {}).items():
             if lim.deduct_when(response):
                 self.limiter.hit(lim.limit, *args)
 
@@ -384,7 +387,9 @@ class Limiter(object):
 
     def __inject_headers(self, response):
         self.__check_conditional_deductions(response)
-        current_limit = getattr(g, "view_rate_limit", None)
+        current_limit = getattr(g,
+                                '%s_view_rate_limit' % self._key_prefix,
+                                None)
         if self.enabled and self._headers_enabled and current_limit:
             try:
                 window_stats = self.limiter.get_window_stats(*current_limit)
@@ -441,8 +446,10 @@ class Limiter(object):
         failed_limit = None
         limit_for_header = None
         limits_escape = []
-        if not getattr(g, "conditional_deductions", None):
-            g.conditional_deductions = {}
+        if not getattr(g,
+                       "%s_conditional_deductions" % self._key_prefix,
+                       None):
+            setattr(g, "%s_conditional_deductions" % self._key_prefix, {})
 
         for lim in limits:
             limit_scope = lim.scope or endpoint
@@ -464,7 +471,9 @@ class Limiter(object):
                 args = [self._key_prefix] + args
 
             if lim.deduct_when:
-                g.conditional_deductions[lim] = args
+                getattr(g,
+                        "%s_conditional_deductions" % self._key_prefix
+                        )[lim] = args
                 method = self.limiter.test
             else:
                 method = self.limiter.hit
@@ -485,8 +494,8 @@ class Limiter(object):
 
             limits_escape.append([lim.limit] + args)
 
-        g.view_rate_limit = limit_for_header
-        g.view_limits = limits_escape
+        setattr(g, "%s_view_rate_limit" % self._key_prefix, limit_for_header)
+        setattr(g, "%s_view_limits" % self._key_prefix, limits_escape)
 
         if failed_limit:
             raise RateLimitExceeded(failed_limit)
@@ -502,7 +511,7 @@ class Limiter(object):
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
             or any(fn() for fn in self._request_filters)
-            or g.get("_rate_limiting_complete")
+            or g.get("%s_rate_limiting_complete" % self._key_prefix)
         ):
             return
         limits, dynamic_limits = [], []
@@ -694,10 +703,15 @@ class Limiter(object):
 
                 @wraps(obj)
                 def __inner(*a, **k):
-                    if self._auto_check and not g.get("_rate_limiting_complete"):
+                    if (
+                        self._auto_check
+                        and not
+                        g.get("%s_rate_limiting_complete" % self._key_prefix)
+                    ):
                         self.__check_request_limit(False)
-                        g._rate_limiting_complete = True
-
+                        setattr(g,
+                                "%s_rate_limiting_complete" % self._key_prefix,
+                                True)
                     return current_app.ensure_sync(obj)(*a, **k)
                 return __inner
 

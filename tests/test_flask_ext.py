@@ -582,3 +582,94 @@ def test_custom_key_prefix(redis_connection, extension_factory):
         assert 200 == resp.status_code
         resp = cli.get("/test")
         assert 429 == resp.status_code
+
+
+def test_second_instance_bypassed_by_shared_g():
+    app = Flask(__name__)
+    limiter1 = Limiter(
+        app,
+        key_func=get_remote_address
+    )
+
+    limiter2 = Limiter(
+        app,
+        key_func=get_remote_address
+    )
+
+    @app.route("/test1")
+    @limiter2.limit("1/second")
+    def app_test1():
+        return "app test1"
+
+    @app.route("/test2")
+    @limiter1.limit("10/minute")
+    @limiter2.limit("1/second")
+    def app_test2():
+        return "app test2"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/test1").status_code == 200
+            assert cli.get("/test2").status_code == 200
+            assert cli.get("/test1").status_code == 429
+            assert cli.get("/test2").status_code == 200
+            for i in range(8):
+                assert cli.get("/test1").status_code == 429
+                assert cli.get("/test2").status_code == 200
+            assert cli.get("/test2").status_code == 429
+            timeline.forward(1)
+            assert cli.get("/test1").status_code == 200
+            assert cli.get("/test2").status_code == 429
+            timeline.forward(59)
+            assert cli.get("/test1").status_code == 200
+            assert cli.get("/test2").status_code == 200
+
+
+def test_independent_instances_by_key_prefix():
+    app = Flask(__name__)
+    limiter1 = Limiter(
+        app,
+        key_prefix="lmt1",
+        key_func=get_remote_address
+    )
+
+    limiter2 = Limiter(
+        app,
+        key_prefix="lmt2",
+        key_func=get_remote_address
+    )
+
+    @app.route("/test1")
+    @limiter2.limit("1/second")
+    def app_test1():
+        return "app test1"
+
+    @app.route("/test2")
+    @limiter1.limit("10/minute")
+    @limiter2.limit("1/second")
+    def app_test2():
+        return "app test2"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/test1").status_code == 200
+            assert cli.get("/test2").status_code == 200
+
+            resp = cli.get("/test1")
+            assert resp.status_code == 429
+            assert "1 per 1 second" in resp.data.decode()
+
+            resp = cli.get("/test2")
+            assert resp.status_code == 429
+            assert "1 per 1 second" in resp.data.decode()
+
+            for i in range(8):
+                assert cli.get("/test1").status_code == 429
+                assert cli.get("/test2").status_code == 429
+            assert cli.get("/test2").status_code == 429
+            timeline.forward(1)
+            assert cli.get("/test1").status_code == 200
+            assert cli.get("/test2").status_code == 429
+            timeline.forward(59)
+            assert cli.get("/test1").status_code == 200
+            assert cli.get("/test2").status_code == 200
