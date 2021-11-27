@@ -12,4 +12,4 @@ htmlcov
 .cache
 .eggs
 .python-version
-
+.*.swp
