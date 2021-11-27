@@ -1,13 +1,13 @@
-.. |ci| image:: https://github.com/alisaifee/flask-limiter/workflows/CI/badge.svg?branch=master
-   :target: https://github.com/alisaifee/flask-limiter/actions?query=branch%3Amaster+workflow%3ACI
-.. |codecov| image:: https://codecov.io/gh/alisaifee/flask-limiter/branch/master/graph/badge.svg
+.. |ci| image:: https://github.com/alisaifee/flask-limiter/workflows/CI/badge.svg?branch=1.x
+   :target: https://github.com/alisaifee/flask-limiter/actions?query=branch%3A1.x+workflow%3ACI
+.. |codecov| image:: https://codecov.io/gh/alisaifee/flask-limiter/branch/1.x/graph/badge.svg
    :target: https://codecov.io/gh/alisaifee/flask-limiter
 .. |pypi| image:: https://img.shields.io/pypi/v/Flask-Limiter.svg?style=flat-square
    :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |license| image:: https://img.shields.io/pypi/l/Flask-Limiter.svg?style=flat-square
    :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |docs| image:: https://readthedocs.org/projects/flask-limiter/badge
-   :target: https://flask-limiter.readthedocs.org
+   :target: https://flask-limiter.readthedocs.io/en/1.x/
 
 *************
 Flask-Limiter
