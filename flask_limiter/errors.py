@@ -18,7 +18,6 @@ class RateLimitExceeded(exceptions.TooManyRequests):
         if limit.error_message:
             description = (
                 limit.error_message
-
                 if not callable(limit.error_message)
                 else limit.error_message()
             )

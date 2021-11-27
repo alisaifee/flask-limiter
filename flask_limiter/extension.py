@@ -17,7 +17,6 @@ from werkzeug.http import http_date, parse_date
 
 from flask_limiter.wrappers import Limit, LimitGroup
 from .errors import RateLimitExceeded
-from .util import get_ipaddr
 
 
 class C:
@@ -141,18 +140,13 @@ class Limiter(object):
         self._storage_options = storage_options
         self._auto_check = auto_check
         self._swallow_errors = swallow_errors
-        if not key_func:
-            warnings.warn(
-                "Use of the default `get_ipaddr` function is discouraged."
-                " Please refer to"
-                " https://flask-limiter.readthedocs.org/#rate-limit-domain"
-                " for the recommended configuration",
-                UserWarning,
-            )
+
+        assert key_func
+
         if global_limits:
             self.__raise_global_limits_warning()
 
-        self._key_func = key_func or get_ipaddr
+        self._key_func = key_func
         self._key_prefix = key_prefix
 
         for limit in set(global_limits + default_limits):
@@ -163,6 +157,7 @@ class Limiter(object):
                     )
                 ]
             )
+
         for limit in application_limits:
             self._application_limits.extend(
                 [
@@ -179,6 +174,7 @@ class Limiter(object):
                     )
                 ]
             )
+
         for limit in in_memory_fallback:
             self._in_memory_fallback.extend(
                 [
@@ -204,6 +200,7 @@ class Limiter(object):
                 return
 
         self.logger.addHandler(BlackHoleHandler())
+
         if app:
             self.init_app(app)
 
@@ -213,6 +210,7 @@ class Limiter(object):
         """
         config = app.config
         self.enabled = config.setdefault(C.ENABLED, self.enabled)
+
         if not self.enabled:
             return
 
@@ -235,6 +233,7 @@ class Limiter(object):
             **self._storage_options
         )
         strategy = self._strategy or config.setdefault(C.STRATEGY, "fixed-window")
+
         if strategy not in STRATEGIES:
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
         self._limiter = STRATEGIES[strategy](self._storage)
@@ -261,6 +260,7 @@ class Limiter(object):
         self._key_prefix = self._key_prefix or config.get(C.KEY_PREFIX)
 
         app_limits = config.get(C.APPLICATION_LIMITS, None)
+
         if not self._application_limits and app_limits:
             self._application_limits = [
                 LimitGroup(
@@ -280,6 +280,7 @@ class Limiter(object):
             self.__raise_global_limits_warning()
 
         conf_limits = config.get(C.GLOBAL_LIMITS, config.get(C.DEFAULT_LIMITS, None))
+
         if not self._default_limits and conf_limits:
             self._default_limits = [
                 LimitGroup(
@@ -294,6 +295,7 @@ class Limiter(object):
                     None,
                 )
             ]
+
         for limit in self._default_limits:
             limit.per_method = self._default_limits_per_method
             limit.exempt_when = self._default_limits_exempt_when
@@ -302,6 +304,7 @@ class Limiter(object):
         self.__configure_fallbacks(app, strategy)
 
         # purely for backward compatibility as stated in flask documentation
+
         if not hasattr(app, "extensions"):
             app.extensions = {}  # pragma: no cover
 
@@ -317,6 +320,7 @@ class Limiter(object):
         config = app.config
         fallback_enabled = config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
         fallback_limits = config.get(C.IN_MEMORY_FALLBACK, None)
+
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
                 LimitGroup(
@@ -331,6 +335,7 @@ class Limiter(object):
                     None,
                 )
             ]
+
         if not self._in_memory_fallback_enabled:
             self._in_memory_fallback_enabled = (
                 fallback_enabled or len(self._in_memory_fallback) > 0
@@ -343,10 +348,13 @@ class Limiter(object):
     def __should_check_backend(self):
         if self.__check_backend_count > MAX_BACKEND_CHECKS:
             self.__check_backend_count = 0
+
         if time.time() - self.__last_check_backend > pow(2, self.__check_backend_count):
             self.__last_check_backend = time.time()
             self.__check_backend_count += 1
+
             return True
+
         return False
 
     def check(self):
@@ -387,6 +395,7 @@ class Limiter(object):
     def __inject_headers(self, response):
         self.__check_conditional_deductions(response)
         current_limit = getattr(g, "%s_view_rate_limit" % self._key_prefix, None)
+
         if self.enabled and self._headers_enabled and current_limit:
             try:
                 window_stats = self.limiter.get_window_stats(*current_limit)
@@ -407,6 +416,7 @@ class Limiter(object):
                     retry_after = parse_date(existing_retry_after_header)
 
                     # parse_date failure returns None
+
                     if retry_after is None:
                         retry_after = time.time() + int(existing_retry_after_header)
 
@@ -458,10 +468,12 @@ class Limiter(object):
                 limit_scope += ":%s" % request.method
             limit_key = lim.key_func()
             args = [limit_key, limit_scope]
+
             if not all(args):
                 self.logger.error(
                     "Skipping limit: %s. Empty value found in parameters.", lim.limit
                 )
+
                 continue
 
             if self._key_prefix:
@@ -485,6 +497,7 @@ class Limiter(object):
                 )
                 failed_limit = lim
                 limit_for_header = [lim.limit] + args
+
                 break
 
             limits_escape.append([lim.limit] + args)
@@ -499,6 +512,7 @@ class Limiter(object):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
         name = "%s.%s" % (view_func.__module__, view_func.__name__) if view_func else ""
+
         if (
             not request.endpoint
             or not (self.enabled and self.initialized)
@@ -532,6 +546,7 @@ class Limiter(object):
         if not in_middleware or implicit_decorator:
             limits = name in self._route_limits and self._route_limits[name] or []
             dynamic_limits = []
+
             if name in self._dynamic_route_limits:
                 for lim in self._dynamic_route_limits[name]:
                     try:
@@ -542,6 +557,7 @@ class Limiter(object):
                             name,
                             e,
                         )
+
         if request.blueprint:
             if (
                 request.blueprint in self._blueprint_dynamic_limits
@@ -571,11 +587,13 @@ class Limiter(object):
                             request.blueprint,
                             e,
                         )
+
             if request.blueprint in self._blueprint_limits and not limits:
                 limits.extend(self._blueprint_limits[request.blueprint])
 
         try:
             all_limits = []
+
             if self._storage_dead and self._fallback_limiter:
                 if in_middleware and name in self.__marked_for_limiting:
                     pass
@@ -586,6 +604,7 @@ class Limiter(object):
                         self.__check_backend_count = 0
                     else:
                         all_limits = list(itertools.chain(*self._in_memory_fallback))
+
             if not all_limits:
                 route_limits = limits + dynamic_limits
                 all_limits = (
@@ -603,6 +622,7 @@ class Limiter(object):
                 before_request_context = (
                     in_middleware and name in self.__marked_for_limiting
                 )
+
                 if (
                     (explicit_limits_exempt or combined_defaults)
                     and not before_request_context
@@ -647,6 +667,7 @@ class Limiter(object):
             is_route = not isinstance(obj, Blueprint)
             name = "%s.%s" % (obj.__module__, obj.__name__) if is_route else obj.name
             dynamic_limit, static_limits = None, []
+
             if callable(limit_value):
                 dynamic_limit = LimitGroup(
                     limit_value,
@@ -681,6 +702,7 @@ class Limiter(object):
                         name,
                         e,
                     )
+
             if isinstance(obj, Blueprint):
                 if dynamic_limit:
                     self._blueprint_dynamic_limits.setdefault(name, []).append(
@@ -690,6 +712,7 @@ class Limiter(object):
                     self._blueprint_limits.setdefault(name, []).extend(static_limits)
             else:
                 self.__marked_for_limiting.setdefault(name, []).append(obj)
+
                 if dynamic_limit:
                     self._dynamic_route_limits.setdefault(name, []).append(
                         dynamic_limit
@@ -704,6 +727,7 @@ class Limiter(object):
                     ):
                         self.__check_request_limit(False)
                         setattr(g, "%s_rate_limiting_complete" % self._key_prefix, True)
+
                     return current_app.ensure_sync(obj)(*a, **k)
 
                 return __inner
@@ -743,6 +767,7 @@ class Limiter(object):
          :class:`flask.Response` object and returns True/False to decide if a
          deduction should be done from the rate limit
         """
+
         return self.__limit_decorator(
             limit_value,
             key_func,
@@ -784,6 +809,7 @@ class Limiter(object):
          :class:`flask.Response`  object and returns True/False to decide if a
          deduction should be done from the rate limit
         """
+
         return self.__limit_decorator(
             limit_value,
             key_func,
@@ -800,6 +826,7 @@ class Limiter(object):
         decorator to mark a view or all views in a blueprint as exempt from
         rate limits.
         """
+
         if not isinstance(obj, Blueprint):
             name = "%s.%s" % (obj.__module__, obj.__name__)
 
@@ -808,6 +835,7 @@ class Limiter(object):
                 return current_app.ensure_sync(obj)(*a, **k)
 
             self._exempt_routes.add(name)
+
             return __inner
         else:
             self._blueprint_exempt.add(obj.name)
@@ -818,6 +846,7 @@ class Limiter(object):
         to check if the request is exempt from rate limiting.
         """
         self._request_filters.append(fn)
+
         return fn
 
     def __raise_global_limits_warning(self):

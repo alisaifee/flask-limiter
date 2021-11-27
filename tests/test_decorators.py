@@ -9,11 +9,14 @@ from flask import Blueprint, request, current_app, Flask, g
 from werkzeug.exceptions import BadRequest
 
 from flask_limiter import Limiter
-from flask_limiter.util import get_ipaddr, get_remote_address
+
+
+def get_ip_from_header():
+    return request.headers.get("Test-IP") or "127.0.0.1"
 
 
 def test_multiple_decorators(extension_factory):
-    app, limiter = extension_factory(key_func=get_ipaddr)
+    app, limiter = extension_factory(key_func=get_ip_from_header)
 
     @app.route("/t1")
     @limiter.limit(
@@ -27,15 +30,13 @@ def test_multiple_decorators(extension_factory):
         with app.test_client() as cli:
             for i in range(0, 100):
                 assert (200 if i < 50 else 429) == cli.get(
-                    "/t1", headers={"X_FORWARDED_FOR": "127.0.0.2"}
+                    "/t1", headers={"Test-IP": "127.0.0.2"}
                 ).status_code
+
             for i in range(50):
                 assert 200 == cli.get("/t1").status_code
             assert 429 == cli.get("/t1").status_code
-            assert (
-                429
-                == cli.get("/t1", headers={"X_FORWARDED_FOR": "127.0.0.3"}).status_code
-            )
+            assert 429 == cli.get("/t1", headers={"Test-IP": "127.0.0.3"}).status_code
 
 
 def test_exempt_routes(extension_factory):
@@ -97,12 +98,14 @@ def test_shared_limit_with_conditional_deduction(extension_factory):
     def app_test(path):
         if path != "1":
             raise BadRequest()
+
         return path
 
     @bp.route("/test/<path:path>")
     def bp_test(path):
         if path != "1":
             raise BadRequest()
+
         return path
 
     limit(bp)
@@ -142,6 +145,7 @@ def test_header_ordering_with_conditional_deductions(extension_factory):
     def app_test_combined(path):
         if path != "1":
             raise BadRequest()
+
         return path
 
     @app.route("/test/<path:path>")
@@ -149,6 +153,7 @@ def test_header_ordering_with_conditional_deductions(extension_factory):
     def app_test(path):
         if path != "1":
             raise BadRequest()
+
         return path
 
     with hiro.Timeline() as timeline:
@@ -232,12 +237,9 @@ def test_decorated_dynamic_limits(extension_factory):
 
     def request_context_limit():
         limits = {"127.0.0.1": "10 per minute", "127.0.0.2": "1 per minute"}
-        remote_addr = (
-            (request.access_route and request.access_route[0])
-            or request.remote_addr
-            or "127.0.0.1"
-        )
+        remote_addr = request.headers.get("Test-IP").split(",")[0] or "127.0.0.1"
         limit = limits.setdefault(remote_addr, "1 per minute")
+
         return limit
 
     @app.route("/t1")
@@ -252,8 +254,8 @@ def test_decorated_dynamic_limits(extension_factory):
     def t2():
         return "42"
 
-    R1 = {"X_FORWARDED_FOR": "127.0.0.1, 127.0.0.0"}
-    R2 = {"X_FORWARDED_FOR": "127.0.0.2"}
+    R1 = {"Test-IP": "127.0.0.1, 127.0.0.0"}
+    R2 = {"Test-IP": "127.0.0.2"}
 
     with app.test_client() as cli:
         with hiro.Timeline().freeze() as timeline:
@@ -275,7 +277,7 @@ def test_decorated_dynamic_limits(extension_factory):
 def test_invalid_decorated_dynamic_limits(caplog):
     app = Flask(__name__)
     app.config.setdefault("X", "2 per sec")
-    limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
+    limiter = Limiter(app, default_limits=["1/second"], key_func=get_ip_from_header)
 
     @app.route("/t1")
     @limiter.limit(lambda: current_app.config.get("X"))
@@ -296,7 +298,7 @@ def test_invalid_decorated_dynamic_limits(caplog):
 
 def test_invalid_decorated_static_limits(caplog):
     app = Flask(__name__)
-    limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
+    limiter = Limiter(app, default_limits=["1/second"], key_func=get_ip_from_header)
 
     @app.route("/t1")
     @limiter.limit("2/sec")
@@ -378,7 +380,7 @@ def test_dynamic_shared_limit(extension_factory):
 def test_conditional_limits():
     """Test that the conditional activation of the limits work."""
     app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
+    limiter = Limiter(app, key_func=get_ip_from_header)
 
     @app.route("/limited")
     @limiter.limit("1 per day")
@@ -415,7 +417,7 @@ def test_conditional_limits():
 def test_conditional_shared_limits():
     """Test that conditional shared limits work."""
     app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
+    limiter = Limiter(app, key_func=get_ip_from_header)
 
     @app.route("/limited")
     @limiter.shared_limit("1 per day", "test_scope")
@@ -455,7 +457,7 @@ def test_whitelisting():
         app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address,
+        key_func=get_ip_from_header,
     )
 
     @app.route("/")
@@ -466,6 +468,7 @@ def test_whitelisting():
     def w():
         if request.headers.get("internal", None) == "true":
             return True
+
         return False
 
     with hiro.Timeline().freeze() as timeline:
@@ -519,6 +522,7 @@ def test_decorated_limit_immediate(extension_factory):
         @wraps(fn)
         def __inner(*args, **kwargs):
             g.rate_limit = "2/minute"
+
             return fn(*args, **kwargs)
 
         return __inner
@@ -545,6 +549,7 @@ def test_decorated_shared_limit_immediate(extension_factory):
         @wraps(fn)
         def __inner(*args, **kwargs):
             g.rate_limit = "2/minute"
+
             return fn(*args, **kwargs)
 
         return __inner
@@ -612,6 +617,7 @@ def test_async_route(extension_factory):
     @limiter.limit("1/minute")
     async def t1():
         await asyncio.sleep(0.01)
+
         return "test"
 
     @app.route("/t2")
@@ -619,6 +625,7 @@ def test_async_route(extension_factory):
     @limiter.exempt
     async def t2():
         await asyncio.sleep(0.01)
+
         return "test"
 
     with app.test_client() as cli:

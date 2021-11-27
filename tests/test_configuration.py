@@ -43,7 +43,7 @@ def test_invalid_config_with_disabled():
     app.config.setdefault(C.ENABLED, False)
     app.config.setdefault(C.STORAGE_URL, "fubar://")
 
-    limiter = Limiter(app, default_limits=["1/hour"])
+    limiter = Limiter(app, key_func=get_remote_address, default_limits=["1/hour"])
 
     @app.route("/")
     def root():
@@ -64,7 +64,7 @@ def test_invalid_config_with_disabled():
 
 def test_uninitialized_limiter():
     app = Flask(__name__)
-    limiter = Limiter(default_limits=["1/hour"])
+    limiter = Limiter(key_func=get_remote_address, default_limits=["1/hour"])
 
     @app.route("/")
     @limiter.limit("2/hour")
