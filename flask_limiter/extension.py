@@ -501,7 +501,7 @@ class Limiter(object):
         if (
             not request.endpoint
             or not (self.enabled and self.initialized)
-            or view_func == current_app.send_static_file
+            or request.endpoint == "static"
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
             or any(fn() for fn in self._request_filters)
