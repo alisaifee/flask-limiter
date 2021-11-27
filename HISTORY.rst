@@ -3,6 +3,17 @@
 Changelog
 =========
 
+v1.5
+----
+Release Date: 2021-11-27
+
+Final Release for python < 3.7
+
+* Features
+
+  * Prepend ``key_prefix`` to extension variables attached to ``g``
+  * Expose ``g.view_limits``
+
 v1.4
 ----
 Release Date: 2020-08-25
@@ -389,6 +400,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
