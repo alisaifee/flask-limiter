@@ -586,15 +586,9 @@ def test_custom_key_prefix(redis_connection, extension_factory):
 
 def test_second_instance_bypassed_by_shared_g():
     app = Flask(__name__)
-    limiter1 = Limiter(
-        app,
-        key_func=get_remote_address
-    )
+    limiter1 = Limiter(app, key_func=get_remote_address)
 
-    limiter2 = Limiter(
-        app,
-        key_func=get_remote_address
-    )
+    limiter2 = Limiter(app, key_func=get_remote_address)
 
     @app.route("/test1")
     @limiter2.limit("1/second")
@@ -627,17 +621,9 @@ def test_second_instance_bypassed_by_shared_g():
 
 def test_independent_instances_by_key_prefix():
     app = Flask(__name__)
-    limiter1 = Limiter(
-        app,
-        key_prefix="lmt1",
-        key_func=get_remote_address
-    )
+    limiter1 = Limiter(app, key_prefix="lmt1", key_func=get_remote_address)
 
-    limiter2 = Limiter(
-        app,
-        key_prefix="lmt2",
-        key_func=get_remote_address
-    )
+    limiter2 = Limiter(app, key_prefix="lmt2", key_func=get_remote_address)
 
     @app.route("/test1")
     @limiter2.limit("1/second")
