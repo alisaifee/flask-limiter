@@ -697,8 +697,8 @@ class Limiter(object):
                     if self._auto_check and not g.get("_rate_limiting_complete"):
                         self.__check_request_limit(False)
                         g._rate_limiting_complete = True
-                    return obj(*a, **k)
 
+                    return current_app.ensure_sync(obj)(*a, **k)
                 return __inner
 
         return _inner
@@ -798,7 +798,7 @@ class Limiter(object):
 
             @wraps(obj)
             def __inner(*a, **k):
-                return obj(*a, **k)
+                return current_app.ensure_sync(obj)(*a, **k)
 
             self._exempt_routes.add(name)
             return __inner

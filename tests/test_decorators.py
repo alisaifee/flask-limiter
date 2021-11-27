@@ -3,6 +3,8 @@ from functools import wraps
 
 import hiro
 import mock
+import asyncio
+
 from flask import Blueprint, request, current_app, Flask, g
 from werkzeug.exceptions import BadRequest
 
@@ -601,3 +603,26 @@ def test_backward_compatibility_with_incorrect_ordering(extension_factory):
             assert 429 == cli.get("/t2").status_code
             assert 200 == cli.get("/t3").status_code
             assert 429 == cli.get("/t3").status_code
+
+
+def test_async_route(extension_factory):
+    app, limiter = extension_factory()
+
+    @app.route("/t1")
+    @limiter.limit("1/minute")
+    async def t1():
+        await asyncio.sleep(0.01)
+        return "test"
+
+    @app.route("/t2")
+    @limiter.limit("1/minute")
+    @limiter.exempt
+    async def t2():
+        await asyncio.sleep(0.01)
+        return "test"
+
+    with app.test_client() as cli:
+        assert cli.get("/t1").status_code == 200
+        assert cli.get("/t1").status_code == 429
+        assert cli.get("/t2").status_code == 200
+        assert cli.get("/t2").status_code == 200
