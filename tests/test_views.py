@@ -8,21 +8,21 @@ def test_pluggable_views(extension_factory):
     app, limiter = extension_factory(default_limits=["1/hour"])
 
     class Va(View):
-        methods = ['GET', 'POST']
+        methods = ["GET", "POST"]
         decorators = [limiter.limit("2/second")]
 
         def dispatch_request(self):
             return request.method.lower()
 
     class Vb(View):
-        methods = ['GET']
+        methods = ["GET"]
         decorators = [limiter.limit("1/second, 3/minute")]
 
         def dispatch_request(self):
             return request.method.lower()
 
     class Vc(View):
-        methods = ['GET']
+        methods = ["GET"]
 
         def dispatch_request(self):
             return request.method.lower()
@@ -69,7 +69,7 @@ def test_pluggable_method_views(extension_factory):
             return request.method.lower()
 
     class Vd(MethodView):
-        decorators = [limiter.limit("1/minute", methods=['get'])]
+        decorators = [limiter.limit("1/minute", methods=["get"])]
 
         def get(self):
             return request.method.lower()
@@ -130,9 +130,8 @@ def test_flask_restful_resource(extension_factory):
 
     class Vd(Resource):
         decorators = [
-            limiter.limit("2/second", methods=['GET']),
-            limiter.limit("1/second", methods=['POST']),
-
+            limiter.limit("2/second", methods=["GET"]),
+            limiter.limit("1/second", methods=["POST"]),
         ]
 
         def get(self):
