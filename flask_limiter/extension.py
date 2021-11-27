@@ -9,7 +9,6 @@ import time
 import warnings
 from functools import wraps
 
-import six
 from flask import request, current_app, g, Blueprint
 from limits.errors import ConfigurationError
 from limits.storage import storage_from_string, MemoryStorage
@@ -423,7 +422,7 @@ class Limiter(object):
                     and http_date(reset_in)
                     or int(reset_in - time.time()),
                 )
-            except:  # noqa: E722
+            except Exception as e:  # noqa: E722
                 if self._in_memory_fallback_enabled and not self._storage_dead:
                     self.logger.warning(
                         "Rate limit storage unreachable - falling back to"
@@ -437,13 +436,15 @@ class Limiter(object):
                             "Failed to update rate limit headers. " "Swallowing error"
                         )
                     else:
-                        six.reraise(*sys.exc_info())
+                        raise e
+
         return response
 
     def __evaluate_limits(self, endpoint, limits):
         failed_limit = None
         limit_for_header = None
         limits_escape = []
+
         if not getattr(g, "%s_conditional_deductions" % self._key_prefix, None):
             setattr(g, "%s_conditional_deductions" % self._key_prefix, {})
 
@@ -611,7 +612,8 @@ class Limiter(object):
             self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:
             if isinstance(e, RateLimitExceeded):
-                six.reraise(*sys.exc_info())
+                raise e
+
             if self._in_memory_fallback_enabled and not self._storage_dead:
                 self.logger.warning(
                     "Rate limit storage unreachable - falling back to"
@@ -623,7 +625,7 @@ class Limiter(object):
                 if self._swallow_errors:
                     self.logger.exception("Failed to rate limit. Swallowing error")
                 else:
-                    six.reraise(*sys.exc_info())
+                    raise e
 
     def __limit_decorator(
         self,
