@@ -27,17 +27,15 @@ def test_multiple_decorators(extension_factory):
         with app.test_client() as cli:
             for i in range(0, 100):
                 assert (200 if i < 50 else 429) == cli.get(
-                    "/t1", headers={
-                        "X_FORWARDED_FOR": "127.0.0.2"
-                    }
+                    "/t1", headers={"X_FORWARDED_FOR": "127.0.0.2"}
                 ).status_code
             for i in range(50):
                 assert 200 == cli.get("/t1").status_code
             assert 429 == cli.get("/t1").status_code
-            assert 429 == \
-                cli.get("/t1", headers={
-                    "X_FORWARDED_FOR": "127.0.0.3"
-                }).status_code
+            assert (
+                429
+                == cli.get("/t1", headers={"X_FORWARDED_FOR": "127.0.0.3"}).status_code
+            )
 
 
 def test_exempt_routes(extension_factory):
@@ -63,12 +61,8 @@ def test_decorated_limit_with_conditional_deduction(extension_factory):
     app, limiter = extension_factory()
 
     @app.route("/t/<path:path>")
-    @limiter.limit(
-        "1/second", deduct_when=lambda resp: resp.status_code == 200
-    )
-    @limiter.limit(
-        "1/minute", deduct_when=lambda resp: resp.status_code == 400
-    )
+    @limiter.limit("1/second", deduct_when=lambda resp: resp.status_code == 200)
+    @limiter.limit("1/minute", deduct_when=lambda resp: resp.status_code == 400)
     def t(path):
         if path == "1":
             return "test"
@@ -93,8 +87,9 @@ def test_shared_limit_with_conditional_deduction(extension_factory):
     bp = Blueprint("main", __name__)
 
     limit = limiter.shared_limit(
-        "2/minute", "not_found",
-        deduct_when=lambda response: response.status_code == 400
+        "2/minute",
+        "not_found",
+        deduct_when=lambda response: response.status_code == 400,
     )
 
     @app.route("/test/<path:path>")
@@ -112,7 +107,7 @@ def test_shared_limit_with_conditional_deduction(extension_factory):
 
     limit(bp)
 
-    app.register_blueprint(bp, url_prefix='/bp')
+    app.register_blueprint(bp, url_prefix="/bp")
 
     with hiro.Timeline() as timeline:
         with app.test_client() as cli:
@@ -131,18 +126,18 @@ def test_shared_limit_with_conditional_deduction(extension_factory):
 
 
 def test_header_ordering_with_conditional_deductions(extension_factory):
-    app, limiter = extension_factory(
-        default_limits=['3/second'], headers_enabled=True
-    )
+    app, limiter = extension_factory(default_limits=["3/second"], headers_enabled=True)
 
     @app.route("/test_combined/<path:path>")
     @limiter.limit(
-        "1/hour", override_defaults=False,
-        deduct_when=lambda response: response.status_code != 200
+        "1/hour",
+        override_defaults=False,
+        deduct_when=lambda response: response.status_code != 200,
     )
     @limiter.limit(
-        "4/minute", override_defaults=False,
-        deduct_when=lambda response: response.status_code == 200
+        "4/minute",
+        override_defaults=False,
+        deduct_when=lambda response: response.status_code == 200,
     )
     def app_test_combined(path):
         if path != "1":
@@ -150,9 +145,7 @@ def test_header_ordering_with_conditional_deductions(extension_factory):
         return path
 
     @app.route("/test/<path:path>")
-    @limiter.limit(
-        "2/hour", deduct_when=lambda response: response.status_code != 200
-    )
+    @limiter.limit("2/hour", deduct_when=lambda response: response.status_code != 200)
     def app_test(path):
         if path != "1":
             raise BadRequest()
@@ -163,21 +156,21 @@ def test_header_ordering_with_conditional_deductions(extension_factory):
             assert cli.get("/test_combined/1").status_code == 200
             resp = cli.get("/test_combined/1")
             assert resp.status_code == 200
-            assert resp.headers.get('X-RateLimit-Limit') == '3'
-            assert resp.headers.get('X-RateLimit-Remaining') == '1'
+            assert resp.headers.get("X-RateLimit-Limit") == "3"
+            assert resp.headers.get("X-RateLimit-Remaining") == "1"
             assert cli.get("/test_combined/2").status_code == 400
 
             resp = cli.get("/test/1")
-            assert resp.headers.get('X-RateLimit-Limit') == '2'
-            assert resp.headers.get('X-RateLimit-Remaining') == '2'
+            assert resp.headers.get("X-RateLimit-Limit") == "2"
+            assert resp.headers.get("X-RateLimit-Remaining") == "2"
             resp = cli.get("/test/2")
-            assert resp.headers.get('X-RateLimit-Limit') == '2'
-            assert resp.headers.get('X-RateLimit-Remaining') == '1'
+            assert resp.headers.get("X-RateLimit-Limit") == "2"
+            assert resp.headers.get("X-RateLimit-Remaining") == "1"
 
             resp = cli.get("/test_combined/1")
             assert resp.status_code == 429
-            assert resp.headers.get('X-RateLimit-Limit') == '1'
-            assert resp.headers.get('X-RateLimit-Remaining') == '0'
+            assert resp.headers.get("X-RateLimit-Limit") == "1"
+            assert resp.headers.get("X-RateLimit-Remaining") == "0"
             assert cli.get("/test_combined/2").status_code == 429
             timeline.forward(60)
             assert cli.get("/test_combined/1").status_code == 429
@@ -187,9 +180,7 @@ def test_header_ordering_with_conditional_deductions(extension_factory):
 
 
 def test_decorated_limits_with_combined_defaults(extension_factory):
-    app, limiter = extension_factory(
-        default_limits=['2/minute']
-    )
+    app, limiter = extension_factory(default_limits=["2/minute"])
 
     @app.route("/")
     @limiter.limit("1/second", override_defaults=False)
@@ -210,12 +201,11 @@ def test_decorated_limits_with_combined_defaults(extension_factory):
 
 def test_decorated_limit_with_combined_defaults_per_method(extension_factory):
     app, limiter = extension_factory(
-        default_limits=['2/minute'],
-        default_limits_per_method=True
+        default_limits=["2/minute"], default_limits_per_method=True
     )
 
-    @app.route("/", methods=['GET', 'PUT'])
-    @limiter.limit("1/second", override_defaults=False, methods=['GET'])
+    @app.route("/", methods=["GET", "PUT"])
+    @limiter.limit("1/second", override_defaults=False, methods=["GET"])
     def root():
         return "root"
 
@@ -238,18 +228,16 @@ def test_decorated_limit_with_combined_defaults_per_method(extension_factory):
 
 
 def test_decorated_dynamic_limits(extension_factory):
-    app, limiter = extension_factory(
-        {"X": "2 per second"}, default_limits=["1/second"]
-    )
+    app, limiter = extension_factory({"X": "2 per second"}, default_limits=["1/second"])
 
     def request_context_limit():
-        limits = {
-            "127.0.0.1": "10 per minute",
-            "127.0.0.2": "1 per minute"
-        }
-        remote_addr = (request.access_route and request.access_route[0]
-                       ) or request.remote_addr or '127.0.0.1'
-        limit = limits.setdefault(remote_addr, '1 per minute')
+        limits = {"127.0.0.1": "10 per minute", "127.0.0.2": "1 per minute"}
+        remote_addr = (
+            (request.access_route and request.access_route[0])
+            or request.remote_addr
+            or "127.0.0.1"
+        )
+        limit = limits.setdefault(remote_addr, "1 per minute")
         return limit
 
     @app.route("/t1")
@@ -287,9 +275,7 @@ def test_decorated_dynamic_limits(extension_factory):
 def test_invalid_decorated_dynamic_limits(caplog):
     app = Flask(__name__)
     app.config.setdefault("X", "2 per sec")
-    limiter = Limiter(
-        app, default_limits=["1/second"], key_func=get_remote_address
-    )
+    limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
 
     @app.route("/t1")
     @limiter.limit(lambda: current_app.config.get("X"))
@@ -302,26 +288,15 @@ def test_invalid_decorated_dynamic_limits(caplog):
             assert cli.get("/t1").status_code == 429
     # 2 for invalid limit, 1 for warning.
     assert len(caplog.records) == 3
-    assert (
-        "failed to load ratelimit"
-        in caplog.records[0].msg
-    )
-    assert (
-        "failed to load ratelimit"
-        in caplog.records[1].msg
-    )
-    assert (
-        "exceeded at endpoint"
-        in caplog.records[2].msg
-    )
-    assert caplog.records[2].levelname == 'WARNING'
+    assert "failed to load ratelimit" in caplog.records[0].msg
+    assert "failed to load ratelimit" in caplog.records[1].msg
+    assert "exceeded at endpoint" in caplog.records[2].msg
+    assert caplog.records[2].levelname == "WARNING"
 
 
 def test_invalid_decorated_static_limits(caplog):
     app = Flask(__name__)
-    limiter = Limiter(
-        app, default_limits=["1/second"], key_func=get_remote_address
-    )
+    limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
 
     @app.route("/t1")
     @limiter.limit("2/sec")
@@ -332,20 +307,14 @@ def test_invalid_decorated_static_limits(caplog):
         with hiro.Timeline().freeze():
             assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 429
-    assert (
-        "failed to configure"
-        in caplog.records[0].msg
-    )
-    assert (
-        "exceeded at endpoint"
-        in caplog.records[1].msg
-    )
+    assert "failed to configure" in caplog.records[0].msg
+    assert "exceeded at endpoint" in caplog.records[1].msg
 
 
 def test_named_shared_limit(extension_factory):
     app, limiter = extension_factory()
-    shared_limit_a = limiter.shared_limit("1/minute", scope='a')
-    shared_limit_b = limiter.shared_limit("1/minute", scope='b')
+    shared_limit_a = limiter.shared_limit("1/minute", scope="a")
+    shared_limit_b = limiter.shared_limit("1/minute", scope="b")
 
     @app.route("/t1")
     @shared_limit_a
@@ -454,18 +423,14 @@ def test_conditional_shared_limits():
         return "passed"
 
     @app.route("/unlimited")
-    @limiter.shared_limit(
-        "1 per day", "test_scope", exempt_when=lambda: True
-    )
+    @limiter.shared_limit("1 per day", "test_scope", exempt_when=lambda: True)
     def never_limited_route():
         return "should always pass"
 
     is_exempt = False
 
     @app.route("/conditional")
-    @limiter.shared_limit(
-        "1 per day", "test_scope", exempt_when=lambda: is_exempt
-    )
+    @limiter.shared_limit("1 per day", "test_scope", exempt_when=lambda: is_exempt)
     def conditionally_limited_route():
         return "conditional"
 
@@ -490,7 +455,7 @@ def test_whitelisting():
         app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address
+        key_func=get_remote_address,
     )
 
     @app.route("/")
@@ -511,9 +476,7 @@ def test_whitelisting():
             assert cli.get("/").status_code == 200
 
             for i in range(0, 10):
-                assert cli.get(
-                    "/", headers={"internal": "true"}
-                ).status_code == 200
+                assert cli.get("/", headers={"internal": "true"}).status_code == 200
 
 
 def test_separate_method_limits(extension_factory):
@@ -533,7 +496,7 @@ def test_separate_method_limits(extension_factory):
 
 
 def test_explicit_method_limits(extension_factory):
-    app, limiter = extension_factory(default_limits=['2/second'])
+    app, limiter = extension_factory(default_limits=["2/second"])
 
     @app.route("/", methods=["GET", "POST"])
     @limiter.limit("1/second", methods=["GET"])
@@ -557,6 +520,7 @@ def test_decorated_limit_immediate(extension_factory):
         def __inner(*args, **kwargs):
             g.rate_limit = "2/minute"
             return fn(*args, **kwargs)
+
         return __inner
 
     @app.route("/", methods=["GET", "POST"])
@@ -574,14 +538,15 @@ def test_decorated_limit_immediate(extension_factory):
 
 def test_decorated_shared_limit_immediate(extension_factory):
 
-    app, limiter = extension_factory(default_limits=['1/minute'])
-    shared = limiter.shared_limit(lambda: g.rate_limit, 'shared')
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    shared = limiter.shared_limit(lambda: g.rate_limit, "shared")
 
     def append_info(fn):
         @wraps(fn)
         def __inner(*args, **kwargs):
             g.rate_limit = "2/minute"
             return fn(*args, **kwargs)
+
         return __inner
 
     @app.route("/", methods=["GET", "POST"])
@@ -610,6 +575,7 @@ def test_backward_compatibility_with_incorrect_ordering(extension_factory):
         @functools.wraps(fn)
         def __inner(*args, **kwargs):
             return fn(*args, **kwargs)
+
         return __inner
 
     @limiter.limit("1/second")

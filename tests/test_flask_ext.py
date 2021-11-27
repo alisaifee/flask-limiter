@@ -29,10 +29,9 @@ def test_reset(extension_factory):
 
 
 def test_reset_unsupported(extension_factory):
-    app, limiter = extension_factory({
-        C.GLOBAL_LIMITS: "1 per day",
-        C.STORAGE_URL: 'memcached://localhost:31211'
-    })
+    app, limiter = extension_factory(
+        {C.GLOBAL_LIMITS: "1 per day", C.STORAGE_URL: "memcached://localhost:31211"}
+    )
 
     @app.route("/")
     def null():
@@ -47,9 +46,7 @@ def test_reset_unsupported(extension_factory):
 
 
 def test_combined_rate_limits(extension_factory):
-    app, limiter = extension_factory({
-        C.GLOBAL_LIMITS: "1 per hour; 10 per day"
-    })
+    app, limiter = extension_factory({C.GLOBAL_LIMITS: "1 per hour; 10 per day"})
 
     @app.route("/t1")
     @limiter.limit("100 per hour;10/minute")
@@ -68,12 +65,11 @@ def test_combined_rate_limits(extension_factory):
 
 
 def test_defaults_per_method(extension_factory):
-    app, limiter = extension_factory({
-        C.DEFAULT_LIMITS: "1 per hour",
-        C.DEFAULT_LIMITS_PER_METHOD: True
-    })
+    app, limiter = extension_factory(
+        {C.DEFAULT_LIMITS: "1 per hour", C.DEFAULT_LIMITS_PER_METHOD: True}
+    )
 
-    @app.route("/t1", methods=['GET', 'POST'])
+    @app.route("/t1", methods=["GET", "POST"])
     def t1():
         return "t1"
 
@@ -87,12 +83,11 @@ def test_defaults_per_method(extension_factory):
 
 def test_default_limit_with_exemption(extension_factory):
     def is_backdoor():
-        return request.headers.get('backdoor') == 'true'
+        return request.headers.get("backdoor") == "true"
 
-    app, limiter = extension_factory({
-        C.DEFAULT_LIMITS: "1 per hour",
-        C.DEFAULT_LIMITS_EXEMPT_WHEN: is_backdoor
-    })
+    app, limiter = extension_factory(
+        {C.DEFAULT_LIMITS: "1 per hour", C.DEFAULT_LIMITS_EXEMPT_WHEN: is_backdoor}
+    )
 
     @app.route("/t1")
     def t1():
@@ -100,28 +95,21 @@ def test_default_limit_with_exemption(extension_factory):
 
     with hiro.Timeline() as timeline:
         with app.test_client() as cli:
-            assert cli.get(
-                "/t1", headers={'backdoor': 'true'}
-            ).status_code == 200
-            assert cli.get(
-                "/t1", headers={'backdoor': 'true'}
-            ).status_code == 200
+            assert cli.get("/t1", headers={"backdoor": "true"}).status_code == 200
+            assert cli.get("/t1", headers={"backdoor": "true"}).status_code == 200
             assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 429
             timeline.forward(3600)
             assert cli.get("/t1").status_code == 200
 
 
-def test_default_limit_with_conditional_deduction(
-        extension_factory
-):
+def test_default_limit_with_conditional_deduction(extension_factory):
     def failed_request(response):
         return response.status_code != 200
 
-    app, limiter = extension_factory({
-        C.DEFAULT_LIMITS: "1 per hour",
-        C.DEFAULT_LIMITS_DEDUCT_WHEN: failed_request
-    })
+    app, limiter = extension_factory(
+        {C.DEFAULT_LIMITS: "1 per hour", C.DEFAULT_LIMITS_DEDUCT_WHEN: failed_request}
+    )
 
     @app.route("/t1/<path:path>")
     def t1(path):
@@ -152,12 +140,12 @@ def test_key_func(extension_factory):
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
             for i in range(0, 100):
-                assert 200 == \
-                    cli.get(
-                        "/t1", headers={
-                            "X_FORWARDED_FOR": "127.0.0.2"
-                        }
+                assert (
+                    200
+                    == cli.get(
+                        "/t1", headers={"X_FORWARDED_FOR": "127.0.0.2"}
                     ).status_code
+                )
             assert 429 == cli.get("/t1").status_code
 
 
@@ -174,7 +162,7 @@ def test_logging(caplog):
         assert 200 == cli.get("/t1").status_code
         assert 429 == cli.get("/t1").status_code
     assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == 'WARNING'
+    assert caplog.records[0].levelname == "WARNING"
 
 
 def test_reuse_logging():
@@ -224,9 +212,7 @@ def test_multiple_apps():
     app1 = Flask(__name__)
     app2 = Flask(__name__)
 
-    limiter = Limiter(
-        default_limits=["1/second"], key_func=get_remote_address
-    )
+    limiter = Limiter(default_limits=["1/second"], key_func=get_remote_address)
     limiter.init_app(app1)
     limiter.init_app(app2)
 
@@ -280,7 +266,7 @@ def test_headers_no_breach():
         app,
         default_limits=["10/minute"],
         headers_enabled=True,
-        key_func=get_remote_address
+        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -295,18 +281,16 @@ def test_headers_no_breach():
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
             resp = cli.get("/t1")
-            assert resp.headers.get('X-RateLimit-Limit') == '10'
-            assert resp.headers.get('X-RateLimit-Remaining') == '9'
-            assert resp.headers.get('X-RateLimit-Reset') == \
-                str(int(time.time() + 61))
-            assert resp.headers.get('Retry-After') == str(60)
+            assert resp.headers.get("X-RateLimit-Limit") == "10"
+            assert resp.headers.get("X-RateLimit-Remaining") == "9"
+            assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 61))
+            assert resp.headers.get("Retry-After") == str(60)
             resp = cli.get("/t2")
-            assert resp.headers.get('X-RateLimit-Limit') == '2'
-            assert resp.headers.get('X-RateLimit-Remaining') == '1'
-            assert resp.headers.get('X-RateLimit-Reset') == \
-                str(int(time.time() + 2))
+            assert resp.headers.get("X-RateLimit-Limit") == "2"
+            assert resp.headers.get("X-RateLimit-Remaining") == "1"
+            assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 2))
 
-            assert resp.headers.get('Retry-After') == str(1)
+            assert resp.headers.get("Retry-After") == str(1)
 
 
 def test_headers_breach():
@@ -315,7 +299,7 @@ def test_headers_breach():
         app,
         default_limits=["10/minute"],
         headers_enabled=True,
-        key_func=get_remote_address
+        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -329,11 +313,10 @@ def test_headers_breach():
                 resp = cli.get("/t1")
                 timeline.forward(1)
 
-            assert resp.headers.get('X-RateLimit-Limit') == '10'
-            assert resp.headers.get('X-RateLimit-Remaining') == '0'
-            assert resp.headers.get('X-RateLimit-Reset') == \
-                str(int(time.time() + 50))
-            assert resp.headers.get('Retry-After') == str(int(50))
+            assert resp.headers.get("X-RateLimit-Limit") == "10"
+            assert resp.headers.get("X-RateLimit-Remaining") == "0"
+            assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 50))
+            assert resp.headers.get("Retry-After") == str(int(50))
 
 
 def test_retry_after():
@@ -342,7 +325,7 @@ def test_retry_after():
         app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address
+        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -352,7 +335,7 @@ def test_retry_after():
     with hiro.Timeline().freeze() as timeline:
         with app.test_client() as cli:
             resp = cli.get("/t1")
-            retry_after = int(resp.headers.get('Retry-After'))
+            retry_after = int(resp.headers.get("Retry-After"))
             assert retry_after > 0
             timeline.forward(retry_after)
             resp = cli.get("/t1")
@@ -365,17 +348,17 @@ def test_retry_after_exists_seconds():
         app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address
+        key_func=get_remote_address,
     )
 
     @app.route("/t1")
     def t():
-        return "", 200, {'Retry-After': '1000000'}
+        return "", 200, {"Retry-After": "1000000"}
 
     with app.test_client() as cli:
         resp = cli.get("/t1")
 
-        retry_after = int(resp.headers.get('Retry-After'))
+        retry_after = int(resp.headers.get("Retry-After"))
         assert retry_after > 1000
 
 
@@ -385,17 +368,17 @@ def test_retry_after_exists_rfc1123():
         app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address
+        key_func=get_remote_address,
     )
 
     @app.route("/t1")
     def t():
-        return "", 200, {'Retry-After': 'Sun, 06 Nov 2032 01:01:01 GMT'}
+        return "", 200, {"Retry-After": "Sun, 06 Nov 2032 01:01:01 GMT"}
 
     with app.test_client() as cli:
         resp = cli.get("/t1")
 
-        retry_after = int(resp.headers.get('Retry-After'))
+        retry_after = int(resp.headers.get("Retry-After"))
         assert retry_after > 1000
 
 
@@ -406,11 +389,11 @@ def test_custom_headers_from_setter():
         default_limits=["10/minute"],
         headers_enabled=True,
         key_func=get_remote_address,
-        retry_after='http-date'
+        retry_after="http-date",
     )
-    limiter._header_mapping[HEADERS.RESET] = 'X-Reset'
-    limiter._header_mapping[HEADERS.LIMIT] = 'X-Limit'
-    limiter._header_mapping[HEADERS.REMAINING] = 'X-Remaining'
+    limiter._header_mapping[HEADERS.RESET] = "X-Reset"
+    limiter._header_mapping[HEADERS.LIMIT] = "X-Limit"
+    limiter._header_mapping[HEADERS.REMAINING] = "X-Remaining"
 
     @app.route("/t1")
     @limiter.limit("2/second; 10 per minute; 20/hour")
@@ -423,14 +406,10 @@ def test_custom_headers_from_setter():
                 resp = cli.get("/t1")
                 timeline.forward(1)
 
-            assert resp.headers.get('X-Limit') == '10'
-            assert resp.headers.get('X-Remaining') == '0'
-            assert resp.headers.get(
-                'X-Reset'
-            ) == str(int(time.time() + 50))
-            assert resp.headers.get(
-                'Retry-After'
-            ) == 'Thu, 01 Jan 1970 00:01:01 GMT'
+            assert resp.headers.get("X-Limit") == "10"
+            assert resp.headers.get("X-Remaining") == "0"
+            assert resp.headers.get("X-Reset") == str(int(time.time() + 50))
+            assert resp.headers.get("Retry-After") == "Thu, 01 Jan 1970 00:01:01 GMT"
 
 
 def test_custom_headers_from_config():
@@ -442,7 +421,7 @@ def test_custom_headers_from_config():
         app,
         default_limits=["10/minute"],
         headers_enabled=True,
-        key_func=get_remote_address
+        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -456,11 +435,9 @@ def test_custom_headers_from_config():
                 resp = cli.get("/t1")
                 timeline.forward(1)
 
-            assert resp.headers.get('X-Limit') == '10'
-            assert resp.headers.get('X-Remaining') == '0'
-            assert resp.headers.get(
-                'X-Reset'
-            ) == str(int(time.time() + 50))
+            assert resp.headers.get("X-Limit") == "10"
+            assert resp.headers.get("X-Remaining") == "0"
+            assert resp.headers.get("X-Reset") == str(int(time.time() + 50))
 
 
 def test_custom_headers_from_setter_and_config():
@@ -469,11 +446,9 @@ def test_custom_headers_from_setter_and_config():
     app.config.setdefault(C.HEADER_REMAINING, "Remaining")
     app.config.setdefault(C.HEADER_RESET, "Reset")
     limiter = Limiter(
-        default_limits=["10/minute"],
-        headers_enabled=True,
-        key_func=get_remote_address
+        default_limits=["10/minute"], headers_enabled=True, key_func=get_remote_address
     )
-    limiter._header_mapping[HEADERS.REMAINING] = 'Available'
+    limiter._header_mapping[HEADERS.REMAINING] = "Available"
     limiter.init_app(app)
 
     @app.route("/t1")
@@ -484,9 +459,9 @@ def test_custom_headers_from_setter_and_config():
         for i in range(11):
             resp = cli.get("/t1")
 
-        assert resp.headers.get('Limit') == '10'
-        assert resp.headers.get('Available') == '0'
-        assert resp.headers.get('Reset') is not None
+        assert resp.headers.get("Limit") == "10"
+        assert resp.headers.get("Available") == "0"
+        assert resp.headers.get("Reset") is not None
 
 
 def test_application_shared_limit(extension_factory):
@@ -528,9 +503,7 @@ def test_callable_default_limit(extension_factory):
 
 def test_callable_application_limit(extension_factory):
 
-    app, limiter = extension_factory(
-        application_limits=[lambda: "1/minute"]
-    )
+    app, limiter = extension_factory(application_limits=[lambda: "1/minute"])
 
     @app.route("/t1")
     def t1():
@@ -575,12 +548,9 @@ def test_custom_key_prefix(redis_connection, extension_factory):
         key_prefix="moo", storage_uri="redis://localhost:36379"
     )
     app2, limiter2 = extension_factory(
-        {C.KEY_PREFIX: "cow"},
-        storage_uri="redis://localhost:36379"
+        {C.KEY_PREFIX: "cow"}, storage_uri="redis://localhost:36379"
     )
-    app3, limiter3 = extension_factory(
-        storage_uri="redis://localhost:36379"
-    )
+    app3, limiter3 = extension_factory(storage_uri="redis://localhost:36379")
 
     @app1.route("/test")
     @limiter1.limit("1/day")

@@ -8,15 +8,13 @@ import hiro
 from flask_limiter.extension import C
 
 
-def test_redis_request_slower_than_fixed_window(
-        redis_connection, extension_factory
-):
+def test_redis_request_slower_than_fixed_window(redis_connection, extension_factory):
     app, limiter = extension_factory(
         {
             C.GLOBAL_LIMITS: "5 per second",
             C.STORAGE_URL: "redis://localhost:36379",
             C.STRATEGY: "fixed-window",
-            C.HEADERS_ENABLED: True
+            C.HEADERS_ENABLED: True,
         }
     )
 
@@ -27,18 +25,16 @@ def test_redis_request_slower_than_fixed_window(
 
     with app.test_client() as cli:
         resp = cli.get("/t1")
-        assert resp.headers["X-RateLimit-Remaining"] == '5'
+        assert resp.headers["X-RateLimit-Remaining"] == "5"
 
 
-def test_redis_request_slower_than_moving_window(
-        redis_connection, extension_factory
-):
+def test_redis_request_slower_than_moving_window(redis_connection, extension_factory):
     app, limiter = extension_factory(
         {
             C.GLOBAL_LIMITS: "5 per second",
             C.STORAGE_URL: "redis://localhost:36379",
             C.STRATEGY: "moving-window",
-            C.HEADERS_ENABLED: True
+            C.HEADERS_ENABLED: True,
         }
     )
 
@@ -49,15 +45,12 @@ def test_redis_request_slower_than_moving_window(
 
     with app.test_client() as cli:
         resp = cli.get("/t1")
-        assert resp.headers["X-RateLimit-Remaining"] == '5'
+        assert resp.headers["X-RateLimit-Remaining"] == "5"
 
 
 def test_dynamic_limits(extension_factory):
     app, limiter = extension_factory(
-        {
-            C.STRATEGY: "moving-window",
-            C.HEADERS_ENABLED: True
-        }
+        {C.STRATEGY: "moving-window", C.HEADERS_ENABLED: True}
     )
 
     def func(*a):
@@ -100,14 +93,10 @@ def test_invalid_ratelimit_key(extension_factory):
 
 def test_custom_key_prefix_with_headers(redis_connection, extension_factory):
     app1, limiter1 = extension_factory(
-        key_prefix="moo",
-        storage_uri="redis://localhost:36379",
-        headers_enabled=True
+        key_prefix="moo", storage_uri="redis://localhost:36379", headers_enabled=True
     )
     app2, limiter2 = extension_factory(
-        key_prefix="cow",
-        storage_uri="redis://localhost:36379",
-        headers_enabled=True
+        key_prefix="cow", storage_uri="redis://localhost:36379", headers_enabled=True
     )
 
     @app1.route("/test")
@@ -124,20 +113,18 @@ def test_custom_key_prefix_with_headers(redis_connection, extension_factory):
         resp = cli.get("/test")
         assert 200 == resp.status_code
         resp = cli.get("/test")
-        assert resp.headers.get('Retry-After') == str(60)
+        assert resp.headers.get("Retry-After") == str(60)
         assert 429 == resp.status_code
     with app2.test_client() as cli:
         resp = cli.get("/test")
         assert 200 == resp.status_code
         resp = cli.get("/test")
-        assert resp.headers.get('Retry-After') == str(60)
+        assert resp.headers.get("Retry-After") == str(60)
         assert 429 == resp.status_code
 
 
 def test_default_limits_with_per_route_limit(extension_factory):
-    app, limiter = extension_factory(
-        application_limits=['3/minute']
-    )
+    app, limiter = extension_factory(application_limits=["3/minute"])
 
     @app.route("/explicit")
     @limiter.limit("1/minute")
@@ -162,8 +149,9 @@ def test_default_limits_with_per_route_limit(extension_factory):
 def test_application_limits_from_config(extension_factory):
     app, limiter = extension_factory(
         config={
-            C.APPLICATION_LIMITS: '4/second', C.DEFAULT_LIMITS: '1/second',
-            C.DEFAULT_LIMITS_PER_METHOD: True
+            C.APPLICATION_LIMITS: "4/second",
+            C.DEFAULT_LIMITS: "1/second",
+            C.DEFAULT_LIMITS_PER_METHOD: True,
         }
     )
 
@@ -171,8 +159,8 @@ def test_application_limits_from_config(extension_factory):
     def root():
         return "null"
 
-    @app.route("/test", methods=['GET', 'PUT'])
-    @limiter.limit("3/second", methods=['GET'])
+    @app.route("/test", methods=["GET", "PUT"])
+    @limiter.limit("3/second", methods=["GET"])
     def test():
         return "test"
 

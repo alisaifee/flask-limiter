@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [2.7, 3.7, 3.8]
+        python-version: [3.8, 3.9, "3.10"]
     steps:
     - uses: actions/checkout@v2
     - name: Cache dependencies
@@ -32,3 +32,7 @@ jobs:
       run: |
         flake8 . --count --show-source --statistics
         flake8 . --count --exit-zero --max-complexity=10
+    - name: Lint with black
+      run: |
+        pip install black
+        black
