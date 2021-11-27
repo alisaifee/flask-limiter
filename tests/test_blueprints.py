@@ -92,9 +92,7 @@ def test_register_blueprint(extension_factory):
 
 def test_invalid_decorated_static_limit_blueprint(caplog):
     app = Flask(__name__)
-    limiter = Limiter(
-        app, default_limits=["1/second"], key_func=get_remote_address
-    )
+    limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
     bp = Blueprint("bp1", __name__)
 
     @bp.route("/t1")
@@ -108,22 +106,14 @@ def test_invalid_decorated_static_limit_blueprint(caplog):
         with hiro.Timeline().freeze():
             assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 429
-    assert (
-        "failed to configure"
-        in caplog.records[0].msg
-    )
-    assert (
-        "exceeded at endpoint"
-        in caplog.records[1].msg
-    )
+    assert "failed to configure" in caplog.records[0].msg
+    assert "exceeded at endpoint" in caplog.records[1].msg
 
 
 def test_invalid_decorated_dynamic_limits_blueprint(caplog):
     app = Flask(__name__)
     app.config.setdefault("X", "2 per sec")
-    limiter = Limiter(
-        app, default_limits=["1/second"], key_func=get_remote_address
-    )
+    limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
     bp = Blueprint("bp1", __name__)
 
     @bp.route("/t1")

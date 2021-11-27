@@ -8,8 +8,16 @@ class Limit(object):
     """
 
     def __init__(
-        self, limit, key_func, scope, per_method, methods, error_message,
-        exempt_when, override_defaults, deduct_when
+        self,
+        limit,
+        key_func,
+        scope,
+        per_method,
+        methods,
+        error_message,
+        exempt_when,
+        override_defaults,
+        deduct_when,
     ):
         self.limit = limit
         self.key_func = key_func
@@ -28,17 +36,14 @@ class Limit(object):
 
     @property
     def scope(self):
-        return self.__scope(request.endpoint) if callable(
-            self.__scope
-        ) else self.__scope
+        return (
+            self.__scope(request.endpoint) if callable(self.__scope) else self.__scope
+        )
 
     @property
     def method_exempt(self):
         """Check if the limit is not applicable for this method"""
-        return (
-            self.methods is not None
-            and request.method.lower() not in self.methods
-        )
+        return self.methods is not None and request.method.lower() not in self.methods
 
 
 class LimitGroup(object):
@@ -48,8 +53,16 @@ class LimitGroup(object):
     """
 
     def __init__(
-        self, limit_provider, key_function, scope, per_method, methods,
-        error_message, exempt_when, override_defaults, deduct_when
+        self,
+        limit_provider,
+        key_function,
+        scope,
+        per_method,
+        methods,
+        error_message,
+        exempt_when,
+        override_defaults,
+        deduct_when,
     ):
         self.__limit_provider = limit_provider
         self.__scope = scope
@@ -64,11 +77,18 @@ class LimitGroup(object):
     def __iter__(self):
         limit_items = parse_many(
             self.__limit_provider()
-            if callable(self.__limit_provider) else self.__limit_provider
+            if callable(self.__limit_provider)
+            else self.__limit_provider
         )
         for limit in limit_items:
             yield Limit(
-                limit, self.key_function, self.__scope, self.per_method,
-                self.methods, self.error_message, self.exempt_when,
-                self.override_defaults, self.deduct_when
+                limit,
+                self.key_function,
+                self.__scope,
+                self.per_method,
+                self.methods,
+                self.error_message,
+                self.exempt_when,
+                self.override_defaults,
+                self.deduct_when,
             )

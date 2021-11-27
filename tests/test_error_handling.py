@@ -24,9 +24,9 @@ def test_error_message(extension_factory):
                 '{"error" : "rate limit %s"}' % str(e.description), 429
             )
 
-        assert {
-            'error': 'rate limit 1 per 1 day'
-        } == json.loads(cli.get("/").data.decode())
+        assert {"error": "rate limit 1 per 1 day"} == json.loads(
+            cli.get("/").data.decode()
+        )
 
 
 def test_custom_error_message(extension_factory):
@@ -52,9 +52,7 @@ def test_custom_error_message(extension_factory):
     def t2():
         return "2"
 
-    s1 = limiter.shared_limit(
-        "1/second", scope='error_message', error_message="tres"
-    )
+    s1 = limiter.shared_limit("1/second", scope="error_message", error_message="tres")
 
     @app.route("/t3")
     @s1
@@ -66,32 +64,32 @@ def test_custom_error_message(extension_factory):
             cli.get("/t1")
             resp = cli.get("/t1")
             assert 429 == resp.status_code
-            assert resp.data == b'uno'
+            assert resp.data == b"uno"
             cli.get("/t2")
             resp = cli.get("/t2")
             assert 429 == resp.status_code
-            assert resp.data == b'dos'
+            assert resp.data == b"dos"
             cli.get("/t3")
             resp = cli.get("/t3")
             assert 429 == resp.status_code
-            assert resp.data == b'tres'
+            assert resp.data == b"tres"
 
 
 def test_swallow_error(extension_factory):
-    app, limiter = extension_factory({
-        C.GLOBAL_LIMITS: "1 per day",
-        C.HEADERS_ENABLED: True,
-        C.SWALLOW_ERRORS: True,
-    })
+    app, limiter = extension_factory(
+        {
+            C.GLOBAL_LIMITS: "1 per day",
+            C.HEADERS_ENABLED: True,
+            C.SWALLOW_ERRORS: True,
+        }
+    )
 
     @app.route("/")
     def null():
         return "ok"
 
     with app.test_client() as cli:
-        with patch(
-            "limits.strategies.FixedWindowRateLimiter.hit"
-        ) as hit:
+        with patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
 
             def raiser(*a, **k):
                 raise Exception
@@ -99,7 +97,7 @@ def test_swallow_error(extension_factory):
             hit.side_effect = raiser
             assert "ok" in cli.get("/").data.decode()
         with patch(
-                "limits.strategies.FixedWindowRateLimiter.get_window_stats"
+            "limits.strategies.FixedWindowRateLimiter.get_window_stats"
         ) as get_window_stats:
 
             def raiser(*a, **k):
@@ -110,10 +108,9 @@ def test_swallow_error(extension_factory):
 
 
 def test_no_swallow_error(extension_factory):
-    app, limiter = extension_factory({
-        C.GLOBAL_LIMITS: "1 per day",
-        C.HEADERS_ENABLED: True
-    })
+    app, limiter = extension_factory(
+        {C.GLOBAL_LIMITS: "1 per day", C.HEADERS_ENABLED: True}
+    )
 
     @app.route("/")
     def null():
@@ -127,9 +124,7 @@ def test_no_swallow_error(extension_factory):
         raise Exception("underlying")
 
     with app.test_client() as cli:
-        with patch(
-            "limits.strategies.FixedWindowRateLimiter.hit"
-        ) as hit:
+        with patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
 
             hit.side_effect = raiser
             assert 500 == cli.get("/").status_code
@@ -148,14 +143,13 @@ def test_fallback_to_memory_config(redis_connection, extension_factory):
         config={C.ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:36379",
-        in_memory_fallback=["1/minute"]
+        in_memory_fallback=["1/minute"],
     )
     assert len(limiter._in_memory_fallback) == 1
     assert limiter._in_memory_fallback_enabled
 
     _, limiter = extension_factory(
-        config={C.ENABLED: True,
-                C.IN_MEMORY_FALLBACK: "1/minute"},
+        config={C.ENABLED: True, C.IN_MEMORY_FALLBACK: "1/minute"},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:36379",
     )
@@ -173,18 +167,16 @@ def test_fallback_to_memory_config(redis_connection, extension_factory):
         config={C.ENABLED: True},
         global_limits=["5/minute"],
         storage_uri="redis://localhost:36379",
-        in_memory_fallback_enabled=True
+        in_memory_fallback_enabled=True,
     )
 
 
-def test_fallback_to_memory_backoff_check(
-    redis_connection, extension_factory
-):
+def test_fallback_to_memory_backoff_check(redis_connection, extension_factory):
     app, limiter = extension_factory(
         config={C.ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:36379",
-        in_memory_fallback=["1/minute"]
+        in_memory_fallback=["1/minute"],
     )
 
     @app.route("/t1")
@@ -197,12 +189,8 @@ def test_fallback_to_memory_backoff_check(
             raise Exception("redis dead")
 
         with hiro.Timeline() as timeline:
-            with patch(
-                'limits.storage.RedisStorage.incr'
-            ) as incr:
-                with patch(
-                        'limits.storage.RedisStorage.check'
-                ) as check:
+            with patch("limits.storage.RedisStorage.incr") as incr:
+                with patch("limits.storage.RedisStorage.check") as check:
                     check.return_value = False
                     incr.side_effect = raiser
                     assert cli.get("/t1").status_code == 200
@@ -232,14 +220,12 @@ def test_fallback_to_memory_backoff_check(
             assert cli.get("/t1").status_code == 429
 
 
-def test_fallback_to_memory_with_global_override(
-        redis_connection, extension_factory
-):
+def test_fallback_to_memory_with_global_override(redis_connection, extension_factory):
     app, limiter = extension_factory(
         config={C.ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:36379",
-        in_memory_fallback=["1/minute"]
+        in_memory_fallback=["1/minute"],
     )
 
     @app.route("/t1")
@@ -266,10 +252,8 @@ def test_fallback_to_memory_with_global_override(
         def raiser(*a):
             raise Exception("redis dead")
 
-        with patch(
-            'limits.storage.RedisStorage.incr'
-        ) as incr:
-            with patch('limits.storage.RedisStorage.check') as check:
+        with patch("limits.storage.RedisStorage.incr") as incr:
+            with patch("limits.storage.RedisStorage.check") as check:
                 check.return_value = False
                 incr.side_effect = raiser
                 assert cli.get("/t1").status_code == 200
@@ -292,7 +276,7 @@ def test_fallback_to_memory(extension_factory):
         global_limits=["2/minute"],
         storage_uri="redis://localhost:36379",
         in_memory_fallback_enabled=True,
-        headers_enabled=True
+        headers_enabled=True,
     )
 
     @app.route("/t1")
@@ -303,6 +287,7 @@ def test_fallback_to_memory(extension_factory):
     @limiter.limit("1 per minute")
     def t2():
         return "test"
+
     with app.test_client() as cli:
         assert cli.get("/t1").status_code == 200
         assert cli.get("/t1").status_code == 200
@@ -313,7 +298,7 @@ def test_fallback_to_memory(extension_factory):
         def raiser(*a):
             raise Exception("redis dead")
 
-        with patch('limits.storage.RedisStorage.incr') as hit:
+        with patch("limits.storage.RedisStorage.incr") as hit:
             hit.side_effect = raiser
             assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 200
@@ -325,6 +310,6 @@ def test_fallback_to_memory(extension_factory):
             limiter._storage.storage.flushall()
             assert cli.get("/t2").status_code == 200
             assert cli.get("/t2").status_code == 429
-        with patch('limits.storage.RedisStorage.get') as get:
+        with patch("limits.storage.RedisStorage.get") as get:
             get.side_effect = raiser
             assert cli.get("/t1").status_code == 200

@@ -12,12 +12,13 @@ import os
 import versioneer
 
 this_dir = os.path.abspath(os.path.dirname(__file__))
-REQUIREMENTS = filter(None, open(
-    os.path.join(this_dir, 'requirements', 'main.txt')).read().splitlines())
+REQUIREMENTS = filter(
+    None, open(os.path.join(this_dir, "requirements", "main.txt")).read().splitlines()
+)
 
 
 setup(
-    name='Flask-Limiter',
+    name="Flask-Limiter",
     author=__author__,
     author_email=__email__,
     license="MIT",
@@ -26,8 +27,8 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     install_requires=list(REQUIREMENTS),
-    classifiers=[k for k in open('CLASSIFIERS').read().split('\n') if k],
-    description='Rate limiting for flask applications',
-    long_description=open('README.rst').read() + open('HISTORY.rst').read(),
+    classifiers=[k for k in open("CLASSIFIERS").read().split("\n") if k],
+    description="Rate limiting for flask applications",
+    long_description=open("README.rst").read() + open("HISTORY.rst").read(),
     packages=find_packages(exclude=["tests*"]),
 )

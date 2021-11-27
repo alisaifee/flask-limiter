@@ -20,7 +20,8 @@ def extension_factory():
         app = Flask(__name__)
         for k, v in config.items():
             app.config.setdefault(k, v)
-        limiter_args.setdefault('key_func', get_remote_address)
+        limiter_args.setdefault("key_func", get_remote_address)
         limiter = Limiter(app, **limiter_args)
         return app, limiter
+
     return _build_app_and_extension
