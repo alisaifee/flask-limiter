@@ -1,8 +1,5 @@
 """errors and exceptions."""
 
-from distutils.version import LooseVersion
-from pkg_resources import get_distribution
-from six import text_type
 from werkzeug import exceptions
 
 
@@ -26,5 +23,5 @@ class RateLimitExceeded(exceptions.TooManyRequests):
                 else limit.error_message()
             )
         else:
-            description = text_type(limit.limit)
+            description = str(limit.limit)
         super(RateLimitExceeded, self).__init__(description=description)
