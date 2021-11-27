@@ -3,6 +3,12 @@
 Changelog
 =========
 
+v2.0.0
+------
+Release Date: 2021-11-27
+
+Drop support for python < 3.7 & Flask < 2.0
+
 v1.5
 ----
 Release Date: 2021-11-27
@@ -400,6 +406,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
