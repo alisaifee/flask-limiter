@@ -712,7 +712,7 @@ class Limiter(object):
                         setattr(g,
                                 "%s_rate_limiting_complete" % self._key_prefix,
                                 True)
-                    return current_app.ensure_sync(obj)(*a, **k)
+                    return obj(*a, **k)
                 return __inner
 
         return _inner
@@ -812,7 +812,7 @@ class Limiter(object):
 
             @wraps(obj)
             def __inner(*a, **k):
-                return current_app.ensure_sync(obj)(*a, **k)
+                return obj(*a, **k)
 
             self._exempt_routes.add(name)
             return __inner
