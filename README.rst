@@ -14,7 +14,8 @@ Flask-Limiter
 *************
 |docs| |ci| |codecov| |pypi| |license|
 
-Flask-Limiter provides rate limiting features to flask routes.
+Flask-Limiter provides rate limiting features to flask applications.
+
 It has support for a configurable backend for storage
 with current implementations for in-memory, redis and memcache.
 
@@ -90,8 +91,3 @@ with it.
 
 
 `Read the docs <http://flask-limiter.readthedocs.org>`_
-
-
-
-
-
