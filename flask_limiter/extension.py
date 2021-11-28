@@ -801,7 +801,7 @@ class Limiter(object):
         exempt_when: Callable[[], bool] = None,
         override_defaults=True,
         deduct_when: Callable[[Response], bool] = None,
-    ):
+    ) -> Callable:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
