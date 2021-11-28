@@ -1,3 +1,5 @@
+.. rst-class:: hide-header
+
 .. _pymemcache: https://pypi.python.org/pypi/pymemcache
 .. _redis: https://pypi.python.org/pypi/redis
 .. _github issue #41: https://github.com/alisaifee/flask-limiter/issues/41
@@ -7,6 +9,10 @@
 *************
 Flask-Limiter
 *************
+
+.. image:: _static/logo.png
+    :alt: Flask-Limiter
+    :align: center
 .. currentmodule:: flask_limiter
 
 Usage
@@ -156,7 +162,7 @@ instance are
               ...
 
         .. note:: The key function  is called from within a
-           :ref:`flask request context <flask:request-context>`.
+           :doc:`flask request context <flask:reqcontext>`.
 
   Dynamically loaded limit string(s)
     There may be situations where the rate limits need to be retrieved from
@@ -178,7 +184,7 @@ instance are
            on the decorated route. For expensive retrievals, consider
            caching the response.
         .. note:: The callable is called from within a
-           :ref:`flask request context <flask:request-context>` during the
+           :doc:`flask request context <flask:reqcontext>` during the
            `before_request` phase.
 
   Exemption conditions
@@ -295,10 +301,10 @@ the :class:`Limiter` constructor, those will take precedence.
                                           combination of all method per route.
 ``RATELIMIT_DEFAULTS_EXEMPT_WHEN``        A function that should return a truthy value if the default rate limit(s)
                                           should be skipped for the current request. This callback is called in the
-                                          :ref:`flask request context <flask:request-context>` `before_request` phase.
+                                          :doc:`flask request context <flask:reqcontext>` `before_request` phase.
 ``RATELIMIT_DEFAULTS_DEDUCT_WHEN``        A function that should return a truthy value if a deduction should be made
                                           from the default rate limit(s) for the current request. This callback is called
-                                          in the :ref:`flask request context <flask:request-context>` `after_request` phase.
+                                          in the :doc:`flask request context <flask:reqcontext>` `after_request` phase.
 ``RATELIMIT_APPLICATION``                 A comma (or some other delimiter) separated string
                                           that will be used to apply limits to the application as a whole (i.e. shared
                                           by all routes).
