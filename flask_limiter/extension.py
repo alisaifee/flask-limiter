@@ -4,7 +4,6 @@ the flask extension
 import datetime
 import itertools
 import logging
-import sys
 import time
 import warnings
 from functools import wraps
@@ -578,6 +577,7 @@ class Limiter(object):
                                     limit.override_defaults,
                                     limit.deduct_when,
                                 )
+
                                 for limit in limit_group
                             ]
                         )
@@ -609,6 +609,7 @@ class Limiter(object):
                 route_limits = limits + dynamic_limits
                 all_limits = (
                     list(itertools.chain(*self._application_limits))
+
                     if in_middleware
                     else []
                 )
