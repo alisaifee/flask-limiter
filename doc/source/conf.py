@@ -13,6 +13,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "pallets_sphinx_themes",
+    "sphinx_autodoc_typehints",
 ]
 
 templates_path = ["_templates"]

@@ -1,7 +1,9 @@
 -r test.txt
 -r docs.txt
+black
 flake8
 keyring
+mypy
 sphinx-autobuild
 twine
 yapf

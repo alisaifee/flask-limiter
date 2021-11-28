@@ -32,6 +32,7 @@ class Limit(object):
     @property
     def is_exempt(self):
         """Check if the limit is exempt."""
+
         return self.exempt_when and self.exempt_when()
 
     @property
@@ -43,6 +44,7 @@ class Limit(object):
     @property
     def method_exempt(self):
         """Check if the limit is not applicable for this method"""
+
         return self.methods is not None and request.method.lower() not in self.methods
 
 
@@ -80,6 +82,7 @@ class LimitGroup(object):
             if callable(self.__limit_provider)
             else self.__limit_provider
         )
+
         for limit in limit_items:
             yield Limit(
                 limit,

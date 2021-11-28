@@ -6,12 +6,20 @@ import itertools
 import logging
 import time
 import warnings
+
 from functools import wraps
 
-from flask import request, current_app, g, Blueprint
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Union
+
+from flask import request, current_app, g, Blueprint, Flask, Response
 from limits.errors import ConfigurationError
-from limits.storage import storage_from_string, MemoryStorage
-from limits.strategies import STRATEGIES
+from limits.storage import storage_from_string, Storage, MemoryStorage
+from limits.strategies import STRATEGIES, RateLimiter
 from werkzeug.http import http_date, parse_date
 
 from flask_limiter.wrappers import Limit, LimitGroup
@@ -56,64 +64,65 @@ class Limiter(object):
     The :class:`Limiter` class initializes the Flask-Limiter extension.
 
     :param app: :class:`flask.Flask` instance to initialize the extension with.
-    :param list default_limits: a variable list of strings or callables
+    :param key_func: a callable that returns the domain to rate limit
+      by.
+    :param default_limits: a variable list of strings or callables
      returning strings denoting global limits to apply to all routes.
      :ref:`ratelimit-string` for  more details.
-    :param bool default_limits_per_method: whether default limits are applied
+    :param default_limits_per_method: whether default limits are applied
      per method, per route or as a combination of all method per route.
-    :param function default_limits_exempt_when: a function that should return
+    :param default_limits_exempt_when: a function that should return
      True/False to decide if the default limits should be skipped
-    :param function default_limits_deduct_when: a function that receives the
+    :param default_limits_deduct_when: a function that receives the
      current :class:`flask.Response` object and returns True/False to decide
      if a deduction should be made from the default rate limit(s)
-    :param list application_limits: a variable list of strings or callables
+    :param application_limits: a variable list of strings or callables
      returning strings for limits that are applied to the entire application
      (i.e a shared limit for all routes)
-    :param function key_func: a callable that returns the domain to rate limit
-      by.
-    :param bool headers_enabled: whether ``X-RateLimit`` response headers are
+    :param headers_enabled: whether ``X-RateLimit`` response headers are
      written.
-    :param str strategy: the strategy to use.
+    :param strategy: the strategy to use.
      Refer to :ref:`ratelimit-strategy`
-    :param str storage_uri: the storage location.
+    :param storage_uri: the storage location.
      Refer to :ref:`ratelimit-conf`
-    :param dict storage_options: kwargs to pass to the storage implementation
+    :param storage_options: kwargs to pass to the storage implementation
      upon instantiation.
-    :param bool auto_check: whether to automatically check the rate limit in
+    :param auto_check: whether to automatically check the rate limit in
      the before_request chain of the application. default ``True``
-    :param bool swallow_errors: whether to swallow errors when hitting a rate
+    :param swallow_errors: whether to swallow errors when hitting a rate
      limit. An exception will still be logged. default ``False``
-    :param list in_memory_fallback: a variable list of strings or callables
+    :param in_memory_fallback: a variable list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
-    :param bool in_memory_fallback_enabled: simply falls back to in memory
+    :param in_memory_fallback_enabled: simply falls back to in memory
      storage when the main storage is down and inherits the original limits.
-    :param str retry_after: Allows configuration of how the value of the
+    :param retry_after: Allows configuration of how the value of the
      `Retry-After` header is rendered. One of `http-date` or `delta-seconds`.
-    :param str key_prefix: prefix prepended to rate limiter keys and app context global names.
+    :param key_prefix: prefix prepended to rate limiter keys and app context global names.
+    :param enabled: Whether the extension is enabled or not
     """
 
     def __init__(
         self,
-        app=None,
-        key_func=None,
-        global_limits=[],
-        default_limits=[],
+        app: Optional[Flask] = None,
+        key_func: Callable[[], str] = None,
+        global_limits: List[str] = [],
+        default_limits: List[str] = [],
         default_limits_per_method=False,
-        default_limits_exempt_when=None,
-        default_limits_deduct_when=None,
-        application_limits=[],
+        default_limits_exempt_when: Callable[[], bool] = None,
+        default_limits_deduct_when: Callable[[], bool] = None,
+        application_limits: List[str] = [],
         headers_enabled=False,
-        strategy=None,
-        storage_uri=None,
+        strategy: Optional[str] = None,
+        storage_uri: Optional[str] = None,
         storage_options={},
         auto_check=True,
         swallow_errors=False,
-        in_memory_fallback=[],
+        in_memory_fallback: List[str] = [],
         in_memory_fallback_enabled=False,
-        retry_after=None,
-        key_prefix="",
-        enabled=True,
+        retry_after: str = None,
+        key_prefix: str = "",
+        enabled: bool = True,
     ):
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
@@ -129,10 +138,10 @@ class Limiter(object):
         self._in_memory_fallback_enabled = (
             in_memory_fallback_enabled or len(in_memory_fallback) > 0
         )
-        self._exempt_routes = set()
-        self._request_filters = []
+        self._exempt_routes: Set[str] = set()
+        self._request_filters: List[Callable[[], bool]] = []
         self._headers_enabled = headers_enabled
-        self._header_mapping = {}
+        self._header_mapping: Dict[int, str] = {}
         self._retry_after = retry_after
         self._strategy = strategy
         self._storage_uri = storage_uri
@@ -140,6 +149,7 @@ class Limiter(object):
         self._auto_check = auto_check
         self._swallow_errors = swallow_errors
 
+        # No longer optional
         assert key_func
 
         if global_limits:
@@ -182,17 +192,18 @@ class Limiter(object):
                     )
                 ]
             )
-        self._route_limits = {}
-        self._dynamic_route_limits = {}
-        self._blueprint_limits = {}
-        self._blueprint_dynamic_limits = {}
-        self._blueprint_exempt = set()
-        self._storage = self._limiter = None
+        self._route_limits: Dict[str, List[Limit]] = {}
+        self._dynamic_route_limits: Dict[str, List[LimitGroup]] = {}
+        self._blueprint_limits: Dict[str, List[Limit]] = {}
+        self._blueprint_dynamic_limits: Dict[str, List[LimitGroup]] = {}
+        self._blueprint_exempt: Set[str] = set()
+        self._storage: Optional[Storage] = None
+        self._limiter: Optional[RateLimiter] = None
         self._storage_dead = False
-        self._fallback_limiter = None
+        self._fallback_limiter: Optional[RateLimiter] = None
         self.__check_backend_count = 0
         self.__last_check_backend = time.time()
-        self.__marked_for_limiting = {}
+        self.__marked_for_limiting: Dict[str, List[str]] = {}
 
         class BlackHoleHandler(logging.StreamHandler):
             def emit(*_):
@@ -203,7 +214,7 @@ class Limiter(object):
         if app:
             self.init_app(app)
 
-    def init_app(self, app):
+    def init_app(self, app: Flask):
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
@@ -356,7 +367,7 @@ class Limiter(object):
 
         return False
 
-    def check(self):
+    def check(self) -> None:
         """
         check the limits for the current request
 
@@ -364,7 +375,7 @@ class Limiter(object):
         """
         self.__check_request_limit(False)
 
-    def reset(self):
+    def reset(self) -> None:
         """
         resets the storage if it supports being reset
         """
@@ -375,7 +386,7 @@ class Limiter(object):
             self.logger.warning("This storage type does not support being reset")
 
     @property
-    def limiter(self):
+    def limiter(self) -> RateLimiter:
         if self._storage_dead and self._in_memory_fallback_enabled:
             return self._fallback_limiter
         else:
@@ -398,7 +409,7 @@ class Limiter(object):
         if self.enabled and self._headers_enabled and current_limit:
             try:
                 window_stats = self.limiter.get_window_stats(*current_limit)
-                reset_in = 1 + window_stats[0]
+                reset_in: Union[int, float] = 1 + window_stats[0]
                 response.headers.add(
                     self._header_mapping[HEADERS.LIMIT], str(current_limit[0].amount)
                 )
@@ -412,7 +423,9 @@ class Limiter(object):
 
                 if existing_retry_after_header is not None:
                     # might be in http-date format
-                    retry_after = parse_date(existing_retry_after_header)
+                    retry_after: Union[float, datetime.datetime] = parse_date(
+                        existing_retry_after_header
+                    )
 
                     # parse_date failure returns None
 
@@ -522,7 +535,8 @@ class Limiter(object):
             or g.get("%s_rate_limiting_complete" % self._key_prefix)
         ):
             return
-        limits, dynamic_limits = [], []
+        limits: List[Limit] = []
+        dynamic_limits: List[Limit] = []
 
         # this is to ensure backward compatibility with behavior that
         # existed accidentally, i.e::
@@ -577,7 +591,6 @@ class Limiter(object):
                                     limit.override_defaults,
                                     limit.deduct_when,
                                 )
-
                                 for limit in limit_group
                             ]
                         )
@@ -609,7 +622,6 @@ class Limiter(object):
                 route_limits = limits + dynamic_limits
                 all_limits = (
                     list(itertools.chain(*self._application_limits))
-
                     if in_middleware
                     else []
                 )
@@ -737,34 +749,34 @@ class Limiter(object):
 
     def limit(
         self,
-        limit_value,
-        key_func=None,
-        per_method=False,
-        methods=None,
-        error_message=None,
-        exempt_when=None,
-        override_defaults=True,
-        deduct_when=None,
-    ):
+        limit_value: Union[str, Callable[[], str]],
+        key_func: Callable[[], str] = None,
+        per_method: bool = False,
+        methods: List[str] = None,
+        error_message: str = None,
+        exempt_when: Callable[[], bool] = None,
+        override_defaults: bool = True,
+        deduct_when: Callable[[Response], bool] = None,
+    ) -> Callable:
         """
         decorator to be used for rate limiting individual routes or blueprints.
 
         :param limit_value: rate limit string or a callable that returns a
          string. :ref:`ratelimit-string` for more details.
-        :param function key_func: function/lambda to extract the unique
+        :param key_func: function/lambda to extract the unique
          identifier for the rate limit. defaults to remote address of the
          request.
-        :param bool per_method: whether the limit is sub categorized into the
+        :param per_method: whether the limit is sub categorized into the
          http method of the request.
-        :param list methods: if specified, only the methods in this list will
+        :param methods: if specified, only the methods in this list will
          be rate limited (default: None).
         :param error_message: string (or callable that returns one) to override
          the error message used in the response.
-        :param function exempt_when: function/lambda used to decide if the rate
+        :param exempt_when: function/lambda used to decide if the rate
          limit should skipped.
-        :param bool override_defaults:  whether the decorated limit overrides
+        :param override_defaults:  whether the decorated limit overrides
          the default limits. (default: True)
-        :param function deduct_when: a function that receives the current
+        :param deduct_when: a function that receives the current
          :class:`flask.Response` object and returns True/False to decide if a
          deduction should be done from the rate limit
         """
@@ -782,13 +794,13 @@ class Limiter(object):
 
     def shared_limit(
         self,
-        limit_value,
-        scope,
-        key_func=None,
-        error_message=None,
-        exempt_when=None,
+        limit_value: Union[str, Callable[[], str]],
+        scope: Union[str, Callable[[], str]],
+        key_func: Callable[[], str] = None,
+        error_message: str = None,
+        exempt_when: Callable[[], bool] = None,
         override_defaults=True,
-        deduct_when=None,
+        deduct_when: Callable[[Response], bool] = None,
     ):
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -797,16 +809,16 @@ class Limiter(object):
          string. :ref:`ratelimit-string` for more details.
         :param scope: a string or callable that returns a string
          for defining the rate limiting scope.
-        :param function key_func: function/lambda to extract the unique
+        :param key_func: function/lambda to extract the unique
          identifier for the rate limit. defaults to remote address of the
          request.
         :param error_message: string (or callable that returns one) to override
          the error message used in the response.
         :param function exempt_when: function/lambda used to decide if the rate
          limit should skipped.
-        :param bool override_defaults:  whether the decorated limit overrides
+        :param override_defaults:  whether the decorated limit overrides
          the default limits. (default: True)
-        :param function deduct_when: a function that receives the current
+        :param deduct_when: a function that receives the current
          :class:`flask.Response`  object and returns True/False to decide if a
          deduction should be done from the rate limit
         """
@@ -841,7 +853,7 @@ class Limiter(object):
         else:
             self._blueprint_exempt.add(obj.name)
 
-    def request_filter(self, fn):
+    def request_filter(self, fn: Callable) -> Callable:
         """
         decorator to mark a function as a filter to be executed
         to check if the request is exempt from rate limiting.
