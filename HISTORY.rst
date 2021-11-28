@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.0.1
+------
+Release Date: 2021-11-28
+
+* Deprecations
+  * Remove deprecated get_ipaddr method
+  * Remove use of six
+  * Remove backward compatibility hacks for RateLimit exceptions
+
 v2.0.0
 ------
 Release Date: 2021-11-27
@@ -406,6 +415,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
