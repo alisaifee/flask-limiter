@@ -1,2 +1,2 @@
-limits
-Flask
+limits>=2
+Flask>=2
