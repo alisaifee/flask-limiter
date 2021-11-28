@@ -3,11 +3,21 @@
 Changelog
 =========
 
+v2.0.2
+------
+Release Date: 2021-11-28
+
+* Features
+
+  * Pin Flask, limits to >= 2
+  * Add type hints
+
 v2.0.1
 ------
 Release Date: 2021-11-28
 
 * Deprecations
+
   * Remove deprecated get_ipaddr method
   * Remove use of six
   * Remove backward compatibility hacks for RateLimit exceptions
@@ -415,6 +425,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
