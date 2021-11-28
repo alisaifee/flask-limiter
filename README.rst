@@ -6,7 +6,7 @@
    :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |license| image:: https://img.shields.io/pypi/l/Flask-Limiter.svg?style=flat-square
    :target: https://pypi.python.org/pypi/Flask-Limiter
-.. |docs| image:: https://readthedocs.org/projects/flask-limiter/badge
+.. |docs| image:: https://readthedocs.org/projects/flask-limiter/badge/?version=master
    :target: https://flask-limiter.readthedocs.org
 
 *************
