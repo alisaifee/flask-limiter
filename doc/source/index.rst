@@ -689,12 +689,12 @@ fixer to reliably get the remote address of the user, while protecting your appl
         from flask import Flask
         from flask_limiter import Limiter
         from flask_limiter.util import get_remote_address
-        from werkzeug.contrib.fixers import ProxyFix
+        from werkzeug.middleware.proxy_fix import ProxyFix
 
         app = Flask(__name__)
         # for example if the request goes through one proxy
         # before hitting your application server
-        app.wsgi_app = ProxyFix(app.wsgi_app, num_proxies=1)
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
         limiter = Limiter(app, key_func=get_remote_address)
 
 API
