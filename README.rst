@@ -23,7 +23,7 @@ with current implementations for in-memory, redis and memcache.
 
 Compatibility
 =============
-The version of the extension on master only supports Pythons versions >= 3.7 and Flask >= 2.0. If you are looking for support for older versions, please refer to the `1.x branch </alisaifee/flask-limiter/tree/1.x>`_
+The version of the extension on master only supports Pythons versions >= 3.7 and Flask >= 2.0. If you are looking for support for older versions, please refer to the `1.x branch <https://github.com/alisaifee/flask-limiter/tree/1.x>`_
 
 Quickstart
 ===========
