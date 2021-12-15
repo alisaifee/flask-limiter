@@ -168,7 +168,7 @@ def test_flask_restful_resource(extension_factory):
             assert 429 == cli.get("/c").status_code
 
 
-def test_flask_restplus_resource(extension_factory):
+def test_flask_restx_resource(extension_factory):
 
     app, limiter = extension_factory()
     api = flask_restx.Api(app)
