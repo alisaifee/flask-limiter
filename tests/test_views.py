@@ -1,7 +1,8 @@
 import hiro
 from flask import request
 from flask.views import View, MethodView
-from flask_restful import Api as RestfulApi, Resource
+import flask_restful
+import flask_restx
 
 
 def test_pluggable_views(extension_factory):
@@ -107,9 +108,9 @@ def test_pluggable_method_views(extension_factory):
 
 def test_flask_restful_resource(extension_factory):
     app, limiter = extension_factory(default_limits=["1/hour"])
-    api = RestfulApi(app)
+    api = flask_restful.Api(app)
 
-    class Va(Resource):
+    class Va(flask_restful.Resource):
         decorators = [limiter.limit("2/second")]
 
         def get(self):
@@ -118,17 +119,17 @@ def test_flask_restful_resource(extension_factory):
         def post(self):
             return request.method.lower()
 
-    class Vb(Resource):
+    class Vb(flask_restful.Resource):
         decorators = [limiter.limit("1/second, 3/minute")]
 
         def get(self):
             return request.method.lower()
 
-    class Vc(Resource):
+    class Vc(flask_restful.Resource):
         def get(self):
             return request.method.lower()
 
-    class Vd(Resource):
+    class Vd(flask_restful.Resource):
         decorators = [
             limiter.limit("2/second", methods=["GET"]),
             limiter.limit("1/second", methods=["POST"]),
@@ -165,3 +166,32 @@ def test_flask_restful_resource(extension_factory):
             assert 429 == cli.get("/b").status_code
             assert 200 == cli.get("/c").status_code
             assert 429 == cli.get("/c").status_code
+
+
+def test_flask_restplus_resource(extension_factory):
+
+    app, limiter = extension_factory()
+    api = flask_restx.Api(app)
+    ns = api.namespace("test")
+
+    @ns.route("/a")
+    class Va(flask_restx.Resource):
+        decorators = [limiter.limit("2/second", per_method=True)]
+
+        def get(self):
+            return request.method.lower()
+
+        def post(self):
+            return request.method.lower()
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert 200 == cli.get("/test/a").status_code
+            assert 200 == cli.get("/test/a").status_code
+            assert 200 == cli.post("/test/a").status_code
+            assert 200 == cli.post("/test/a").status_code
+            assert 429 == cli.get("/test/a").status_code
+            assert 429 == cli.post("/test/a").status_code
+            timeline.forward(1)
+            assert 200 == cli.get("/test/a").status_code
+            assert 200 == cli.post("/test/a").status_code
