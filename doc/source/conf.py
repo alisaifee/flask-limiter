@@ -8,19 +8,20 @@ sys.path.insert(0, os.path.abspath("../../"))
 import flask_limiter
 
 extensions = [
+    "pallets_sphinx_themes",
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    "pallets_sphinx_themes",
     "sphinx_autodoc_typehints",
+    "sphinx_tabs.tabs",
 ]
 
 templates_path = ["_templates"]
 source_suffix = ".rst"
 master_doc = "index"
-project = u"Flask-Limiter"
-copyright = u"2014, Ali-Akber Saifee"
+project = "Flask-Limiter"
+copyright = "2014, Ali-Akber Saifee"
 
 version = release = flask_limiter.__version__
 exclude_patterns = []
@@ -44,21 +45,21 @@ latex_documents = [
     (
         "index",
         "Flask-Limiter.tex",
-        u"Flask-Limiter Documentation",
-        u"Ali-Akber Saifee",
+        "Flask-Limiter Documentation",
+        "Ali-Akber Saifee",
         "manual",
     ),
 ]
 man_pages = [
-    ("index", "flask-limiter", u"Flask-Limiter Documentation", [u"Ali-Akber Saifee"], 1)
+    ("index", "flask-limiter", "Flask-Limiter Documentation", ["Ali-Akber Saifee"], 1)
 ]
 
 texinfo_documents = [
     (
         "index",
         "Flask-Limiter",
-        u"Flask-Limiter Documentation",
-        u"Ali-Akber Saifee",
+        "Flask-Limiter Documentation",
+        "Ali-Akber Saifee",
         "Flask-Limiter",
         "One line description of project.",
         "Miscellaneous",
@@ -67,8 +68,8 @@ texinfo_documents = [
 
 intersphinx_mapping = {
     "python": ("http://docs.python.org/", None),
-    "flask": ("https://flask.palletsprojects.com/en/2.0.x/", None),
-    "werkzeug": ("http://werkzeug.pocoo.org/docs/", None),
+    "flask": ("https://flask.palletsprojects.com/en/latest/", None),
+    "werkzeug": ("https://werkzeug.palletsprojects.com/en/latest/", None),
     "limits": ("http://limits.readthedocs.org/en/latest/", None),
     "flaskrestful": ("http://flask-restful.readthedocs.org/en/latest/", None),
 }
