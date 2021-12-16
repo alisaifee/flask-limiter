@@ -3,6 +3,12 @@
 Changelog
 =========
 
+v2.0.3
+------
+Release Date: 2021-12-15
+
+Documentation & test tweaks
+
 v2.0.2
 ------
 Release Date: 2021-11-28
@@ -425,6 +431,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
