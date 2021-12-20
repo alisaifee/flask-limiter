@@ -127,20 +127,21 @@ Deferred app initialization using ``init_app``
 
 Rate Limit Domain
 -----------------
-Each :class:`~flask_limiter.Limiter` instance is initialized with a `key_func` which returns the bucket
-in which each request is put into when evaluating whether it is within the rate limit or not.
+Each :class:`~flask_limiter.Limiter` instance is initialized with a
+:attr:`key_func` which returns the bucket in which each request is put
+into when evaluating whether it is within the rate limit or not.
 
 For simple setups a utility function is provided:
-
-* :func:`~flask_limiter.util.get_remote_address`: uses the `remote_address` of the request.
+:func:`~flask_limiter.util.get_remote_address` which uses the
+:attr:`remote_address` of the request.
 
 Please refer to :ref:`deploy-behind-proxy` for an example.
 
 
 Decorators
 ----------
-The decorators made available as instance methods of the :class:`~flask_limiter.Limiter`
-instance are
+Decorators made available as instance methods of the :class:`~flask_limiter.Limiter`
+instance to be used with the :class:`flask.Flask` application.
 
 .. _ratelimit-decorator-limit:
 
