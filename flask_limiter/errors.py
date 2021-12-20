@@ -9,9 +9,6 @@ class RateLimitExceeded(exceptions.TooManyRequests):
     The exception results in ``abort(429)`` being called.
     """
 
-    code = 429
-    limit = None
-
     def __init__(self, limit):
         self.limit = limit
 

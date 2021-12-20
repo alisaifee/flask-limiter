@@ -4,6 +4,5 @@ black
 flake8
 keyring
 mypy
-sphinx-autobuild
 twine
 yapf

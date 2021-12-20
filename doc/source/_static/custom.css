@@ -1,0 +1,104 @@
+:root {
+  --bg0: #fbf1c7;
+  --bg1: #ebdbb2;
+  --bg2: #d5c4a1;
+  --bg3: #bdae93;
+  --bg4: #a89984;
+  --gry: #928374;
+  --fg4: #7c6f64;
+  --fg3: #665c54;
+  --fg2: #504945;
+  --fg1: #3c3836;
+  --fg0: #282828;
+  --red: #cc241d;
+  --red2: #9d0006;
+  --orange: #d65d0e;
+  --orange2: #af3a03;
+  --yellow: #d79921;
+  --yellow2: #b57614;
+  --green: #98971a;
+  --green2: #79740e;
+  --aqua: #689d6a;
+  --aqua2: #427b58;
+  --blue: #458588;
+  --blue2: #076678;
+  --purple: #b16286;
+  --purple2: #8f3f71;
+}
+div.body {
+  min-width: inherit !important;
+}
+div.sphinxsidebar {
+    max-height: 100%;
+    overflow-y: auto;
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+}
+
+.sphinxsidebar::-webkit-scrollbar {
+  display: none;
+}
+#flask-limiter h1 { display: none }
+
+pre,
+.py {
+  font-family: "Fira Code", monospace;
+}
+pre, .admonition {
+  color: var(--bg0);
+}
+div.admonition {
+  filter: drop-shadow(2px 4px 6px black);
+  font-family: "Fira Sans", sans-serif;
+  font-size: smaller;
+}
+div.admonition p.admonition-title {
+  font-size: large;
+}
+h1.logo a {
+  font-style: italic;
+}
+dl {
+  color: var(--fg2);
+}
+dl.py.class dt.sig {
+  border-top: solid 3px var(--purple);
+  line-height: 1.5em;
+  margin: 1em 0 0 0;
+  padding: 1em 0 0 0;
+}
+
+dl.py.class span.sig-name {
+  color: var(--green)
+}
+
+dl.py.class em.property {
+  color: var(--red2)
+}
+
+dl.py.method dt.sig {
+  border-top: none;
+  border-left: solid 1px var(--purple);
+  margin: 1em 0 0 0;
+  padding: 0 0 0 1em;
+}
+
+dl.py.method span.sig-name {
+  color: var(--green);
+}
+
+dl.py.function span.sig-name {
+  color: var(--green);
+}
+code.literal span.pre {
+  color: var(--orange);
+}
+a code.literal span.pre {
+  text-decoration: underline;
+}
+dl.field-list {
+  display: table;
+}
+em.sig-param span.default_value {
+  color: var(--purple2);
+}

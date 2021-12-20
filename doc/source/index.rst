@@ -1,33 +1,57 @@
-.. rst-class:: hide-header
-
 .. _pymemcache: https://pypi.python.org/pypi/pymemcache
 .. _redis: https://pypi.python.org/pypi/redis
 .. _github issue #41: https://github.com/alisaifee/flask-limiter/issues/41
 .. _flask apps and ip spoofing: http://esd.io/blog/flask-apps-heroku-real-ip-spoofing.html
 .. _RFC2616: https://tools.ietf.org/html/rfc2616#section-14.37
 
-*************
-Flask-Limiter
-*************
-
 .. image:: _static/logo.png
     :alt: Flask-Limiter
     :align: center
 
+=============
+Flask-Limiter
+=============
+
 .. currentmodule:: flask_limiter
 
-Usage
-=====
+.. image:: https://img.shields.io/github/last-commit/alisaifee/flask-limiter?logo=github&style=flat-square&labelColor=#282828
+   :target: https://github.com/alisaifee/flask-limiter
+.. image:: https://img.shields.io/github/workflow/status/alisaifee/flask-limiter/CI?logo=github&style=flat-square&labelColor=#282828
+   :target: https://github.com/alisaifee/flask-limiter/actions/workflows/main.yml
+.. image:: https://img.shields.io/codecov/c/github/alisaifee/flask-limiter?logo=codecov&style=flat-square&labelColor=#282828
+   :target: https://app.codecov.io/gh/alisaifee/flask-limiter
+.. image:: https://img.shields.io/pypi/pyversions/flask-limiter?style=flat-square&logo=pypi
+   :target: https://pypi.org/project/flask-limiter
 
 Installation
-------------
+============
+.. tabbed:: Standalone
 
-::
+   .. code:: console
 
-   pip install Flask-Limiter
+      $ pip install Flask-Limiter
+
+.. tabbed:: Redis
+
+   .. code:: console
+
+      $ pip install Flask-Limiter[redis]
+
+.. tabbed:: Memcached
+
+   .. code:: console
+
+      $ pip install Flask-Limiter[memcached]
+
+.. tabbed:: MongoDB
+
+   .. code:: console
+
+      $ pip install Flask-Limiter[mongodb]
+
 
 Quick start
------------
+===========
 
 .. code-block:: python
 
@@ -331,8 +355,8 @@ take priority.
    should probably never be used in production. Some supported backends include:
 
    - Memcached: ``memcached://host:port``
+   - MongoDB: ``mongodb://host:port``
    - Redis: ``redis://host:port``
-   - GAE Memcached: ``gaememcached://host:port``
 
    For specific examples and requirements of supported backends please
    refer to :ref:`storage-scheme`.
@@ -568,7 +592,9 @@ Custom Rate limit exceeded responses
 ------------------------------------
 The default configuration results in an ``abort(429)`` being called every time
 a rate limit is exceeded for a particular route. The exceeded limit is added to
-the response and results in an response body that looks something like::
+the response and results in an response body that looks something like:
+
+  .. code:: html
 
     <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
     <title>429 Too Many Requests</title>
@@ -768,6 +794,7 @@ Core
 Exceptions
 ----------
 .. autoexception:: RateLimitExceeded
+  :no-inherited-members:
 
 Utils
 -----
