@@ -49,7 +49,7 @@ html_theme = "alabaster"
 html_theme_options = {
     "logo": "tap-logo.png",
     "github_user": "alisaifee",
-    "github_repo": "flask_limiter",
+    "github_repo": "flask-limiter",
     "github_button": False,
     "github_banner": True,
     "fixed_sidebar": True,
