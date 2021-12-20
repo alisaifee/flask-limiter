@@ -146,168 +146,186 @@ instance are
 .. _ratelimit-decorator-limit:
 
 :meth:`~flask_limiter.Limiter.limit`
-  There are a few ways of using this decorator depending on your preference and use-case.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-  Single decorator
-    The limit string can be a single limit or a delimiter separated string
+There are a few ways of using this decorator depending on your preference and use-case.
 
-      .. code-block:: python
+Single decorator
 
-         @app.route("....")
-         @limiter.limit("100/day;10/hour;1/minute")
-         def my_route()
-           ...
+  The limit string can be a single limit or a delimiter separated string
 
-  Multiple decorators
-    The limit string can be a single limit or a delimiter separated string
-    or a combination of both.
+  .. code-block:: python
 
-        .. code-block:: python
+     @app.route("....")
+     @limiter.limit("100/day;10/hour;1/minute")
+     def my_route()
+       ...
 
-           @app.route("....")
-           @limiter.limit("100/day")
-           @limiter.limit("10/hour")
-           @limiter.limit("1/minute")
-           def my_route():
-             ...
+Multiple decorators
 
-  Custom keying function
-    By default rate limits are applied based on the key function that the :class:`~flask_limiter.Limiter` instance
-    was initialized with. You can implement your own function to retrieve the key to rate limit by
-    when decorating individual routes. Take a look at :ref:`keyfunc-customization` for some examples..
+  The limit string can be a single limit or a delimiter separated string
+  or a combination of both.
 
-        .. code-block:: python
+  .. code-block:: python
 
-            def my_key_func():
-              ...
+      @app.route("....")
+      @limiter.limit("100/day")
+      @limiter.limit("10/hour")
+      @limiter.limit("1/minute")
+      def my_route():
+        ...
 
-            @app.route("...")
-            @limiter.limit("100/day", my_key_func)
-            def my_route():
-              ...
+Custom keying function
 
-        .. note:: The key function  is called from within a
-           :doc:`flask request context <flask:reqcontext>`.
+  By default rate limits are applied based on the key function that the :class:`~flask_limiter.Limiter` instance
+  was initialized with. You can implement your own function to retrieve the key to rate limit by
+  when decorating individual routes. Take a look at :ref:`keyfunc-customization` for some examples..
 
-  Dynamically loaded limit string(s)
-    There may be situations where the rate limits need to be retrieved from
-    sources external to the code (database, remote api, etc...). This can be
-    achieved by providing a callable to the decorator.
+  .. code-block:: python
+
+     def my_key_func():
+       ...
+
+     @app.route("...")
+     @limiter.limit("100/day", my_key_func)
+     def my_route():
+       ...
+
+  .. note:: The key function  is called from within a
+      :doc:`flask request context <flask:reqcontext>`.
+
+Dynamically loaded limit string(s)
+
+  There may be situations where the rate limits need to be retrieved from
+  sources external to the code (database, remote api, etc...). This can be
+  achieved by providing a callable to the decorator.
 
 
-        .. code-block:: python
+  .. code-block:: python
 
-               def rate_limit_from_config():
-                   return current_app.config.get("CUSTOM_LIMIT", "10/s")
+     def rate_limit_from_config():
+         return current_app.config.get("CUSTOM_LIMIT", "10/s")
 
-               @app.route("...")
-               @limiter.limit(rate_limit_from_config)
-               def my_route():
-                   ...
+     @app.route("...")
+     @limiter.limit(rate_limit_from_config)
+     def my_route():
+         ...
 
-        .. danger:: The provided callable will be called for every request
-           on the decorated route. For expensive retrievals, consider
-           caching the response.
-        .. note:: The callable is called from within a
-           :doc:`flask request context <flask:reqcontext>` during the
-           `before_request` phase.
+  .. warning:: The provided callable will be called for every request
+      on the decorated route. For expensive retrievals, consider
+      caching the response.
 
-  Exemption conditions
-    Each limit can be exempted when given conditions are fulfilled. These
-    conditions can be specified by supplying a callable as an
-    ```exempt_when``` argument when defining the limit.
 
-        .. code-block:: python
+  .. note:: The callable is called from within a
+     :doc:`flask request context <flask:reqcontext>` during the
+     `before_request` phase.
 
-           @app.route("/expensive")
-           @limiter.limit("100/day", exempt_when=lambda: current_user.is_admin)
-           def expensive_route():
-             ...
+
+Exemption conditions
+
+  Each limit can be exempted when given conditions are fulfilled. These
+  conditions can be specified by supplying a callable as an
+  :attr:`exempt_when` argument when defining the limit.
+
+  .. code-block:: python
+
+    @app.route("/expensive")
+    @limiter.limit("100/day", exempt_when=lambda: current_user.is_admin)
+    def expensive_route():
+      ...
 
 .. _ratelimit-decorator-shared-limit:
 
 :meth:`~flask_limiter.Limiter.shared_limit`
-    For scenarios where a rate limit should be shared by multiple routes
-    (For example when you want to protect routes using the same resource
-    with an umbrella rate limit).
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    Named shared limit
+For scenarios where a rate limit should be shared by multiple routes
+(For example when you want to protect routes using the same resource
+with an umbrella rate limit).
 
-      .. code-block:: python
+Named shared limit
 
-        mysql_limit = limiter.shared_limit("100/hour", scope="mysql")
+  .. code-block:: python
 
-        @app.route("..")
-        @mysql_limit
-        def r1():
-           ...
+    mysql_limit = limiter.shared_limit("100/hour", scope="mysql")
 
-        @app.route("..")
-        @mysql_limit
-        def r2():
-           ...
+    @app.route("..")
+    @mysql_limit
+    def r1():
+        ...
 
-
-    Dynamic shared limit: when a callable is passed as scope, the return value
-    of the function will be used as the scope. Note that the callable takes one argument: a string representing
-    the request endpoint.
-
-      .. code-block:: python
-
-        def host_scope(endpoint_name):
-            return request.host
-        host_limit = limiter.shared_limit("100/hour", scope=host_scope)
-
-        @app.route("..")
-        @host_limit
-        def r1():
-           ...
-
-        @app.route("..")
-        @host_limit
-        def r2():
-           ...
+    @app.route("..")
+    @mysql_limit
+    def r2():
+        ...
 
 
-    .. note:: Shared rate limits provide the same conveniences as individual rate limits
+Dynamic shared limit
 
-        * Can be chained with other shared limits or individual limits
-        * Accept keying functions
-        * Accept callables to determine the rate limit value
+  When a callable is passed as scope, the return value
+  of the function will be used as the scope. Note that the callable takes one argument: a string representing
+  the request endpoint.
+
+  .. code-block:: python
+
+     def host_scope(endpoint_name):
+         return request.host
+     host_limit = limiter.shared_limit("100/hour", scope=host_scope)
+
+     @app.route("..")
+     @host_limit
+     def r1():
+         ...
+
+     @app.route("..")
+     @host_limit
+     def r2():
+         ...
+
+     .. note:: Shared rate limits provide the same conveniences as individual rate limits
+
+         * Can be chained with other shared limits or individual limits
+         * Accept keying functions
+         * Accept callables to determine the rate limit value
 
 
 
 .. _ratelimit-decorator-exempt:
 
 :meth:`~flask_limiter.Limiter.exempt`
-  This decorator simply marks a route as being exempt from any rate limits.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This decorator simply marks a route as being exempt from any rate limits.
 
 .. _ratelimit-decorator-request-filter:
 
 :meth:`~flask_limiter.Limiter.request_filter`
-  This decorator simply marks a function as a filter for requests that are going to be tested for rate limits. If any of the request filters return ``True`` no
-  rate limiting will be performed for that request. This mechanism can be used to
-  create custom white lists.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This decorator simply marks a function as a filter for requests that are going to be tested for rate limits. If any of the request filters return ``True`` no
+rate limiting will be performed for that request. This mechanism can be used to
+create custom white lists.
 
 
-        .. code-block:: python
+.. code-block:: python
 
-            @limiter.request_filter
-            def header_whitelist():
-                return request.headers.get("X-Internal", "") == "true"
+   @limiter.request_filter
+   def header_whitelist():
+       return request.headers.get("X-Internal", "") == "true"
 
-            @limiter.request_filter
-            def ip_whitelist():
-                return request.remote_addr == "127.0.0.1"
+   @limiter.request_filter
+   def ip_whitelist():
+       return request.remote_addr == "127.0.0.1"
 
-    In the above example, any request that contains the header ``X-Internal: true``
-    or originates from localhost will not be rate limited.
+In the above example, any request that contains the header ``X-Internal: true``
+or originates from localhost will not be rate limited.
 
 
 .. _ratelimit-conf:
 
 Configuration
 =============
+
 The following :doc:`flask Configuration <flask:config>` values are honored by
 :class:`~flask_limiter.Limiter`. If the corresponding configuration value is also present
 as an argument to the :class:`~flask_limiter.Limiter` constructor, the constructor argument will
@@ -335,13 +353,13 @@ take priority.
 
    A function that should return a truthy value if the default rate limit(s)
    should be skipped for the current request. This callback is called in the
-   :doc:`flask request context <flask:reqcontext>` `before_request` phase.
+   :doc:`flask request context <flask:reqcontext>` ``before_request`` phase.
 
 .. data:: RATELIMIT_DEFAULTS_DEDUCT_WHEN
 
    A function that should return a truthy value if a deduction should be made
    from the default rate limit(s) for the current request. This callback is called
-   in the :doc:`flask request context <flask:reqcontext>` `after_request` phase.
+   in the :doc:`flask request context <flask:reqcontext>` ``after_request`` phase.
 
 .. data:: RATELIMIT_APPLICATION
 
@@ -397,8 +415,8 @@ take priority.
 
 .. data:: RATELIMIT_HEADER_RETRY_AFTER_VALUE
 
-   Allows configuration of how the value of the `Retry-After` header is rendered.
-   One of `http-date` or `delta-seconds`. (`RFC2616`_).
+   Allows configuration of how the value of the ``Retry-After`` header is rendered.
+   One of ``http-date`` or ``delta-seconds``. (`RFC2616`_).
 
 .. data:: RATELIMIT_SWALLOW_ERRORS
 
@@ -424,14 +442,14 @@ take priority.
    Prefix that is prepended to each stored rate limit key and app context
    global name. This can be useful when using a shared storage for multiple
    applications or rate limit domains. For multi-instance use cases, explicitly
-   pass ``key_prefix`` keyword argument to :~class:`~flask_limiter.Limiter` constructor instead.
+   pass ``key_prefix`` keyword argument to :class:`~flask_limiter.Limiter` constructor instead.
 
 .. _ratelimit-string:
 
 Rate limit string notation
 ==========================
 
-Rate limits are specified as strings following the format:
+Rate limits are specified as strings following the format::
 
     [count] [per|/] [n (optional)] [second|minute|hour|day|month|year]
 
@@ -441,10 +459,10 @@ choice.
 Examples
 --------
 
-* 10 per hour
-* 10/hour
-* 10/hour;100/day;2000 per year
-* 100/day, 500/7days
+* ``10 per hour``
+* ``10/hour``
+* ``10/hour;100/day;2000 per year``
+* ``100/day, 500/7days``
 
 .. warning:: If rate limit strings that are provided to the :meth:`~flask_limiter.Limiter.limit`
    decorator are malformed and can't be parsed the decorated route will fall back
@@ -491,9 +509,9 @@ circumvent bursts.
 
 Moving Window
 -------------
-.. warning:: The moving window strategy is only implemented for the ``redis`` and ``in-memory``
-    storage backends. The strategy requires using a list with fast random access which
-    is not very convenient to implement with a memcached storage.
+.. warning:: The moving window strategy is not implemented for the memcached
+   storage backend. The strategy requires using a list with fast random access which
+   is not very convenient to implement with a memcached storage.
 
 This strategy is the most effective for preventing bursts from by-passing the
 rate limit as the window for each limit is not fixed at the start and end of each time unit

@@ -161,6 +161,5 @@ intersphinx_mapping = {
     "pymongo": ("https://pymongo.readthedocs.io/en/stable/", None),
     "flask": ("https://flask.palletsprojects.com/en/latest/", None),
     "werkzeug": ("https://werkzeug.palletsprojects.com/en/latest/", None),
-    "limits": ("http://limits.readthedocs.org/en/latest/", None),
     "flaskrestful": ("http://flask-restful.readthedocs.org/en/latest/", None),
 }
