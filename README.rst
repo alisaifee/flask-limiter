@@ -18,12 +18,16 @@ Flask-Limiter
 
 Flask-Limiter provides rate limiting features to flask applications.
 
-It has support for a configurable backend for storage
-with current implementations for in-memory, redis and memcache.
+It allows configuring various backends to persist the rate limits, which is
+provided by the `limits <https://github.com/alisaifee/limits>`_ library.
 
 Compatibility
 =============
-The version of the extension on master only supports Pythons versions >= 3.7 and Flask >= 2.0. If you are looking for support for older versions, please refer to the `1.x branch <https://github.com/alisaifee/flask-limiter/tree/1.x>`_
+The version of the extension on master only supports Pythons versions >= 3.7
+and Flask >= 2.0.
+
+If you are looking for support for older versions,
+please refer to the `1.x branch <https://github.com/alisaifee/flask-limiter/tree/1.x>`_
 
 Quickstart
 ===========
