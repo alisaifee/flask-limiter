@@ -1,6 +1,7 @@
 -r main.txt
 pytest
 pytest-cov
+pytest-docker
 mock
 coverage
 hiro>0.1.6

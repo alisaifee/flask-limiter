@@ -28,9 +28,9 @@ def test_reset(extension_factory):
         assert "1 per 1 day" in cli.get("/").data.decode()
 
 
-def test_reset_unsupported(extension_factory):
+def test_reset_unsupported(extension_factory, memcached_connection):
     app, limiter = extension_factory(
-        {C.GLOBAL_LIMITS: "1 per day", C.STORAGE_URL: "memcached://localhost:31211"}
+            {C.GLOBAL_LIMITS: "1 per day", C.STORAGE_URL: "memcached://localhost:31211"}
     )
 
     @app.route("/")
