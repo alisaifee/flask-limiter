@@ -11,7 +11,7 @@ from flask_limiter.extension import C
 def test_redis_request_slower_than_fixed_window(redis_connection, extension_factory):
     app, limiter = extension_factory(
         {
-            C.GLOBAL_LIMITS: "5 per second",
+            C.DEFAULT_LIMITS: "5 per second",
             C.STORAGE_URL: "redis://localhost:36379",
             C.STRATEGY: "fixed-window",
             C.HEADERS_ENABLED: True,
@@ -31,7 +31,7 @@ def test_redis_request_slower_than_fixed_window(redis_connection, extension_fact
 def test_redis_request_slower_than_moving_window(redis_connection, extension_factory):
     app, limiter = extension_factory(
         {
-            C.GLOBAL_LIMITS: "5 per second",
+            C.DEFAULT_LIMITS: "5 per second",
             C.STORAGE_URL: "redis://localhost:36379",
             C.STRATEGY: "moving-window",
             C.HEADERS_ENABLED: True,

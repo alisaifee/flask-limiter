@@ -32,7 +32,6 @@ class C:
     STORAGE_URL = "RATELIMIT_STORAGE_URL"
     STORAGE_OPTIONS = "RATELIMIT_STORAGE_OPTIONS"
     STRATEGY = "RATELIMIT_STRATEGY"
-    GLOBAL_LIMITS = "RATELIMIT_GLOBAL"
     DEFAULT_LIMITS = "RATELIMIT_DEFAULT"
     DEFAULT_LIMITS_PER_METHOD = "RATELIMIT_DEFAULTS_PER_METHOD"
     DEFAULT_LIMITS_EXEMPT_WHEN = "RATELIMIT_DEFAULTS_EXEMPT_WHEN"
@@ -67,7 +66,7 @@ class Limiter(object):
     :param key_func: a callable that returns the domain to rate limit
       by.
     :param default_limits: a variable list of strings or callables
-     returning strings denoting global limits to apply to all routes.
+     returning strings denoting default limits to apply to all routes.
      :ref:`ratelimit-string` for  more details.
     :param default_limits_per_method: whether default limits are applied
      per method, per route or as a combination of all method per route.
@@ -106,7 +105,6 @@ class Limiter(object):
         self,
         app: Optional[Flask] = None,
         key_func: Callable[[], str] = None,
-        global_limits: List[str] = [],
         default_limits: List[str] = [],
         default_limits_per_method: bool = False,
         default_limits_exempt_when: Callable[[], bool] = None,
@@ -152,13 +150,10 @@ class Limiter(object):
         # No longer optional
         assert key_func
 
-        if global_limits:
-            self.__raise_global_limits_warning()
-
         self._key_func = key_func
         self._key_prefix = key_prefix
 
-        for limit in set(global_limits + default_limits):
+        for limit in default_limits:
             self._default_limits.extend(
                 [
                     LimitGroup(
@@ -286,10 +281,7 @@ class Limiter(object):
                 )
             ]
 
-        if config.get(C.GLOBAL_LIMITS, None):
-            self.__raise_global_limits_warning()
-
-        conf_limits = config.get(C.GLOBAL_LIMITS, config.get(C.DEFAULT_LIMITS, None))
+        conf_limits = config.get(C.DEFAULT_LIMITS, None)
 
         if not self._default_limits and conf_limits:
             self._default_limits = [
@@ -861,13 +853,3 @@ class Limiter(object):
         self._request_filters.append(fn)
 
         return fn
-
-    def __raise_global_limits_warning(self):
-        warnings.warn(
-            "global_limits was a badly named configuration since it is "
-            "actually a default limit and not a globally shared limit. Use "
-            "default_limits if you want to provide a default or use "
-            "application_limits if you intend to really have a global "
-            "shared limit",
-            UserWarning,
-        )

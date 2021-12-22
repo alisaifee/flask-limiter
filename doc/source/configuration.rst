@@ -13,9 +13,6 @@ take priority.
 
 .. list-table::
 
-   * - .. data:: RATELIMIT_GLOBAL
-     - .. deprecated:: 0.9.4
-          Use :any:`RATELIMIT_DEFAULT` instead.
    * - .. data:: RATELIMIT_DEFAULT
      - A comma (or some other delimiter) separated string that will be used to
        apply a default limit on all routes. If not provided, the default limits can be

@@ -14,7 +14,7 @@ from flask_limiter.util import get_remote_address
 
 
 def test_reset(extension_factory):
-    app, limiter = extension_factory({C.GLOBAL_LIMITS: "1 per day"})
+    app, limiter = extension_factory({C.DEFAULT_LIMITS: "1 per day"})
 
     @app.route("/")
     def null():
@@ -30,7 +30,7 @@ def test_reset(extension_factory):
 
 def test_reset_unsupported(extension_factory, memcached_connection):
     app, limiter = extension_factory(
-        {C.GLOBAL_LIMITS: "1 per day", C.STORAGE_URL: "memcached://localhost:31211"}
+        {C.DEFAULT_LIMITS: "1 per day", C.STORAGE_URL: "memcached://localhost:31211"}
     )
 
     @app.route("/")
@@ -46,7 +46,7 @@ def test_reset_unsupported(extension_factory, memcached_connection):
 
 
 def test_combined_rate_limits(extension_factory):
-    app, limiter = extension_factory({C.GLOBAL_LIMITS: "1 per hour; 10 per day"})
+    app, limiter = extension_factory({C.DEFAULT_LIMITS: "1 per hour; 10 per day"})
 
     @app.route("/t1")
     @limiter.limit("100 per hour;10/minute")
