@@ -30,7 +30,7 @@ def test_reset(extension_factory):
 
 def test_reset_unsupported(extension_factory, memcached_connection):
     app, limiter = extension_factory(
-        {C.DEFAULT_LIMITS: "1 per day", C.STORAGE_URL: "memcached://localhost:31211"}
+        {C.DEFAULT_LIMITS: "1 per day", C.STORAGE_URI: "memcached://localhost:31211"}
     )
 
     @app.route("/")

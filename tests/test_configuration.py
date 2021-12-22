@@ -19,7 +19,7 @@ def test_invalid_strategy():
 
 def test_invalid_storage_string():
     app = Flask(__name__)
-    app.config.setdefault(C.STORAGE_URL, "fubar://localhost:1234")
+    app.config.setdefault(C.STORAGE_URI, "fubar://localhost:1234")
     with pytest.raises(ConfigurationError):
         Limiter(app, key_func=get_remote_address)
 
@@ -29,7 +29,7 @@ def test_constructor_arguments_over_config(redis_connection):
     app.config.setdefault(C.STRATEGY, "fixed-window-elastic-expiry")
     limiter = Limiter(strategy="moving-window", key_func=get_remote_address)
     limiter.init_app(app)
-    app.config.setdefault(C.STORAGE_URL, "redis://localhost:36379")
+    app.config.setdefault(C.STORAGE_URI, "redis://localhost:36379")
     assert type(limiter._limiter) == MovingWindowRateLimiter
     limiter = Limiter(
         storage_uri="memcached://localhost:31211", key_func=get_remote_address
@@ -41,7 +41,7 @@ def test_constructor_arguments_over_config(redis_connection):
 def test_invalid_config_with_disabled():
     app = Flask(__name__)
     app.config.setdefault(C.ENABLED, False)
-    app.config.setdefault(C.STORAGE_URL, "fubar://")
+    app.config.setdefault(C.STORAGE_URI, "fubar://")
 
     limiter = Limiter(app, key_func=get_remote_address, default_limits=["1/hour"])
 

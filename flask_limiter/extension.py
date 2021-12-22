@@ -29,6 +29,7 @@ from .errors import RateLimitExceeded
 class C:
     ENABLED = "RATELIMIT_ENABLED"
     HEADERS_ENABLED = "RATELIMIT_HEADERS_ENABLED"
+    STORAGE_URI = "RATELIMIT_STORAGE_URI"  # deprecated due to inconsistency
     STORAGE_URL = "RATELIMIT_STORAGE_URL"
     STORAGE_OPTIONS = "RATELIMIT_STORAGE_OPTIONS"
     STRATEGY = "RATELIMIT_STRATEGY"
@@ -83,7 +84,7 @@ class Limiter(object):
     :param strategy: the strategy to use.
      Refer to :ref:`ratelimit-strategy`
     :param storage_uri: the storage location.
-     Refer to :data:`RATELIMIT_STORAGE_URL`
+     Refer to :data:`RATELIMIT_STORAGE_URI`
     :param storage_options: kwargs to pass to the storage implementation
      upon instantiation.
     :param auto_check: whether to automatically check the rate limit in
@@ -233,8 +234,9 @@ class Limiter(object):
             C.HEADERS_ENABLED, False
         )
         self._storage_options.update(config.get(C.STORAGE_OPTIONS, {}))
+        storage_uri_from_config = config.get(C.STORAGE_URI, config.get(C.STORAGE_URL, "memory://"))
         self._storage = storage_from_string(
-            self._storage_uri or config.setdefault(C.STORAGE_URL, "memory://"),
+            self._storage_uri or storage_uri_from_config,
             **self._storage_options
         )
         strategy = self._strategy or config.setdefault(C.STRATEGY, "fixed-window")

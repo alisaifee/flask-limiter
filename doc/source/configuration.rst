@@ -34,6 +34,8 @@ take priority.
      - A comma (or some other delimiter) separated string that will be used to
        apply limits to the application as a whole (i.e. shared by all routes).
    * - .. data:: RATELIMIT_STORAGE_URL
+     - .. deprecated:: 2.0.0 Use :data:`RATELIMIT_STORAGE_URI` instead.
+   * - .. data:: RATELIMIT_STORAGE_URI
      - A storage location conforming to the scheme in :ref:`storage-scheme`.
        A basic in-memory storage can be used by specifying ``memory://`` but it
        should be used with caution in any production setup since:
