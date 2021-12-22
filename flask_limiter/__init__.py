@@ -1,7 +1,7 @@
 """Flask-Limiter extension for rate limiting."""
 from ._version import get_versions
 from .errors import RateLimitExceeded
-from .extension import Limiter, HEADERS
+from .extension import HEADERS, Limiter
 
 __version__ = get_versions()["version"]
 del get_versions

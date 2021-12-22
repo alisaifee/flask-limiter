@@ -1,8 +1,8 @@
-import hiro
-from flask import request
-from flask.views import View, MethodView
 import flask_restful
 import flask_restx
+import hiro
+from flask import request
+from flask.views import MethodView, View
 
 
 def test_pluggable_views(extension_factory):

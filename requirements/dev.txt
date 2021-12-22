@@ -2,6 +2,7 @@
 -r docs.txt
 black
 flake8
+isort
 keyring
 mypy
 twine

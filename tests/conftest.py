@@ -1,7 +1,6 @@
-import pytest
 import pymemcache
+import pytest
 import redis
-
 from flask import Flask
 
 from flask_limiter import Limiter

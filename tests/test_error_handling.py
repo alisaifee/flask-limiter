@@ -1,8 +1,8 @@
 import json
 
 import hiro
-from mock import patch
 from flask import make_response
+from mock import patch
 
 from flask_limiter.extension import C
 

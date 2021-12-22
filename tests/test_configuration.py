@@ -1,13 +1,11 @@
 import pytest
-
 from flask import Flask
-
-from flask_limiter.extension import C, Limiter
-from flask_limiter.util import get_remote_address
-
 from limits.errors import ConfigurationError
 from limits.storage import MemcachedStorage
 from limits.strategies import MovingWindowRateLimiter
+
+from flask_limiter.extension import C, Limiter
+from flask_limiter.util import get_remote_address
 
 
 def test_invalid_strategy():

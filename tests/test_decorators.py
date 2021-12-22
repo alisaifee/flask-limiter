@@ -1,11 +1,10 @@
+import asyncio
 import functools
 from functools import wraps
 
 import hiro
 import mock
-import asyncio
-
-from flask import Blueprint, request, current_app, Flask, g
+from flask import Blueprint, Flask, current_app, g, request
 from werkzeug.exceptions import BadRequest
 
 from flask_limiter import Limiter
