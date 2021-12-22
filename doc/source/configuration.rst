@@ -119,8 +119,6 @@ Examples
    early enough to not cause disruption to a running application.
 
 
-.. _ratelimit-strategy:
-
 .. _ratelimit-headers:
 
 Rate-limiting Headers

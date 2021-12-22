@@ -1,3 +1,5 @@
+.. _ratelimit-strategy:
+
 Rate limiting strategies
 ========================
 Flask-Limiter comes with three different rate limiting strategies built-in. Pick
