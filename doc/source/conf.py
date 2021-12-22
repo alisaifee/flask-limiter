@@ -72,7 +72,7 @@ extlinks = {
 
 intersphinx_mapping = {
     "python": ("http://docs.python.org/", None),
-    "limits": ("https://limits.readthedocs.io/en/latest/", None),
+    "limits": ("https://limits.readthedocs.io/en/stable/", None),
     "redis-py-cluster": ("https://redis-py-cluster.readthedocs.io/en/latest/", None),
     "redis-py": ("https://redis-py.readthedocs.io/en/latest/", None),
     "pymemcache": ("https://pymemcache.readthedocs.io/en/latest/", None),
