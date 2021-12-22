@@ -84,7 +84,7 @@ class Limiter(object):
     :param strategy: the strategy to use.
      Refer to :ref:`ratelimit-strategy`
     :param storage_uri: the storage location.
-     Refer to :ref:`ratelimit-conf`
+     Refer to :data:`RATELIMIT_STORAGE_URL`
     :param storage_options: kwargs to pass to the storage implementation
      upon instantiation.
     :param auto_check: whether to automatically check the rate limit in

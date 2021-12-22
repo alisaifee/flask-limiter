@@ -2,11 +2,11 @@
 .. _redis: https://pypi.python.org/pypi/redis
 .. _github issue #41: https://github.com/alisaifee/flask-limiter/issues/41
 .. _flask apps and ip spoofing: http://esd.io/blog/flask-apps-heroku-real-ip-spoofing.html
-.. _RFC2616: https://tools.ietf.org/html/rfc2616#section-14.37
 
 .. image:: _static/logo.png
-    :alt: Flask-Limiter
+    :width: 600px
     :align: center
+    :class: logo
 
 =============
 Flask-Limiter
@@ -14,22 +14,60 @@ Flask-Limiter
 
 .. currentmodule:: flask_limiter
 
-.. image:: https://img.shields.io/github/last-commit/alisaifee/flask-limiter?logo=github&style=flat-square&labelColor=#282828
-   :target: https://github.com/alisaifee/flask-limiter
-.. image:: https://img.shields.io/github/workflow/status/alisaifee/flask-limiter/CI?logo=github&style=flat-square&labelColor=#282828
-   :target: https://github.com/alisaifee/flask-limiter/actions/workflows/main.yml
-.. image:: https://img.shields.io/codecov/c/github/alisaifee/flask-limiter?logo=codecov&style=flat-square&labelColor=#282828
-   :target: https://app.codecov.io/gh/alisaifee/flask-limiter
-.. image:: https://img.shields.io/pypi/pyversions/flask-limiter?style=flat-square&logo=pypi
-   :target: https://pypi.org/project/flask-limiter
+.. toctree::
+   :maxdepth: 2
+   :hidden:
+
+   strategies
+   configuration
+   recipes
+   api
+   development
+   changelog
+   misc
+
+
+.. container:: badges
+
+   .. image:: https://img.shields.io/github/last-commit/alisaifee/flask-limiter?logo=github&style=flat-square&labelColor=#282828
+      :target: https://github.com/alisaifee/flask-limiter
+      :class: header-badge
+   .. image:: https://img.shields.io/github/workflow/status/alisaifee/flask-limiter/CI?logo=github&style=flat-square&labelColor=#282828
+      :target: https://github.com/alisaifee/flask-limiter/actions/workflows/main.yml
+      :class: header-badge
+   .. image:: https://img.shields.io/codecov/c/github/alisaifee/flask-limiter?logo=codecov&style=flat-square&labelColor=#282828
+      :target: https://app.codecov.io/gh/alisaifee/flask-limiter
+      :class: header-badge
+   .. image:: https://img.shields.io/pypi/pyversions/flask-limiter?style=flat-square&logo=pypi
+      :target: https://pypi.org/project/flask-limiter
+      :class: header-badge
+
+**Flask-Limiter** provides rate limiting features to :class:`~flask.Flask` applications.
+
+By adding the extension to your flask application, you can configure various
+rate limits at different levels (e.g. application wide, per :class:`~flask.Blueprint`,
+routes, resource etc).
+
+**Flask-Limiter** can be configured to persist the rate limit state to many
+commonly used storage backends via the :doc:`limits:index` library.
+
+
+.. contents:: Let's get started!
+   :backlinks: none
+   :local:
+
 
 Installation
 ============
-.. tabbed:: Standalone
 
-   .. code:: console
+**Flask-Limiter** can be installed via :program:`pip`.
 
-      $ pip install Flask-Limiter
+.. code:: console
+
+  $ pip install Flask-Limiter
+
+To include extra dependencies for a specific storage backend you can add the
+specific backend name via the ``extras`` notation. For example:
 
 .. tabbed:: Redis
 
@@ -52,6 +90,7 @@ Installation
 
 Quick start
 ===========
+A very basic setup can be achieved as follows:
 
 .. code-block:: python
 
@@ -100,6 +139,7 @@ The above Flask app will have the following rate limiting characteristics:
 Every time a request exceeds the rate limit, the view function will not get called and instead
 a `429 <http://tools.ietf.org/html/rfc6585#section-4>`_ http error will be raised.
 
+
 The Flask-Limiter extension
 ---------------------------
 The extension can be initialized with the :class:`flask.Flask` application
@@ -115,25 +155,29 @@ Using the constructor
 
       limiter = Limiter(app, key_func=get_remote_address)
 
-Deferred app initialization using ``init_app``
+Deferred app initialization using :meth:`~flask_limiter.Limiter.init_app`
 
    .. code-block:: python
 
       limiter = Limiter(key_func=get_remote_address)
       limiter.init_app(app)
 
+At this point it might be a good idea to look at the configuration options
+available in the extension in the :ref:`configuration:using flask config` section and the
+:class:`flask_limiter.Limiter` class documentation.
+
 
 .. _ratelimit-domain:
 
 Rate Limit Domain
 -----------------
-Each :class:`~flask_limiter.Limiter` instance is initialized with a
-:attr:`key_func` which returns the bucket in which each request is put
-into when evaluating whether it is within the rate limit or not.
+Each :class:`~flask_limiter.Limiter` instance should be initialized with a
+:paramref:`~.Limiter.key_func` that returns the bucket in which each request
+is put into when evaluating whether it is within the rate limit or not.
 
 For simple setups a utility function is provided:
 :func:`~flask_limiter.util.get_remote_address` which uses the
-:attr:`remote_address` of the request.
+:attr:`~flask.Request.remote_addr` from :class:`flask.Request`.
 
 Please refer to :ref:`deploy-behind-proxy` for an example.
 
@@ -321,511 +365,4 @@ In the above example, any request that contains the header ``X-Internal: true``
 or originates from localhost will not be rate limited.
 
 
-.. _ratelimit-conf:
-
-Configuration
-=============
-
-The following :doc:`flask Configuration <flask:config>` values are honored by
-:class:`~flask_limiter.Limiter`. If the corresponding configuration value is also present
-as an argument to the :class:`~flask_limiter.Limiter` constructor, the constructor argument will
-take priority.
-
-.. data:: RATELIMIT_GLOBAL
-
-   .. deprecated:: 0.9.4. Use :any:`RATELIMIT_DEFAULT` instead.
-
-
-.. data:: RATELIMIT_DEFAULT
-
-   A comma (or some other delimiter) separated string that will be used to
-   apply a default limit on all routes. If not provided, the default limits can be
-   passed to the :class:`~flask_limiter.Limiter` constructor as well (the values passed to the
-   constructor take precedence over those in the config).
-   :ref:`ratelimit-string` for details.
-
-.. data:: RATELIMIT_DEFAULTS_PER_METHOD
-
-   Whether default limits are applied per method, per route or as a combination
-   of all method per route.
-
-.. data:: RATELIMIT_DEFAULTS_EXEMPT_WHEN
-
-   A function that should return a truthy value if the default rate limit(s)
-   should be skipped for the current request. This callback is called in the
-   :doc:`flask request context <flask:reqcontext>` ``before_request`` phase.
-
-.. data:: RATELIMIT_DEFAULTS_DEDUCT_WHEN
-
-   A function that should return a truthy value if a deduction should be made
-   from the default rate limit(s) for the current request. This callback is called
-   in the :doc:`flask request context <flask:reqcontext>` ``after_request`` phase.
-
-.. data:: RATELIMIT_APPLICATION
-
-   A comma (or some other delimiter) separated string that will be used to
-   apply limits to the application as a whole (i.e. shared by all routes).
-
-.. data:: RATELIMIT_STORAGE_URL
-
-   A storage location conforming to the scheme in :ref:`storage-scheme`.
-   A basic in-memory storage can be used by specifying ``memory://`` though this
-   should probably never be used in production. Some supported backends include:
-
-   - Memcached: ``memcached://host:port``
-   - MongoDB: ``mongodb://host:port``
-   - Redis: ``redis://host:port``
-
-   For specific examples and requirements of supported backends please
-   refer to :ref:`storage-scheme`.
-
-.. data:: RATELIMIT_STORAGE_OPTIONS
-
-   A dictionary to set extra options to be passed to the  storage implementation
-   upon initialization.
-
-.. data:: RATELIMIT_STRATEGY
-
-   The rate limiting strategy to use.  :ref:`ratelimit-strategy`
-   for details.
-
-.. data:: RATELIMIT_HEADERS_ENABLED
-
-   Enables returning :ref:`ratelimit-headers`. Defaults to ``False``
-
-.. data:: RATELIMIT_ENABLED
-
-   Overall kill switch for rate limits. Defaults to ``True``
-
-.. data:: RATELIMIT_HEADER_LIMIT
-
-   Header for the current rate limit. Defaults to ``X-RateLimit-Limit``
-
-.. data:: RATELIMIT_HEADER_RESET
-
-   Header for the reset time of the current rate limit. Defaults to ``X-RateLimit-Reset``
-
-.. data:: RATELIMIT_HEADER_REMAINING
-
-   Header for the number of requests remaining in the current rate limit. Defaults to ``X-RateLimit-Remaining``
-
-.. data:: RATELIMIT_HEADER_RETRY_AFTER
-
-   Header for when the client should retry the request. Defaults to ``Retry-After``
-
-.. data:: RATELIMIT_HEADER_RETRY_AFTER_VALUE
-
-   Allows configuration of how the value of the ``Retry-After`` header is rendered.
-   One of ``http-date`` or ``delta-seconds``. (`RFC2616`_).
-
-.. data:: RATELIMIT_SWALLOW_ERRORS
-
-   Whether to allow failures while attempting to perform a rate limit
-   such as errors with downstream storage. Setting this value to ``True``
-   will effectively disable rate limiting for requests where an error has
-   occurred.
-
-.. data:: RATELIMIT_IN_MEMORY_FALLBACK_ENABLED
-
-   ``True``/``False``. If enabled an in memory rate limiter will be used
-   as a fallback when the configured storage is down. Note that, when used in
-   combination with ``RATELIMIT_IN_MEMORY_FALLBACK`` the original rate limits
-   will not be inherited and the values provided in
-
-.. data:: RATELIMIT_IN_MEMORY_FALLBACK
-
-   A comma (or some other delimiter) separated string
-   that will be used when the configured storage is down.
-
-.. data:: RATELIMIT_KEY_PREFIX
-
-   Prefix that is prepended to each stored rate limit key and app context
-   global name. This can be useful when using a shared storage for multiple
-   applications or rate limit domains. For multi-instance use cases, explicitly
-   pass ``key_prefix`` keyword argument to :class:`~flask_limiter.Limiter` constructor instead.
-
-.. _ratelimit-string:
-
-Rate limit string notation
-==========================
-
-Rate limits are specified as strings following the format::
-
-    [count] [per|/] [n (optional)] [second|minute|hour|day|month|year]
-
-You can combine multiple rate limits by separating them with a delimiter of your
-choice.
-
-Examples
---------
-
-* ``10 per hour``
-* ``10/hour``
-* ``10/hour;100/day;2000 per year``
-* ``100/day, 500/7days``
-
-.. warning:: If rate limit strings that are provided to the :meth:`~flask_limiter.Limiter.limit`
-   decorator are malformed and can't be parsed the decorated route will fall back
-   to the default rate limit(s) and an ``ERROR`` log message will be emitted. Refer
-   to :ref:`logging` for more details on capturing this information. Malformed
-   default rate limit strings will however raise an exception as they are evaluated
-   early enough to not cause disruption to a running application.
-
-
-.. _ratelimit-strategy:
-
-Rate limiting strategies
-========================
-Flask-Limiter comes with three different rate limiting strategies built-in. Pick
-the one that works for your use-case by specifying it in your flask config as
-``RATELIMIT_STRATEGY`` (one of ``fixed-window``, ``fixed-window-elastic-expiry``,
-or ``moving-window``), or as a constructor keyword argument. The default
-configuration is ``fixed-window``.
-
-
-Fixed Window
-------------
-This is the most memory efficient strategy to use as it maintains one counter
-per resource and rate limit. It does however have its drawbacks as it allows
-bursts within each window - thus allowing an 'attacker' to by-pass the limits.
-The effects of these bursts can be partially circumvented by enforcing multiple
-granularities of windows per resource.
-
-For example, if you specify a ``100/minute`` rate limit on a route, this strategy will
-allow 100 hits in the last second of one window and a 100 more in the first
-second of the next window. To ensure that such bursts are managed, you could add a second rate limit
-of ``2/second`` on the same route.
-
-Fixed Window with Elastic Expiry
---------------------------------
-This strategy works almost identically to the Fixed Window strategy with the exception
-that each hit results in the extension of the window. This strategy works well for
-creating large penalties for breaching a rate limit.
-
-For example, if you specify a ``100/minute`` rate limit on a route and it is being
-attacked at the rate of 5 hits per second for 2 minutes - the attacker will be locked
-out of the resource for an extra 60 seconds after the last hit. This strategy helps
-circumvent bursts.
-
-Moving Window
--------------
-.. warning:: The moving window strategy is not implemented for the memcached
-   storage backend. The strategy requires using a list with fast random access which
-   is not very convenient to implement with a memcached storage.
-
-This strategy is the most effective for preventing bursts from by-passing the
-rate limit as the window for each limit is not fixed at the start and end of each time unit
-(i.e. N/second for a moving window means N in the last 1000 milliseconds). There is
-however a higher memory cost associated with this strategy as it requires ``N`` items to
-be maintained in memory per resource and rate limit.
-
-.. _ratelimit-headers:
-
-Rate-limiting Headers
-=====================
-
-If the configuration is enabled, information about the rate limit with respect to the
-route being requested will be added to the response headers. Since multiple rate limits
-can be active for a given route - the rate limit with the lowest time granularity will be
-used in the scenario when the request does not breach any rate limits.
-
-.. tabularcolumns:: |p{8cm}|p{8.5cm}|
-
-============================== ================================================
-``X-RateLimit-Limit``          The total number of requests allowed for the
-                               active window
-``X-RateLimit-Remaining``      The number of requests remaining in the active
-                               window.
-``X-RateLimit-Reset``          UTC seconds since epoch when the window will be
-                               reset.
-``Retry-After``                Seconds to retry after or the http date when the
-                               Rate Limit will be reset. The way the value is presented
-                               depends on the configuration value set in `RATELIMIT_HEADER_RETRY_AFTER_VALUE`
-                               and defaults to `delta-seconds`.
-============================== ================================================
-
-.. warning:: Enabling the headers has an additional cost with certain storage / strategy combinations.
-
-    * Memcached + Fixed Window: an extra key per rate limit is stored to calculate
-      ``X-RateLimit-Reset``
-    * Redis + Moving Window: an extra call to redis is involved during every request
-      to calculate ``X-RateLimit-Remaining`` and ``X-RateLimit-Reset``
-
-The header names can be customised if required by either using the flask configuration (:ref:`ratelimit-conf`)
-values or by setting the ``header_mapping`` property of the :class:`~flask_limiter.Limiter` as follows::
-
-    from flask_limiter import Limiter, HEADERS
-    limiter = Limiter()
-    limiter.header_mapping = {
-        HEADERS.LIMIT : "X-My-Limit",
-        HEADERS.RESET : "X-My-Reset",
-        HEADERS.REMAINING: "X-My-Remaining"
-    }
-    # or by only partially specifying the overrides
-    limiter.header_mapping[HEADERS.LIMIT] = 'X-My-Limit'
-
-
-
-
-
-Recipes
-=======
-
-.. _keyfunc-customization:
-
-Rate Limit Key Functions
--------------------------
-
-You can easily customize your rate limits to be based on any
-characteristic of the incoming request. Both the :class:`~flask_limiter.Limiter` constructor
-and the :meth:`~flask_limiter.Limiter.limit` decorator accept a keyword argument
-``key_func`` that should return a string (or an object that has a string representation).
-
-Rate limiting a route by current user (using Flask-Login)::
-
-
-    @route("/test")
-    @login_required
-    @limiter.limit("1 per day", key_func = lambda : current_user.username)
-    def test_route():
-        return "42"
-
-
-
-Rate limiting all requests by country::
-
-    from flask import request, Flask
-    import GeoIP
-    gi = GeoIP.open("GeoLiteCity.dat", GeoIP.GEOIP_INDEX_CACHE | GeoIP.GEOIP_CHECK_CACHE)
-
-    def get_request_country():
-        return gi.record_by_name(request.remote_addr)['region_name']
-
-    app = Flask(__name__)
-    limiter = Limiter(app, default_limits=["10/hour"], key_func = get_request_country)
-
-
-
-Custom Rate limit exceeded responses
-------------------------------------
-The default configuration results in an ``abort(429)`` being called every time
-a rate limit is exceeded for a particular route. The exceeded limit is added to
-the response and results in an response body that looks something like:
-
-  .. code:: html
-
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-    <title>429 Too Many Requests</title>
-    <h1>Too Many Requests</h1>
-    <p>1 per 1 day</p>
-
-
-If you want to configure the response you can register an error handler for the
-``429`` error code in a manner similar to the following example, which returns a
-json response instead::
-
-    @app.errorhandler(429)
-    def ratelimit_handler(e):
-        return make_response(
-                jsonify(error="ratelimit exceeded %s" % e.description)
-                , 429
-        )
-
-Customizing rate limits based on response
------------------------------------------
-For scenarios where the decision to count the current request towards a rate limit
-can only be made after the request has completed, a callable that accepts the current
-:class:`flask.Response` object as its argument can be provided to the :meth:`~flask_limiter.Limiter.limit` or
-:meth:`~flask_limiter.Limiter.shared_limit` decorators through the ``deduct_when`` keyword arugment.
-A truthy response from the callable will result in a deduction from the rate limit.
-
-As an example, to only count non `200` responses towards the rate limit
-
-
-.. code-block:: python
-
-        @app.route("..")
-        @limiter.limit(
-            "1/second",
-            deduct_when=lambda response: response.status_code != 200
-        )
-        def route():
-           ...
-
-
-.. note:: All requests will be tested for the rate limit and rejected accordingly
- if the rate limit is already hit. The providion of the `deduct_when`
- argument only changes whether the request will count towards depleting the rate limit.
-
-
-Using Flask Pluggable Views
----------------------------
-
-If you are using a class based approach to defining view function, the regular
-method of decorating a view function to apply a per route rate limit will not
-work. You can add rate limits to your view classes using the following approach.
-
-
-.. code-block:: python
-
-    app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
-
-    class MyView(flask.views.MethodView):
-        decorators = [limiter.limit("10/second")]
-        def get(self):
-            return "get"
-
-        def put(self):
-            return "put"
-
-
-.. note:: This approach is limited to either sharing the same rate limit for
- all http methods of a given :class:`flask.views.View` or applying the declared
- rate limit independently for each http method (to accomplish this, pass in ``True`` to
- the ``per_method`` keyword argument to :meth:`~flask_limiter.Limiter.limit`). Alternatively, the limit
- can be restricted to only certain http methods by passing them as a list to the `methods`
- keyword argument.
-
-
-The above approach has been tested with sub-classes of  :class:`flask.views.View`,
-:class:`flask.views.MethodView` and :class:`flask_restful.Resource`.
-
-Rate limiting all routes in a :class:`flask.Blueprint`
-------------------------------------------------------
-:meth:`~flask_limiter.Limiter.limit`, :meth:`~flask_limiter.Limiter.shared_limit` &
-:meth:`~flask_limiter.Limiter.exempt` can all be tpplied to :class:`flask.Blueprint` instances as well.
-In the following example the **login** Blueprint has a special rate limit applied to all its routes, while
-the **help** Blueprint is exempt from all rate limits. The **regular** Blueprint follows the default rate limits.
-
-
-    .. code-block:: python
-
-
-        app = Flask(__name__)
-        login = Blueprint("login", __name__, url_prefix = "/login")
-        regular = Blueprint("regular", __name__, url_prefix = "/regular")
-        doc = Blueprint("doc", __name__, url_prefix = "/doc")
-
-        @doc.route("/")
-        def doc_index():
-            return "doc"
-
-        @regular.route("/")
-        def regular_index():
-            return "regular"
-
-        @login.route("/")
-        def login_index():
-            return "login"
-
-
-        limiter = Limiter(app, default_limits = ["1/second"], key_func=get_remote_address)
-        limiter.limit("60/hour")(login)
-        limiter.exempt(doc)
-
-        app.register_blueprint(doc)
-        app.register_blueprint(login)
-        app.register_blueprint(regular)
-
-
-
-.. _logging:
-
-Logging
--------
-Each :class:`~flask_limiter.Limiter` instance has a ``logger`` instance variable that is by
-default **not** configured with a handler. You can add your own handler to obtain
-log messages emitted by :mod:`flask_limiter`.
-
-Simple stdout handler::
-
-    limiter = Limiter(app, key_func=get_remote_address)
-    limiter.logger.addHandler(StreamHandler())
-
-Reusing all the handlers of the ``logger`` instance of the :class:`flask.Flask` app::
-
-    app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
-    for handler in app.logger.handlers:
-        limiter.logger.addHandler(handler)
-
-
-
-
-Custom error messages
----------------------
-:meth:`~flask_limiter.Limiter.limit` & :meth:`~flask_limiter.Limiter.shared_limit` can be provided with an `error_message`
-argument to over ride the default `n per x` error message that is returned to the calling client.
-The `error_message` argument can either be a simple string or a callable that returns one.
-
-    .. code-block:: python
-
-
-        app = Flask(__name__)
-        limiter = Limiter(app, key_func=get_remote_address)
-
-        def error_handler():
-            return app.config.get("DEFAULT_ERROR_MESSAGE")
-
-        @app.route("/")
-        @limiter.limit("1/second", error_message='chill!')
-        def index():
-            ....
-
-        @app.route("/ping")
-        @limiter.limit("10/second", error_message=error_handler)
-        def ping():
-            ....
-
-.. _deploy-behind-proxy:
-
-Deploying an application behind a proxy
----------------------------------------
-
-If your application is behind a proxy and you are using werkzeug > 0.9+ you can use the :class:`werkzeug.middleware.proxy_fix.ProxyFix`
-fixer to reliably get the remote address of the user, while protecting your application against ip spoofing via headers.
-
-
-    .. code-block:: python
-
-        from flask import Flask
-        from flask_limiter import Limiter
-        from flask_limiter.util import get_remote_address
-        from werkzeug.middleware.proxy_fix import ProxyFix
-
-        app = Flask(__name__)
-        # for example if the request goes through one proxy
-        # before hitting your application server
-        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
-        limiter = Limiter(app, key_func=get_remote_address)
-
-API
-===
-
-.. currentmodule:: flask_limiter
-
-Core
-----
-.. autoclass:: Limiter
-
-Exceptions
-----------
-.. autoexception:: RateLimitExceeded
-  :no-inherited-members:
-
-Utils
------
-
-.. automodule:: flask_limiter.util
-
-
-.. include:: ../../HISTORY.rst
-
-References
-==========
-* `Redis rate limiting pattern #2 <http://redis.io/commands/INCR>`_
-* `DomainTools redis rate limiter <https://github.com/DomainTools/rate-limit>`_
-* `limits: python rate limiting utilities <https://limits.readthedocs.org>`_
-
-.. include:: ../../CONTRIBUTIONS.rst
+For more complex use cases, refer to the :ref:`recipes:recipes` section.
