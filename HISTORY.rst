@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v2.0.4
+------
+Release Date: 2021-12-22
+
+* Chore
+
+  * Documentation theme upgrades
+  * Integrate pytest-docker plugin
+  * Mass linting
+
+* Deprecation
+
+  * Removed deprecated RATELIMIT_GLOBAL config
+  * Added deprecation doc for RATELIMIT_STORAGE_URL config
+
 v2.0.3
 ------
 Release Date: 2021-12-15
@@ -431,6 +446,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
