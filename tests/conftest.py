@@ -1,4 +1,5 @@
 import pymemcache
+import pymongo
 import pytest
 import redis
 from flask import Flask
@@ -9,7 +10,7 @@ from flask_limiter.util import get_remote_address
 
 @pytest.fixture
 def redis_connection(docker_services):
-    r = redis.from_url("redis://localhost:36379")
+    r = redis.from_url("redis://localhost:46379")
     r.flushall()
 
     return r
@@ -18,6 +19,11 @@ def redis_connection(docker_services):
 @pytest.fixture
 def memcached_connection(docker_services):
     return pymemcache.Client(("localhost", 31211))
+
+
+@pytest.fixture
+def mongo_connection(docker_services):
+    return pymongo.MongoClient("mongodb://localhost:47017")
 
 
 @pytest.fixture

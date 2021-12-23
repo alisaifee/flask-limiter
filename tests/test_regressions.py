@@ -12,7 +12,7 @@ def test_redis_request_slower_than_fixed_window(redis_connection, extension_fact
     app, limiter = extension_factory(
         {
             C.DEFAULT_LIMITS: "5 per second",
-            C.STORAGE_URI: "redis://localhost:36379",
+            C.STORAGE_URI: "redis://localhost:46379",
             C.STRATEGY: "fixed-window",
             C.HEADERS_ENABLED: True,
         }
@@ -32,7 +32,7 @@ def test_redis_request_slower_than_moving_window(redis_connection, extension_fac
     app, limiter = extension_factory(
         {
             C.DEFAULT_LIMITS: "5 per second",
-            C.STORAGE_URI: "redis://localhost:36379",
+            C.STORAGE_URI: "redis://localhost:46379",
             C.STRATEGY: "moving-window",
             C.HEADERS_ENABLED: True,
         }
@@ -93,10 +93,10 @@ def test_invalid_ratelimit_key(extension_factory):
 
 def test_custom_key_prefix_with_headers(redis_connection, extension_factory):
     app1, limiter1 = extension_factory(
-        key_prefix="moo", storage_uri="redis://localhost:36379", headers_enabled=True
+        key_prefix="moo", storage_uri="redis://localhost:46379", headers_enabled=True
     )
     app2, limiter2 = extension_factory(
-        key_prefix="cow", storage_uri="redis://localhost:36379", headers_enabled=True
+        key_prefix="cow", storage_uri="redis://localhost:46379", headers_enabled=True
     )
 
     @app1.route("/test")

@@ -8,4 +8,8 @@ services:
   redis:
     image: redis
     ports:
-      - 36379:6379
+      - 46379:6379
+  mongodb:
+    image: mongo
+    ports:
+      - '47017:27017'

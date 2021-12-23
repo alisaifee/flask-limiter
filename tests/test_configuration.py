@@ -27,7 +27,7 @@ def test_constructor_arguments_over_config(redis_connection):
     app.config.setdefault(C.STRATEGY, "fixed-window-elastic-expiry")
     limiter = Limiter(strategy="moving-window", key_func=get_remote_address)
     limiter.init_app(app)
-    app.config.setdefault(C.STORAGE_URI, "redis://localhost:36379")
+    app.config.setdefault(C.STORAGE_URI, "redis://localhost:46379")
     assert type(limiter._limiter) == MovingWindowRateLimiter
     limiter = Limiter(
         storage_uri="memcached://localhost:31211", key_func=get_remote_address

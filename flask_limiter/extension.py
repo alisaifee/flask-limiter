@@ -228,10 +228,11 @@ class Limiter(object):
             C.HEADERS_ENABLED, False
         )
         self._storage_options.update(config.get(C.STORAGE_OPTIONS, {}))
-        storage_uri_from_config = config.get(C.STORAGE_URI, config.get(C.STORAGE_URL, "memory://"))
+        storage_uri_from_config = config.get(
+            C.STORAGE_URI, config.get(C.STORAGE_URL, "memory://")
+        )
         self._storage = storage_from_string(
-            self._storage_uri or storage_uri_from_config,
-            **self._storage_options
+            self._storage_uri or storage_uri_from_config, **self._storage_options
         )
         strategy = self._strategy or config.setdefault(C.STRATEGY, "fixed-window")
 

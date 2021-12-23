@@ -545,12 +545,12 @@ def test_no_auto_check(extension_factory):
 
 def test_custom_key_prefix(redis_connection, extension_factory):
     app1, limiter1 = extension_factory(
-        key_prefix="moo", storage_uri="redis://localhost:36379"
+        key_prefix="moo", storage_uri="redis://localhost:46379"
     )
     app2, limiter2 = extension_factory(
-        {C.KEY_PREFIX: "cow"}, storage_uri="redis://localhost:36379"
+        {C.KEY_PREFIX: "cow"}, storage_uri="redis://localhost:46379"
     )
-    app3, limiter3 = extension_factory(storage_uri="redis://localhost:36379")
+    app3, limiter3 = extension_factory(storage_uri="redis://localhost:46379")
 
     @app1.route("/test")
     @limiter1.limit("1/day")
