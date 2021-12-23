@@ -1,5 +1,5 @@
-import pytest
 import hiro
+import pytest
 
 
 @pytest.fixture(autouse=True)
