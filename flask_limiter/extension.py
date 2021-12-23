@@ -6,7 +6,7 @@ import itertools
 import logging
 import time
 from functools import wraps
-from typing import Callable, Dict, List, Optional, Set, Union
+from typing import Callable, Dict, List, Optional, Set, Union, cast
 
 from flask import Blueprint, Flask, Response, current_app, g, request
 from limits.errors import ConfigurationError
@@ -230,8 +230,11 @@ class Limiter(object):
         storage_uri_from_config = config.get(
             C.STORAGE_URI, config.get(C.STORAGE_URL, "memory://")
         )
-        self._storage = storage_from_string(
-            self._storage_uri or storage_uri_from_config, **self._storage_options
+        self._storage = cast(
+            Storage,
+            storage_from_string(
+                self._storage_uri or storage_uri_from_config, **self._storage_options
+            ),
         )
         strategy = self._strategy or config.setdefault(C.STRATEGY, "fixed-window")
 
@@ -579,6 +582,7 @@ class Limiter(object):
                                     limit.override_defaults,
                                     limit.deduct_when,
                                 )
+
                                 for limit in limit_group
                             ]
                         )
@@ -610,6 +614,7 @@ class Limiter(object):
                 route_limits = limits + dynamic_limits
                 all_limits = (
                     list(itertools.chain(*self._application_limits))
+
                     if in_middleware
                     else []
                 )
