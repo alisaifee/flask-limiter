@@ -29,7 +29,7 @@ setup(
     install_requires=list(REQUIREMENTS),
     classifiers=[k for k in open("CLASSIFIERS").read().split("\n") if k],
     description="Rate limiting for flask applications",
-    long_description=open("README.rst").read() + open("HISTORY.rst").read(),
+    long_description=open("README.rst").read(),
     packages=find_packages(exclude=["tests*"]),
     python_requires=">=3.7",
 )
