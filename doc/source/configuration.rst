@@ -98,7 +98,7 @@ Rate limit string notation
 
 Rate limits are specified as strings following the format::
 
-    [count] [per|/] [n (optional)] [second|minute|hour|day|month|year]
+    [count] [per|/] [n (optional)] [second|minute|hour|day|month|year][s]
 
 You can combine multiple rate limits by separating them with a delimiter of your
 choice.
@@ -107,9 +107,10 @@ Examples
 ^^^^^^^^
 
 * ``10 per hour``
+* ``10 per 2 hours``
 * ``10/hour``
-* ``10/hour;100/day;2000 per year``
-* ``100/day, 500/7days``
+* ``5/2 seconds;10/hour;100/day;2000 per year``
+* ``100/day, 500/7 days``
 
 .. warning:: If rate limit strings that are provided to the :meth:`~flask_limiter.Limiter.limit`
    decorator are malformed and can't be parsed the decorated route will fall back
