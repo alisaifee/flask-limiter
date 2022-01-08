@@ -5,7 +5,7 @@ import datetime
 import itertools
 import logging
 import time
-from functools import cached_property, wraps
+from functools import wraps
 from typing import Callable, Dict, List, Optional, Set, Union, cast
 from weakref import ref
 
@@ -72,18 +72,24 @@ class LimitDetail:
         self.limit = limit
         self.request_args = request_args
         self.key = limit.key_for(*request_args)
+        self._window = None
 
-    @cached_property
-    def _window(self):
-        return self.limiter().get_window_stats(self.limit, *self.request_args)
+    @property
+    def window(self):
+        if not self._window:
+            self._window = self.limiter().get_window_stats(
+                self.limit, *self.request_args
+            )
+
+        return self._window
 
     @property
     def reset_at(self):
-        return self._window[0] + 1
+        return self.window[0] + 1
 
     @property
     def remaining(self):
-        return self._window[1]
+        return self.window[1]
 
 
 MAX_BACKEND_CHECKS = 5
