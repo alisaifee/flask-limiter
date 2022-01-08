@@ -7,10 +7,9 @@ import time
 import hiro
 import mock
 from flask import Flask, request
-from werkzeug.exceptions import BadRequest
-
 from flask_limiter.extension import HEADERS, C, Limiter
 from flask_limiter.util import get_remote_address
+from werkzeug.exceptions import BadRequest
 
 
 def test_reset(extension_factory):
@@ -115,6 +114,7 @@ def test_default_limit_with_conditional_deduction(extension_factory):
     def t1(path):
         if path != "1":
             raise BadRequest()
+
         return path
 
     with hiro.Timeline() as timeline:
@@ -171,6 +171,7 @@ def test_reuse_logging():
     app_handler.level = logging.INFO
     app.logger.addHandler(app_handler)
     limiter = Limiter(app, key_func=get_remote_address)
+
     for handler in app.logger.handlers:
         limiter.logger.addHandler(handler)
 
@@ -203,6 +204,7 @@ def test_disabled_flag(extension_factory):
     with app.test_client() as cli:
         assert cli.get("/t1").status_code == 200
         assert cli.get("/t1").status_code == 200
+
         for i in range(0, 10):
             assert cli.get("/t2").status_code == 200
         assert cli.get("/t2").status_code == 200
@@ -291,6 +293,8 @@ def test_headers_no_breach():
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 2))
 
             assert resp.headers.get("Retry-After") == str(1)
+            assert limiter.header_limit.remaining == 1
+            assert limiter.header_limit.reset_at == int(time.time() + 2)
 
 
 def test_headers_breach():
@@ -317,6 +321,8 @@ def test_headers_breach():
             assert resp.headers.get("X-RateLimit-Remaining") == "0"
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 50))
             assert resp.headers.get("Retry-After") == str(int(50))
+            assert limiter.header_limit.remaining == 0
+            assert limiter.header_limit.reset_at == int(time.time() + 50)
 
 
 def test_retry_after():
@@ -607,6 +613,7 @@ def test_second_instance_bypassed_by_shared_g():
             assert cli.get("/test2").status_code == 200
             assert cli.get("/test1").status_code == 429
             assert cli.get("/test2").status_code == 200
+
             for i in range(8):
                 assert cli.get("/test1").status_code == 429
                 assert cli.get("/test2").status_code == 200

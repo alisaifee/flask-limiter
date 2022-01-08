@@ -5,10 +5,12 @@ import datetime
 import itertools
 import logging
 import time
-from functools import wraps
+from functools import cached_property, wraps
 from typing import Callable, Dict, List, Optional, Set, Union, cast
+from weakref import ref
 
 from flask import Blueprint, Flask, Response, current_app, g, request
+from limits import RateLimitItem
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
@@ -47,6 +49,41 @@ class HEADERS:
     REMAINING = 2
     LIMIT = 3
     RETRY_AFTER = 4
+
+
+class LimitDetail:
+    """
+    Provides details of an enforced limit within the context of a request
+    """
+
+    #: The isntance of the rate limit
+    limit: RateLimitItem
+    #: The full key for the request against which the rate limit is tested
+    key: str
+    #: timestamp at which the rate limit will be reset
+    reset_at: int
+    #: quantity remaining for this rate limit
+    remaining: int
+
+    def __init__(
+        self, limiter: RateLimiter, limit: RateLimitItem, request_args: List[str]
+    ):
+        self.limiter = ref(limiter)
+        self.limit = limit
+        self.request_args = request_args
+        self.key = limit.key_for(*request_args)
+
+    @cached_property
+    def _window(self):
+        return self.limiter().get_window_stats(self.limit, *self.request_args)
+
+    @property
+    def reset_at(self):
+        return self._window[0] + 1
+
+    @property
+    def remaining(self):
+        return self._window[1]
 
 
 MAX_BACKEND_CHECKS = 5
@@ -383,6 +420,39 @@ class Limiter(object):
         else:
             return self._limiter
 
+    @property
+    def header_limit(self) -> Optional[LimitDetail]:
+        """
+        Get details for the rate limit used for generating rate limit headers
+        within the context of the current request.
+
+        In a scenario where multiple rate limits are active for a single request
+        and none are breached, the rate limit which applies to the smallest
+        time window will be returned.
+
+        .. important:: The value of ``remaining`` in :class:`LimitDetail` is after
+           deduction for the current request.
+
+        For example::
+
+            @limit("1/second")
+            @limit("60/minute")
+            @limit("2/day")
+            def route(...):
+                ...
+
+        - Request 1 at ``t=0`` (no breach): this will return the details for for ``1/second``
+        - Request 2 at ``t=1`` (no breach): it will still return the details for ``1/second``
+        - Request 3 at ``t=2`` (breach): it will return the details for ``2/day``
+        """
+        last_limit = getattr(g, "%s_view_rate_limit" % self._key_prefix, None)
+        if last_limit:
+            return LimitDetail(
+                limit=last_limit[0], limiter=self.limiter, request_args=last_limit[1:]
+            )
+
+        return None
+
     def __check_conditional_deductions(self, response):
 
         for lim, args in getattr(
@@ -395,19 +465,19 @@ class Limiter(object):
 
     def __inject_headers(self, response):
         self.__check_conditional_deductions(response)
-        current_limit = getattr(g, "%s_view_rate_limit" % self._key_prefix, None)
+        header_limit = self.header_limit
 
-        if self.enabled and self._headers_enabled and current_limit:
+        if self.enabled and self._headers_enabled and header_limit:
             try:
-                window_stats = self.limiter.get_window_stats(*current_limit)
-                reset_in: Union[int, float] = 1 + window_stats[0]
+                reset_at: Union[int, float] = header_limit.reset_at
                 response.headers.add(
-                    self._header_mapping[HEADERS.LIMIT], str(current_limit[0].amount)
+                    self._header_mapping[HEADERS.LIMIT],
+                    str(header_limit.limit.amount),
                 )
                 response.headers.add(
-                    self._header_mapping[HEADERS.REMAINING], window_stats[1]
+                    self._header_mapping[HEADERS.REMAINING], header_limit.remaining
                 )
-                response.headers.add(self._header_mapping[HEADERS.RESET], reset_in)
+                response.headers.add(self._header_mapping[HEADERS.RESET], reset_at)
 
                 # response may have an existing retry after
                 existing_retry_after_header = response.headers.get("Retry-After")
@@ -426,14 +496,14 @@ class Limiter(object):
                     if isinstance(retry_after, datetime.datetime):
                         retry_after = time.mktime(retry_after.timetuple())
 
-                    reset_in = max(retry_after, reset_in)
+                    reset_at = max(retry_after, reset_at)
 
                 # set the header instead of using add
                 response.headers.set(
                     self._header_mapping[HEADERS.RETRY_AFTER],
                     self._retry_after == "http-date"
-                    and http_date(reset_in)
-                    or int(reset_in - time.time()),
+                    and http_date(reset_at)
+                    or int(reset_at - time.time()),
                 )
             except Exception as e:  # noqa: E722
                 if self._in_memory_fallback_enabled and not self._storage_dead:
@@ -582,7 +652,6 @@ class Limiter(object):
                                     limit.override_defaults,
                                     limit.deduct_when,
                                 )
-
                                 for limit in limit_group
                             ]
                         )
@@ -614,7 +683,6 @@ class Limiter(object):
                 route_limits = limits + dynamic_limits
                 all_limits = (
                     list(itertools.chain(*self._application_limits))
-
                     if in_middleware
                     else []
                 )
