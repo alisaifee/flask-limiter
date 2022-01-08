@@ -69,7 +69,7 @@ h1.logo a {
 dl {
   color: var(--fg2);
 }
-dl.py.class dt.sig {
+dl.py.class > dt.sig {
   border-top: solid 3px var(--purple);
   line-height: 1.5em;
   margin: 1em 0 0 0;
