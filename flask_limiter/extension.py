@@ -6,7 +6,7 @@ import itertools
 import logging
 import time
 from functools import wraps
-from typing import Callable, Dict, List, Optional, Set, Union, cast
+from typing import Callable, Dict, List, Optional, Set, Tuple, Union, cast
 from weakref import ref
 
 from flask import Blueprint, Flask, Response, current_app, g, request
@@ -56,14 +56,10 @@ class LimitDetail:
     Provides details of an enforced limit within the context of a request
     """
 
-    #: The isntance of the rate limit
+    #: The instance of the rate limit
     limit: RateLimitItem
     #: The full key for the request against which the rate limit is tested
     key: str
-    #: timestamp at which the rate limit will be reset
-    reset_at: int
-    #: quantity remaining for this rate limit
-    remaining: int
 
     def __init__(
         self, limiter: RateLimiter, limit: RateLimitItem, request_args: List[str]
@@ -72,7 +68,7 @@ class LimitDetail:
         self.limit = limit
         self.request_args = request_args
         self.key = limit.key_for(*request_args)
-        self._window = None
+        self._window: Optional[Tuple[int, int]] = None
 
     @property
     def window(self):
@@ -84,11 +80,13 @@ class LimitDetail:
         return self._window
 
     @property
-    def reset_at(self):
-        return self.window[0] + 1
+    def reset_at(self) -> int:
+        """Timestamp at which the rate limit will be reset"""
+        return int(self.window[0] + 1)
 
     @property
-    def remaining(self):
+    def remaining(self) -> int:
+        """Quantity remaining for this rate limit"""
         return self.window[1]
 
 
@@ -452,6 +450,7 @@ class Limiter(object):
         - Request 3 at ``t=2`` (breach): it will return the details for ``2/day``
         """
         last_limit = getattr(g, "%s_view_rate_limit" % self._key_prefix, None)
+
         if last_limit:
             return LimitDetail(
                 limit=last_limit[0], limiter=self.limiter, request_args=last_limit[1:]
@@ -475,7 +474,7 @@ class Limiter(object):
 
         if self.enabled and self._headers_enabled and header_limit:
             try:
-                reset_at: Union[int, float] = header_limit.reset_at
+                reset_at = header_limit.reset_at
                 response.headers.add(
                     self._header_mapping[HEADERS.LIMIT],
                     str(header_limit.limit.amount),
@@ -502,7 +501,7 @@ class Limiter(object):
                     if isinstance(retry_after, datetime.datetime):
                         retry_after = time.mktime(retry_after.timetuple())
 
-                    reset_at = max(retry_after, reset_at)
+                    reset_at = max(int(retry_after), reset_at)
 
                 # set the header instead of using add
                 response.headers.set(
