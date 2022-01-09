@@ -70,12 +70,16 @@ take priority.
        Constructor argument: :paramref:`~flask_limiter.Limiter.headers_enabled`
      - Enables returning :ref:`ratelimit-headers`. Defaults to ``False``
    * - .. data:: RATELIMIT_HEADER_LIMIT
+       Constructor argument: :paramref:`~flask_limiter.Limiter.header_name_mapping`
      - Header for the current rate limit. Defaults to ``X-RateLimit-Limit``
    * - .. data:: RATELIMIT_HEADER_RESET
+       Constructor argument: :paramref:`~flask_limiter.Limiter.header_name_mapping`
      - Header for the reset time of the current rate limit. Defaults to ``X-RateLimit-Reset``
    * - .. data:: RATELIMIT_HEADER_REMAINING
+       Constructor argument: :paramref:`~flask_limiter.Limiter.header_name_mapping`
      - Header for the number of requests remaining in the current rate limit. Defaults to ``X-RateLimit-Remaining``
    * - .. data:: RATELIMIT_HEADER_RETRY_AFTER
+       Constructor argument: :paramref:`~flask_limiter.Limiter.header_name_mapping`
      - Header for when the client should retry the request. Defaults to ``Retry-After``
    * - .. data:: RATELIMIT_HEADER_RETRY_AFTER_VALUE
        Constructor argument: :paramref:`~flask_limiter.Limiter.retry_after`
@@ -154,29 +158,27 @@ used in the scenario when the request does not breach any rate limits.
                                reset.
 ``Retry-After``                Seconds to retry after or the http date when the
                                Rate Limit will be reset. The way the value is presented
-                               depends on the configuration value set in `RATELIMIT_HEADER_RETRY_AFTER_VALUE`
+                               depends on the configuration value set in :data:`RATELIMIT_HEADER_RETRY_AFTER_VALUE`
                                and defaults to `delta-seconds`.
 ============================== ================================================
 
-.. warning:: Enabling the headers has an additional cost with certain storage / strategy combinations.
 
-    * Memcached + Fixed Window: an extra key per rate limit is stored to calculate
-      ``X-RateLimit-Reset``
-    * Redis + Moving Window: an extra call to redis is involved during every request
-      to calculate ``X-RateLimit-Remaining`` and ``X-RateLimit-Reset``
-
-The header names can be customised if required by either using the flask configuration (:attr:`RATELIMIT_HEADER_RESET`, :attr:`RATELIMIT_HEADER_RETRY_AFTER` & :attr:`RATELIMIT_HEADER_REMAINING`)
-values or by setting the ``header_mapping`` property of the :class:`~flask_limiter.Limiter` as follows::
+The header names can be customised if required by either using the flask configuration (
+:attr:`RATELIMIT_HEADER_LIMIT`,
+:attr:`RATELIMIT_HEADER_RESET`,
+:attr:`RATELIMIT_HEADER_RETRY_AFTER`,
+:attr:`RATELIMIT_HEADER_REMAINING`
+)
+values or by providing the :paramref:`~flask_limiter.Limiter.header_name_mapping` argument
+to the extension constructor as follows::
 
     from flask_limiter import Limiter, HEADERS
-    limiter = Limiter()
-    limiter.header_mapping = {
-        HEADERS.LIMIT : "X-My-Limit",
-        HEADERS.RESET : "X-My-Reset",
-        HEADERS.REMAINING: "X-My-Remaining"
-    }
-    # or by only partially specifying the overrides
-    limiter.header_mapping[HEADERS.LIMIT] = 'X-My-Limit'
+    limiter = Limiter(header_name_mapping={
+         HEADERS.LIMIT : "X-My-Limit",
+         HEADERS.RESET : "X-My-Reset",
+         HEADERS.REMAINING: "X-My-Remaining"
+      }
+    )
 
 
 

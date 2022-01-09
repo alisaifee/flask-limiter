@@ -1,10 +1,13 @@
+import math
+import time
+
 import pytest
 from flask import Flask
 from limits.errors import ConfigurationError
 from limits.storage import MemcachedStorage
 from limits.strategies import MovingWindowRateLimiter
 
-from flask_limiter.extension import C, Limiter
+from flask_limiter.extension import HEADERS, C, Limiter
 from flask_limiter.util import get_remote_address
 
 
@@ -34,6 +37,52 @@ def test_constructor_arguments_over_config(redis_connection):
     )
     limiter.init_app(app)
     assert type(limiter._storage) == MemcachedStorage
+
+
+def test_header_names_config():
+    app = Flask(__name__)
+    app.config.setdefault(C.HEADER_LIMIT, "XX-Limit")
+    app.config.setdefault(C.HEADER_REMAINING, "XX-Remaining")
+    app.config.setdefault(C.HEADER_RESET, "XX-Reset")
+    limiter = Limiter(
+        key_func=get_remote_address, headers_enabled=True, default_limits=["1/second"]
+    )
+    limiter.init_app(app)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    with app.test_client() as client:
+        resp = client.get("/")
+        assert resp.headers["XX-Limit"] == "1"
+        assert resp.headers["XX-Remaining"] == "0"
+        assert resp.headers["XX-Reset"] == str(math.ceil(time.time() + 1))
+
+
+def test_header_names_constructor():
+    app = Flask(__name__)
+    limiter = Limiter(
+        key_func=get_remote_address,
+        headers_enabled=True,
+        default_limits=["1/second"],
+        header_name_mapping={
+            HEADERS.LIMIT: "XX-Limit",
+            HEADERS.REMAINING: "XX-Remaining",
+            HEADERS.RESET: "XX-Reset",
+        },
+    )
+    limiter.init_app(app)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    with app.test_client() as client:
+        resp = client.get("/")
+        assert resp.headers["XX-Limit"] == "1"
+        assert resp.headers["XX-Remaining"] == "0"
+        assert resp.headers["XX-Reset"] == str(math.ceil(time.time() + 1))
 
 
 def test_invalid_config_with_disabled():

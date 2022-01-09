@@ -2,6 +2,7 @@
 the flask extension
 """
 import datetime
+import enum
 import itertools
 import logging
 import time
@@ -45,11 +46,20 @@ class C:
     FAIL_ON_FIRST_BREACH = "RATELIMIT_FAIL_ON_FIRST_BREACH"
 
 
-class HEADERS:
-    RESET = 1
-    REMAINING = 2
-    LIMIT = 3
-    RETRY_AFTER = 4
+class HEADERS(enum.Enum):
+    """
+    Enumeration of supported rate limit related headers to
+    be used when configuring via :paramref:`~flask_limiter.Limiter.header_name_mapping`
+    """
+
+    #: Timestamp at which this rate limit will be reset
+    RESET = "X-RateLimit-Reset"
+    #: Remaining number of requests within the current window
+    REMAINING = "X-RateLimit-Remaining"
+    #: Total number of allowed requests within a window
+    LIMIT = "X-RateLimit-Limit"
+    #: Number of seconds to retry after at
+    RETRY_AFTER = "Retry-After"
 
 
 class RequestLimit:
@@ -127,6 +137,9 @@ class Limiter(object):
      (i.e a shared limit for all routes)
     :param headers_enabled: whether ``X-RateLimit`` response headers are
      written.
+    :param header_name_mapping: Mapping of header names to use if
+     :paramref:`Limiter.headers_enabled` is ``True``. If no mapping is provided
+     the default values will be used.
     :param strategy: the strategy to use. Refer to :ref:`ratelimit-strategy`
     :param storage_uri: the storage location.
      Refer to :data:`RATELIMIT_STORAGE_URI`
@@ -160,6 +173,7 @@ class Limiter(object):
         default_limits_deduct_when: Callable[[], bool] = None,
         application_limits: List[str] = [],
         headers_enabled: bool = None,
+        header_name_mapping: Dict[HEADERS, str] = {},
         strategy: Optional[str] = None,
         storage_uri: Optional[str] = None,
         storage_options={},
@@ -189,7 +203,7 @@ class Limiter(object):
         self._exempt_routes: Set[str] = set()
         self._request_filters: List[Callable[[], bool]] = []
         self._headers_enabled = headers_enabled
-        self._header_mapping: Dict[int, str] = {}
+        self._header_mapping = header_name_mapping
         self._retry_after = retry_after
         self._strategy = strategy
         self._storage_uri = storage_uri
@@ -306,21 +320,20 @@ class Limiter(object):
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
         self._limiter = STRATEGIES[strategy](self._storage)
 
-        # TODO: this should be made consistent with the rest of the
-        #  configuration
         self._header_mapping = {
             HEADERS.RESET: self._header_mapping.get(
-                HEADERS.RESET, config.get(C.HEADER_RESET, "X-RateLimit-Reset")
+                HEADERS.RESET, config.get(C.HEADER_RESET, HEADERS.RESET.value)
             ),
             HEADERS.REMAINING: self._header_mapping.get(
                 HEADERS.REMAINING,
-                config.get(C.HEADER_REMAINING, "X-RateLimit-Remaining"),
+                config.get(C.HEADER_REMAINING, HEADERS.REMAINING.value),
             ),
             HEADERS.LIMIT: self._header_mapping.get(
-                HEADERS.LIMIT, config.get(C.HEADER_LIMIT, "X-RateLimit-Limit")
+                HEADERS.LIMIT, config.get(C.HEADER_LIMIT, HEADERS.LIMIT.value)
             ),
             HEADERS.RETRY_AFTER: self._header_mapping.get(
-                HEADERS.RETRY_AFTER, config.get(C.HEADER_RETRY_AFTER, "Retry-After")
+                HEADERS.RETRY_AFTER,
+                config.get(C.HEADER_RETRY_AFTER, HEADERS.RETRY_AFTER.value),
             ),
         }
         self._retry_after = self._retry_after or config.get(C.HEADER_RETRY_AFTER_VALUE)

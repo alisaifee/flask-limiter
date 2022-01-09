@@ -7,6 +7,7 @@ Core
 ----
 .. autoclass:: Limiter
 .. autoclass:: RequestLimit
+.. autoclass:: HEADERS
 
 Exceptions
 ----------
