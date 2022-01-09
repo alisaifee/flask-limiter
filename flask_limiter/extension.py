@@ -638,25 +638,7 @@ class Limiter(object):
         limits: List[Limit] = []
         dynamic_limits: List[Limit] = []
 
-        # this is to ensure backward compatibility with behavior that
-        # existed accidentally, i.e::
-        #
-        # @limiter.limit(...)
-        # @app.route('...')
-        # def func(...):
-        #
-        # The above setup would work in pre 1.0 versions because the decorator
-        # was not acting immediately and instead simply registering the rate
-        # limiting. The correct way to use the decorator is to wrap
-        # the limiter with the route, i.e::
-        #
-        # @app.route(...)
-        # @limiter.limit(...)
-        # def func(...):
-
-        implicit_decorator = view_func in self.__marked_for_limiting.get(name, [])
-
-        if not in_middleware or implicit_decorator:
+        if not in_middleware:
             limits = name in self._route_limits and self._route_limits[name] or []
             dynamic_limits = []
 
@@ -737,10 +719,8 @@ class Limiter(object):
                 )
 
                 if (
-                    (explicit_limits_exempt or combined_defaults)
-                    and not before_request_context
-                    or implicit_decorator
-                ):
+                    explicit_limits_exempt or combined_defaults
+                ) and not before_request_context:
                     all_limits += list(itertools.chain(*self._default_limits))
             self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:

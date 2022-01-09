@@ -1,5 +1,4 @@
 import asyncio
-import functools
 from functools import wraps
 
 import hiro
@@ -484,8 +483,8 @@ def test_whitelisting():
 def test_separate_method_limits(extension_factory):
     app, limiter = extension_factory()
 
-    @limiter.limit("1/second", per_method=True)
     @app.route("/", methods=["GET", "POST"])
+    @limiter.limit("1/second", per_method=True)
     def root():
         return "root"
 
@@ -570,43 +569,6 @@ def test_decorated_shared_limit_immediate(extension_factory):
             assert 200 == cli.get("/").status_code
             assert 200 == cli.get("/").status_code
             assert 429 == cli.get("/").status_code
-
-
-def test_backward_compatibility_with_incorrect_ordering(extension_factory):
-    app, limiter = extension_factory()
-
-    def something_else(fn):
-        @functools.wraps(fn)
-        def __inner(*args, **kwargs):
-            return fn(*args, **kwargs)
-
-        return __inner
-
-    @limiter.limit("1/second")
-    @app.route("/t1", methods=["GET", "POST"])
-    def root():
-        return "t1"
-
-    @limiter.limit("1/second")
-    @app.route("/t2", methods=["GET", "POST"])
-    @something_else
-    def t2():
-        return "t2"
-
-    @limiter.limit("2/second")
-    @limiter.limit("1/second")
-    @app.route("/t3", methods=["GET", "POST"])
-    def t3():
-        return "t3"
-
-    with hiro.Timeline().freeze():
-        with app.test_client() as cli:
-            assert 200 == cli.get("/t1").status_code
-            assert 429 == cli.get("/t1").status_code
-            assert 200 == cli.get("/t2").status_code
-            assert 429 == cli.get("/t2").status_code
-            assert 200 == cli.get("/t3").status_code
-            assert 429 == cli.get("/t3").status_code
 
 
 def test_async_route(extension_factory):
