@@ -62,13 +62,21 @@ class RequestLimit:
     #: The full key for the request against which the rate limit is tested
     key: str
 
+    #: Whether the limit was breached within the context of this request
+    breached: bool
+
     def __init__(
-        self, limiter: RateLimiter, limit: RateLimitItem, request_args: List[str]
+        self,
+        limiter: RateLimiter,
+        limit: RateLimitItem,
+        request_args: List[str],
+        breached: bool,
     ):
         self.limiter = ref(limiter)
         self.limit = limit
         self.request_args = request_args
         self.key = limit.key_for(*request_args)
+        self.breached = breached
         self._window: Optional[Tuple[int, int]] = None
 
     @property
@@ -83,11 +91,13 @@ class RequestLimit:
     @property
     def reset_at(self) -> int:
         """Timestamp at which the rate limit will be reset"""
+
         return int(self.window[0] + 1)
 
     @property
     def remaining(self) -> int:
         """Quantity remaining for this rate limit"""
+
         return self.window[1]
 
 
@@ -450,13 +460,36 @@ class Limiter(object):
         - Request 3 at ``t=2`` (breach): it will return the details for ``2/day``
         """
         last_limit = getattr(g, "%s_view_rate_limit" % self._key_prefix, None)
+        breached_limit = getattr(g, "%s_breached_limit" % self._key_prefix, None)
 
         if last_limit:
             return RequestLimit(
-                limit=last_limit[0], limiter=self.limiter, request_args=last_limit[1:]
+                limit=last_limit[0],
+                limiter=self.limiter,
+                request_args=last_limit[1:],
+                breached=breached_limit and last_limit[0] == breached_limit,
             )
 
         return None
+
+    @property
+    def current_limits(self) -> List[RequestLimit]:
+        """
+        Get a list of all rate limits that were applicable and evaluated
+        within the context of this request.
+        """
+        all_limits = getattr(g, "%s_view_rate_limits" % self._key_prefix, [])
+        breached_limit = getattr(g, "%s_breached_limit" % self._key_prefix, None)
+
+        return list(
+            RequestLimit(
+                limit=limit[0],
+                limiter=self.limiter,
+                request_args=limit[1:],
+                breached=breached_limit and limit[0] == breached_limit,
+            )
+            for limit in all_limits
+        )
 
     def __check_conditional_deductions(self, response):
 
@@ -531,7 +564,7 @@ class Limiter(object):
     def __evaluate_limits(self, endpoint, limits):
         failed_limit = None
         limit_for_header = None
-        limits_escape = []
+        view_limits = []
 
         if not getattr(g, "%s_conditional_deductions" % self._key_prefix, None):
             setattr(g, "%s_conditional_deductions" % self._key_prefix, {})
@@ -566,6 +599,8 @@ class Limiter(object):
             if not limit_for_header or lim.limit < limit_for_header[0]:
                 limit_for_header = [lim.limit] + args
 
+            view_limits.append([lim.limit] + args)
+
             if not method(lim.limit, *args):
                 self.logger.warning(
                     "ratelimit %s (%s) exceeded at endpoint: %s",
@@ -578,12 +613,11 @@ class Limiter(object):
 
                 break
 
-            limits_escape.append([lim.limit] + args)
-
         setattr(g, "%s_view_rate_limit" % self._key_prefix, limit_for_header)
-        setattr(g, "%s_view_limits" % self._key_prefix, limits_escape)
+        setattr(g, "%s_view_rate_limits" % self._key_prefix, view_limits)
 
         if failed_limit:
+            setattr(g, "%s_breached_limit" % self._key_prefix, failed_limit.limit)
             raise RateLimitExceeded(failed_limit)
 
     def __check_request_limit(self, in_middleware=True):

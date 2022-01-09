@@ -208,6 +208,46 @@ The `error_message` argument can either be a simple string or a callable that re
         def ping():
             ....
 
+Custom rate limit headers
+-------------------------
+Though you can get pretty far with configuring the standard headers associated
+with rate limiting using configuration parameters available as described under
+:ref:`configuration:rate-limiting headers` - this may not be sufficient for your use case.
+
+For such cases you can access the :attr:`~flask_limiter.Limiter.current_limit`
+property from the :class:`~flask_limiter.Limiter` instance from anywhere within a :doc:`request context <flask:reqcontext>`.
+
+As an example you could disable the automatic headers configuration and
+add your own with an :meth:`~flask.Flask.after_request` hook::
+
+
+      app = Flask(__name__)
+      limiter = Limiter(app, key_func=get_remote_address)
+
+
+      @app.route("/")
+      @limiter.limit("1/second")
+      def index():
+          ....
+
+      @app.after_request
+      def add_headers(response):
+          if limiter.current_limit:
+              response.headers["RemainingLimit"] = limiter.current_limit.remaining
+              response.headers["ResetAt"] = limiter.current_limit.reset_at
+              response.headers["MaxRequests"] = limiter.current_limit.limit.amount
+              response.headers["WindowSize"] = limiter.current_limit.limit.get_expiry()
+              response.headers["Breached"] = limiter.current_limit.breached
+          return response
+
+This will result in headers along the lines of::
+
+  < RemainingLimit: 0
+  < ResetAt: 1641691205
+  < MaxRequests: 1
+  < WindowSize: 1
+  < Breached: True
+
 .. _deploy-behind-proxy:
 
 Deploying an application behind a proxy

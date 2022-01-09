@@ -7,9 +7,10 @@ import time
 import hiro
 import mock
 from flask import Flask, request
+from werkzeug.exceptions import BadRequest
+
 from flask_limiter.extension import HEADERS, C, Limiter
 from flask_limiter.util import get_remote_address
-from werkzeug.exceptions import BadRequest
 
 
 def test_reset(extension_factory):
@@ -295,6 +296,7 @@ def test_headers_no_breach():
             assert resp.headers.get("Retry-After") == str(1)
             assert limiter.current_limit.remaining == 1
             assert limiter.current_limit.reset_at == int(time.time() + 2)
+            assert not limiter.current_limit.breached
 
 
 def test_headers_breach():
@@ -313,9 +315,14 @@ def test_headers_breach():
 
     with hiro.Timeline().freeze() as timeline:
         with app.test_client() as cli:
-            for i in range(11):
+            for i in range(10):
                 resp = cli.get("/t1")
                 timeline.forward(1)
+                assert len(limiter.current_limits) == 3
+                assert all(not limit.breached for limit in limiter.current_limits)
+
+            resp = cli.get("/t1")
+            timeline.forward(1)
 
             assert resp.headers.get("X-RateLimit-Limit") == "10"
             assert resp.headers.get("X-RateLimit-Remaining") == "0"
@@ -323,6 +330,7 @@ def test_headers_breach():
             assert resp.headers.get("Retry-After") == str(int(50))
             assert limiter.current_limit.remaining == 0
             assert limiter.current_limit.reset_at == int(time.time() + 50)
+            assert limiter.current_limit.breached
 
 
 def test_retry_after():
