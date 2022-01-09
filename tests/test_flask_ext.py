@@ -396,36 +396,6 @@ def test_retry_after_exists_rfc1123():
         assert retry_after > 1000
 
 
-def test_custom_headers_from_setter():
-    app = Flask(__name__)
-    limiter = Limiter(
-        app,
-        default_limits=["10/minute"],
-        headers_enabled=True,
-        key_func=get_remote_address,
-        retry_after="http-date",
-    )
-    limiter._header_mapping[HEADERS.RESET] = "X-Reset"
-    limiter._header_mapping[HEADERS.LIMIT] = "X-Limit"
-    limiter._header_mapping[HEADERS.REMAINING] = "X-Remaining"
-
-    @app.route("/t1")
-    @limiter.limit("2/second; 10 per minute; 20/hour")
-    def t():
-        return "test"
-
-    with hiro.Timeline().freeze(0) as timeline:
-        with app.test_client() as cli:
-            for i in range(11):
-                resp = cli.get("/t1")
-                timeline.forward(1)
-
-            assert resp.headers.get("X-Limit") == "10"
-            assert resp.headers.get("X-Remaining") == "0"
-            assert resp.headers.get("X-Reset") == str(int(time.time() + 50))
-            assert resp.headers.get("Retry-After") == "Thu, 01 Jan 1970 00:01:01 GMT"
-
-
 def test_custom_headers_from_config():
     app = Flask(__name__)
     app.config.setdefault(C.HEADER_LIMIT, "X-Limit")
@@ -452,30 +422,6 @@ def test_custom_headers_from_config():
             assert resp.headers.get("X-Limit") == "10"
             assert resp.headers.get("X-Remaining") == "0"
             assert resp.headers.get("X-Reset") == str(int(time.time() + 50))
-
-
-def test_custom_headers_from_setter_and_config():
-    app = Flask(__name__)
-    app.config.setdefault(C.HEADER_LIMIT, "Limit")
-    app.config.setdefault(C.HEADER_REMAINING, "Remaining")
-    app.config.setdefault(C.HEADER_RESET, "Reset")
-    limiter = Limiter(
-        default_limits=["10/minute"], headers_enabled=True, key_func=get_remote_address
-    )
-    limiter._header_mapping[HEADERS.REMAINING] = "Available"
-    limiter.init_app(app)
-
-    @app.route("/t1")
-    def t():
-        return "test"
-
-    with app.test_client() as cli:
-        for i in range(11):
-            resp = cli.get("/t1")
-
-        assert resp.headers.get("Limit") == "10"
-        assert resp.headers.get("Available") == "0"
-        assert resp.headers.get("Reset") is not None
 
 
 def test_application_shared_limit(extension_factory):
