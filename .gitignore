@@ -3,6 +3,7 @@
 cover/*
 .coverage*
 .test_env
+.tool-versions
 .idea
 build/
 dist/
