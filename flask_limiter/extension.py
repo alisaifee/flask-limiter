@@ -51,13 +51,14 @@ class HEADERS:
     RETRY_AFTER = 4
 
 
-class LimitDetail:
+class RequestLimit:
     """
-    Provides details of an enforced limit within the context of a request
+    Provides details of a rate limit within the context of a request
     """
 
     #: The instance of the rate limit
     limit: RateLimitItem
+
     #: The full key for the request against which the rate limit is tested
     key: str
 
@@ -425,16 +426,15 @@ class Limiter(object):
             return self._limiter
 
     @property
-    def header_limit(self) -> Optional[LimitDetail]:
+    def current_limit(self) -> Optional[RequestLimit]:
         """
-        Get details for the rate limit used for generating rate limit headers
-        within the context of the current request.
+        Get details for the most relevant rate limit used in this request.
 
         In a scenario where multiple rate limits are active for a single request
         and none are breached, the rate limit which applies to the smallest
         time window will be returned.
 
-        .. important:: The value of ``remaining`` in :class:`LimitDetail` is after
+        .. important:: The value of ``remaining`` in :class:`RequestLimit` is after
            deduction for the current request.
 
         For example::
@@ -452,7 +452,7 @@ class Limiter(object):
         last_limit = getattr(g, "%s_view_rate_limit" % self._key_prefix, None)
 
         if last_limit:
-            return LimitDetail(
+            return RequestLimit(
                 limit=last_limit[0], limiter=self.limiter, request_args=last_limit[1:]
             )
 
@@ -470,7 +470,7 @@ class Limiter(object):
 
     def __inject_headers(self, response):
         self.__check_conditional_deductions(response)
-        header_limit = self.header_limit
+        header_limit = self.current_limit
 
         if self.enabled and self._headers_enabled and header_limit:
             try:

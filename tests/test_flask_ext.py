@@ -293,8 +293,8 @@ def test_headers_no_breach():
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 2))
 
             assert resp.headers.get("Retry-After") == str(1)
-            assert limiter.header_limit.remaining == 1
-            assert limiter.header_limit.reset_at == int(time.time() + 2)
+            assert limiter.current_limit.remaining == 1
+            assert limiter.current_limit.reset_at == int(time.time() + 2)
 
 
 def test_headers_breach():
@@ -321,8 +321,8 @@ def test_headers_breach():
             assert resp.headers.get("X-RateLimit-Remaining") == "0"
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 50))
             assert resp.headers.get("Retry-After") == str(int(50))
-            assert limiter.header_limit.remaining == 0
-            assert limiter.header_limit.reset_at == int(time.time() + 50)
+            assert limiter.current_limit.remaining == 0
+            assert limiter.current_limit.reset_at == int(time.time() + 50)
 
 
 def test_retry_after():

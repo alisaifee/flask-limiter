@@ -6,7 +6,7 @@ API
 Core
 ----
 .. autoclass:: Limiter
-.. autoclass:: LimitDetail
+.. autoclass:: RequestLimit
 
 Exceptions
 ----------
