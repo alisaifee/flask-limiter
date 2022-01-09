@@ -536,8 +536,8 @@ def test_callable_application_limit(extension_factory):
 def test_no_auto_check(extension_factory):
     app, limiter = extension_factory(auto_check=False)
 
-    @limiter.limit("1/second", per_method=True)
     @app.route("/", methods=["GET", "POST"])
+    @limiter.limit("1/second", per_method=True)
     def root():
         return "root"
 
@@ -555,6 +555,47 @@ def test_no_auto_check(extension_factory):
         with app.test_client() as cli:
             assert 200 == cli.get("/").status_code
             assert 429 == cli.get("/").status_code
+
+
+def test_fail_on_first_breach(extension_factory):
+    app, limiter = extension_factory(fail_on_first_breach=True)
+
+    @app.route("/", methods=["GET", "POST"])
+    @limiter.limit("1/second", per_method=True)
+    @limiter.limit("2/minute", per_method=True)
+    def root():
+        return "root"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert 200 == cli.get("/").status_code
+            assert 429 == cli.get("/").status_code
+            assert [True] == [k.breached for k in limiter.current_limits]
+            timeline.forward(1)
+            assert 200 == cli.get("/").status_code
+            assert [False, False] == [k.breached for k in limiter.current_limits]
+            timeline.forward(1)
+            assert 429 == cli.get("/").status_code
+            assert [False, True] == [k.breached for k in limiter.current_limits]
+
+
+def test_no_fail_on_first_breach(extension_factory):
+    app, limiter = extension_factory(fail_on_first_breach=False)
+
+    @app.route("/", methods=["GET", "POST"])
+    @limiter.limit("1/second", per_method=True)
+    @limiter.limit("2/minute", per_method=True)
+    def root():
+        return "root"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert 200 == cli.get("/").status_code
+            assert 429 == cli.get("/").status_code
+            assert [True, False] == [k.breached for k in limiter.current_limits]
+            timeline.forward(1)
+            assert 429 == cli.get("/").status_code
+            assert [False, True] == [k.breached for k in limiter.current_limits]
 
 
 def test_custom_key_prefix(redis_connection, extension_factory):

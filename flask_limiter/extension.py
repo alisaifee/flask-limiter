@@ -42,6 +42,7 @@ class C:
     HEADER_RETRY_AFTER = "RATELIMIT_HEADER_RETRY_AFTER"
     HEADER_RETRY_AFTER_VALUE = "RATELIMIT_HEADER_RETRY_AFTER_VALUE"
     KEY_PREFIX = "RATELIMIT_KEY_PREFIX"
+    FAIL_ON_FIRST_BREACH = "RATELIMIT_FAIL_ON_FIRST_BREACH"
 
 
 class HEADERS:
@@ -126,8 +127,7 @@ class Limiter(object):
      (i.e a shared limit for all routes)
     :param headers_enabled: whether ``X-RateLimit`` response headers are
      written.
-    :param strategy: the strategy to use.
-     Refer to :ref:`ratelimit-strategy`
+    :param strategy: the strategy to use. Refer to :ref:`ratelimit-strategy`
     :param storage_uri: the storage location.
      Refer to :data:`RATELIMIT_STORAGE_URI`
     :param storage_options: kwargs to pass to the storage implementation
@@ -136,11 +136,14 @@ class Limiter(object):
      the before_request chain of the application. default ``True``
     :param swallow_errors: whether to swallow errors when hitting a rate
      limit. An exception will still be logged. default ``False``
+    :param fail_on_first_breach: whether to stop processing remaining limits
+     after the first breach. default ``True``
     :param in_memory_fallback: a variable list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
-    :param in_memory_fallback_enabled: simply falls back to in memory
+    :param in_memory_fallback_enabled: fall back to in memory
      storage when the main storage is down and inherits the original limits.
+     default ``False``
     :param retry_after: Allows configuration of how the value of the
      `Retry-After` header is rendered. One of `http-date` or `delta-seconds`.
     :param key_prefix: prefix prepended to rate limiter keys and app context global names.
@@ -152,18 +155,19 @@ class Limiter(object):
         app: Optional[Flask] = None,
         key_func: Callable[[], str] = None,
         default_limits: List[str] = [],
-        default_limits_per_method: bool = False,
+        default_limits_per_method: bool = None,
         default_limits_exempt_when: Callable[[], bool] = None,
         default_limits_deduct_when: Callable[[], bool] = None,
         application_limits: List[str] = [],
-        headers_enabled: bool = False,
+        headers_enabled: bool = None,
         strategy: Optional[str] = None,
         storage_uri: Optional[str] = None,
         storage_options={},
         auto_check: bool = True,
-        swallow_errors: bool = False,
+        swallow_errors: bool = None,
+        fail_on_first_breach: bool = None,
         in_memory_fallback: List[str] = [],
-        in_memory_fallback_enabled: bool = False,
+        in_memory_fallback_enabled: bool = None,
         retry_after: str = None,
         key_prefix: str = "",
         enabled: bool = True,
@@ -192,6 +196,7 @@ class Limiter(object):
         self._storage_options = storage_options
         self._auto_check = auto_check
         self._swallow_errors = swallow_errors
+        self._fail_on_first_breach = fail_on_first_breach
 
         # No longer optional
         assert key_func
@@ -265,19 +270,26 @@ class Limiter(object):
         if not self.enabled:
             return
 
-        self._default_limits_per_method = config.setdefault(
-            C.DEFAULT_LIMITS_PER_METHOD, self._default_limits_per_method
+        if self._default_limits_per_method is None:
+            self._default_limits_per_method = config.get(
+                C.DEFAULT_LIMITS_PER_METHOD, False
+            )
+        self._default_limits_exempt_when = (
+            self._default_limits_exempt_when or config.get(C.DEFAULT_LIMITS_EXEMPT_WHEN)
         )
-        self._default_limits_exempt_when = config.setdefault(
-            C.DEFAULT_LIMITS_EXEMPT_WHEN, self._default_limits_exempt_when
+        self._default_limits_deduct_when = (
+            self._default_limits_deduct_when or config.get(C.DEFAULT_LIMITS_DEDUCT_WHEN)
         )
-        self._default_limits_deduct_when = config.setdefault(
-            C.DEFAULT_LIMITS_DEDUCT_WHEN, self._default_limits_deduct_when
-        )
-        self._swallow_errors = config.setdefault(C.SWALLOW_ERRORS, self._swallow_errors)
-        self._headers_enabled = self._headers_enabled or config.setdefault(
-            C.HEADERS_ENABLED, False
-        )
+
+        if self._swallow_errors is None:
+            self._swallow_errors = config.get(C.SWALLOW_ERRORS, False)
+
+        if self._fail_on_first_breach is None:
+            self._fail_on_first_breach = config.get(C.FAIL_ON_FIRST_BREACH, True)
+
+        if self._headers_enabled is None:
+            self._headers_enabled = config.get(C.HEADERS_ENABLED, False)
+
         self._storage_options.update(config.get(C.STORAGE_OPTIONS, {}))
         storage_uri_from_config = config.get(
             C.STORAGE_URI, config.get(C.STORAGE_URL, "memory://")
@@ -459,15 +471,15 @@ class Limiter(object):
         - Request 2 at ``t=1`` (no breach): it will still return the details for ``1/second``
         - Request 3 at ``t=2`` (breach): it will return the details for ``2/day``
         """
-        last_limit = getattr(g, "%s_view_rate_limit" % self._key_prefix, None)
-        breached_limit = getattr(g, "%s_breached_limit" % self._key_prefix, None)
+        last_limit = getattr(g, f"{self._key_prefix}_view_rate_limit", None)
+        breached_limits = getattr(g, f"{self._key_prefix}_breached_limits", [])
 
         if last_limit:
             return RequestLimit(
                 limit=last_limit[0],
                 limiter=self.limiter,
                 request_args=last_limit[1:],
-                breached=breached_limit and last_limit[0] == breached_limit,
+                breached=last_limit[0] in breached_limits,
             )
 
         return None
@@ -477,24 +489,26 @@ class Limiter(object):
         """
         Get a list of all rate limits that were applicable and evaluated
         within the context of this request.
+
+        The limits are returned in a sorted order by smallest window size first.
         """
-        all_limits = getattr(g, "%s_view_rate_limits" % self._key_prefix, [])
-        breached_limit = getattr(g, "%s_breached_limit" % self._key_prefix, None)
+        all_limits = getattr(g, f"{self._key_prefix}_view_rate_limits", [])
+        breached_limits = getattr(g, f"{self._key_prefix}_breached_limits", [])
 
         return list(
             RequestLimit(
                 limit=limit[0],
                 limiter=self.limiter,
                 request_args=limit[1:],
-                breached=breached_limit and limit[0] == breached_limit,
+                breached=limit[0] in breached_limits,
             )
-            for limit in all_limits
+            for limit in sorted(all_limits)
         )
 
     def __check_conditional_deductions(self, response):
 
         for lim, args in getattr(
-            g, "%s_conditional_deductions" % self._key_prefix, {}
+            g, f"{self._key_prefix}_conditional_deductions", {}
         ).items():
             if lim.deduct_when(response):
                 self.limiter.hit(lim.limit, *args)
@@ -608,22 +622,27 @@ class Limiter(object):
                     limit_key,
                     limit_scope,
                 )
-                failed_limit = lim
+                failed_limits.append(lim)
                 limit_for_header = [lim.limit] + args
 
-                break
+                if self._fail_on_first_breach:
+                    break
 
-        setattr(g, "%s_view_rate_limit" % self._key_prefix, limit_for_header)
-        setattr(g, "%s_view_rate_limits" % self._key_prefix, view_limits)
+        setattr(g, f"{self._key_prefix}_view_rate_limit", limit_for_header)
+        setattr(g, f"{self._key_prefix}_view_rate_limits", view_limits)
 
-        if failed_limit:
-            setattr(g, "%s_breached_limit" % self._key_prefix, failed_limit.limit)
-            raise RateLimitExceeded(failed_limit)
+        if failed_limits:
+            setattr(
+                g,
+                f"{self._key_prefix}_breached_limits",
+                [limit.limit for limit in failed_limits],
+            )
+            raise RateLimitExceeded(sorted(failed_limits)[0])
 
     def __check_request_limit(self, in_middleware=True):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
-        name = "%s.%s" % (view_func.__module__, view_func.__name__) if view_func else ""
+        name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
 
         if (
             not request.endpoint
@@ -632,7 +651,7 @@ class Limiter(object):
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
             or any(fn() for fn in self._request_filters)
-            or g.get("%s_rate_limiting_complete" % self._key_prefix)
+            or g.get(f"{self._key_prefix}_rate_limiting_complete")
         ):
             return
         limits: List[Limit] = []
@@ -758,7 +777,7 @@ class Limiter(object):
         def _inner(obj):
             func = key_func or self._key_func
             is_route = not isinstance(obj, Blueprint)
-            name = "%s.%s" % (obj.__module__, obj.__name__) if is_route else obj.name
+            name = f"{obj.__module__}.{obj.__name__}" if is_route else obj.name
             dynamic_limit, static_limits = None, []
 
             if callable(limit_value):
@@ -816,10 +835,10 @@ class Limiter(object):
                 @wraps(obj)
                 def __inner(*a, **k):
                     if self._auto_check and not g.get(
-                        "%s_rate_limiting_complete" % self._key_prefix
+                        f"{self._key_prefix}_rate_limiting_complete"
                     ):
                         self.__check_request_limit(False)
-                        setattr(g, "%s_rate_limiting_complete" % self._key_prefix, True)
+                        setattr(g, f"{self._key_prefix}_rate_limiting_complete", True)
 
                     return current_app.ensure_sync(obj)(*a, **k)
 
@@ -921,7 +940,7 @@ class Limiter(object):
         """
 
         if not isinstance(obj, Blueprint):
-            name = "%s.%s" % (obj.__module__, obj.__name__)
+            name = f"{obj.__module__}.{obj.__name__}"
 
             @wraps(obj)
             def __inner(*a, **k):
