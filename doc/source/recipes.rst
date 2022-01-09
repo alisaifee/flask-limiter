@@ -217,8 +217,8 @@ with rate limiting using configuration parameters available as described under
 For such cases you can access the :attr:`~flask_limiter.Limiter.current_limit`
 property from the :class:`~flask_limiter.Limiter` instance from anywhere within a :doc:`request context <flask:reqcontext>`.
 
-As an example you could disable the automatic headers configuration and
-add your own with an :meth:`~flask.Flask.after_request` hook::
+As an example you could leave the built in header population disabled
+and add your own with an :meth:`~flask.Flask.after_request` hook::
 
 
       app = Flask(__name__)
