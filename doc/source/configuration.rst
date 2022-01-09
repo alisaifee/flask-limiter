@@ -13,29 +13,36 @@ take priority.
 
 .. list-table::
 
+   * - .. data:: RATELIMIT_ENABLED
+       Constructor argument: :paramref:`~flask_limiter.Limiter.enabled`
+     - Overall kill switch for rate limits. Defaults to ``True``
+   * - .. data:: RATELIMIT_APPLICATION
+       Constructor argument: :paramref:`~flask_limiter.Limiter.application_limits`
+     - A comma (or some other delimiter) separated string that will be used to
+       apply limits to the application as a whole (i.e. shared by all routes).
    * - .. data:: RATELIMIT_DEFAULT
+       Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits`
      - A comma (or some other delimiter) separated string that will be used to
        apply a default limit on all routes. If not provided, the default limits can be
        passed to the :class:`~flask_limiter.Limiter` constructor as well (the values passed to the
        constructor take precedence over those in the config).
        :ref:`ratelimit-string` for details.
    * - .. data:: RATELIMIT_DEFAULTS_PER_METHOD
+       Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits_per_method`
      - Whether default limits are applied per method, per route or as a combination
        of all method per route.
    * - .. data:: RATELIMIT_DEFAULTS_EXEMPT_WHEN
+       Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits_exempt_when`
      - A function that should return a truthy value if the default rate limit(s)
        should be skipped for the current request. This callback is called in the
        :doc:`flask request context <flask:reqcontext>` ``before_request`` phase.
    * - .. data:: RATELIMIT_DEFAULTS_DEDUCT_WHEN
+       Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits_deduct_when`
      - A function that should return a truthy value if a deduction should be made
        from the default rate limit(s) for the current request. This callback is called
        in the :doc:`flask request context <flask:reqcontext>` ``after_request`` phase.
-   * - .. data:: RATELIMIT_APPLICATION
-     - A comma (or some other delimiter) separated string that will be used to
-       apply limits to the application as a whole (i.e. shared by all routes).
-   * - .. data:: RATELIMIT_STORAGE_URL
-     - .. deprecated:: 2.0.0 Use :data:`RATELIMIT_STORAGE_URI` instead.
    * - .. data:: RATELIMIT_STORAGE_URI
+       Constructor argument: :paramref:`~flask_limiter.Limiter.storage_uri`
      - A storage location conforming to the scheme in :ref:`storage-scheme`.
        A basic in-memory storage can be used by specifying ``memory://`` but it
        should be used with caution in any production setup since:
@@ -52,15 +59,16 @@ take priority.
        For specific examples and requirements of supported backends please
        refer to :ref:`storage-scheme` and the :doc:`limits <limits:storage>` library.
    * - .. data:: RATELIMIT_STORAGE_OPTIONS
+       Constructor argument: :paramref:`~flask_limiter.Limiter.storage_options`
      - A dictionary to set extra options to be passed to the  storage implementation
        upon initialization.
    * - .. data:: RATELIMIT_STRATEGY
+       Constructor argument: :paramref:`~flask_limiter.Limiter.strategy`
      - The rate limiting strategy to use.  :ref:`ratelimit-strategy`
        for details.
    * - .. data:: RATELIMIT_HEADERS_ENABLED
+       Constructor argument: :paramref:`~flask_limiter.Limiter.headers_enabled`
      - Enables returning :ref:`ratelimit-headers`. Defaults to ``False``
-   * - .. data:: RATELIMIT_ENABLED
-     - Overall kill switch for rate limits. Defaults to ``True``
    * - .. data:: RATELIMIT_HEADER_LIMIT
      - Header for the current rate limit. Defaults to ``X-RateLimit-Limit``
    * - .. data:: RATELIMIT_HEADER_RESET
@@ -70,22 +78,27 @@ take priority.
    * - .. data:: RATELIMIT_HEADER_RETRY_AFTER
      - Header for when the client should retry the request. Defaults to ``Retry-After``
    * - .. data:: RATELIMIT_HEADER_RETRY_AFTER_VALUE
+       Constructor argument: :paramref:`~flask_limiter.Limiter.retry_after`
      - Allows configuration of how the value of the ``Retry-After`` header is rendered.
        One of ``http-date`` or ``delta-seconds``. (`RFC2616`_).
    * - .. data:: RATELIMIT_SWALLOW_ERRORS
+       Constructor argument: :paramref:`~flask_limiter.Limiter.swallow_errors`
      - Whether to allow failures while attempting to perform a rate limit
        such as errors with downstream storage. Setting this value to ``True``
        will effectively disable rate limiting for requests where an error has
        occurred.
    * - .. data:: RATELIMIT_IN_MEMORY_FALLBACK_ENABLED
+       Constructor argument: :paramref:`~flask_limiter.Limiter.in_memory_fallback_enabled`
      - ``True``/``False``. If enabled an in memory rate limiter will be used
        as a fallback when the configured storage is down. Note that, when used in
        combination with ``RATELIMIT_IN_MEMORY_FALLBACK`` the original rate limits
        will not be inherited and the values provided in
    * - .. data:: RATELIMIT_IN_MEMORY_FALLBACK
+       Constructor argument: :paramref:`~flask_limiter.Limiter.in_memory_fallback`
      - A comma (or some other delimiter) separated string
        that will be used when the configured storage is down.
    * - .. data:: RATELIMIT_KEY_PREFIX
+       Constructor argument: :paramref:`~flask_limiter.Limiter.key_prefix`
      - Prefix that is prepended to each stored rate limit key and app context
        global name. This can be useful when using a shared storage for multiple
        applications or rate limit domains. For multi-instance use cases, explicitly
