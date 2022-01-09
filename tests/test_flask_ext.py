@@ -9,7 +9,7 @@ import mock
 from flask import Flask, request
 from werkzeug.exceptions import BadRequest
 
-from flask_limiter.extension import HEADERS, C, Limiter
+from flask_limiter.extension import C, Limiter
 from flask_limiter.util import get_remote_address
 
 
