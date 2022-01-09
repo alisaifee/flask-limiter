@@ -1,4 +1,5 @@
 -r main.txt
+docker-compose
 pytest
 pytest-cov
 pytest-docker
