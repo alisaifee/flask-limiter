@@ -1,5 +1,6 @@
 -r test.txt
 -r docs.txt
+autoflake8
 black
 flake8
 isort
