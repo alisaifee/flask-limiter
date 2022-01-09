@@ -170,6 +170,8 @@ def test_header_ordering_with_conditional_deductions(extension_factory):
             assert resp.headers.get("X-RateLimit-Limit") == "2"
             assert resp.headers.get("X-RateLimit-Remaining") == "1"
 
+            timeline.forward(1)
+
             resp = cli.get("/test_combined/1")
             assert resp.status_code == 429
             assert resp.headers.get("X-RateLimit-Limit") == "1"

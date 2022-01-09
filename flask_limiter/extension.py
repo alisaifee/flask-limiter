@@ -562,14 +562,14 @@ class Limiter(object):
         return response
 
     def __evaluate_limits(self, endpoint, limits):
-        failed_limit = None
+        failed_limits = []
         limit_for_header = None
         view_limits = []
 
         if not getattr(g, "%s_conditional_deductions" % self._key_prefix, None):
             setattr(g, "%s_conditional_deductions" % self._key_prefix, {})
 
-        for lim in limits:
+        for lim in sorted(limits, key=lambda x: x.limit):
             limit_scope = lim.scope or endpoint
 
             if lim.is_exempt or lim.method_exempt:
