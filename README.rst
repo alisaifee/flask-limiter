@@ -23,7 +23,7 @@ provided by the `limits <https://github.com/alisaifee/limits>`_ library.
 
 Compatibility
 =============
-The version of the extension on master only supports Pythons versions >= 3.7
+The ``2.x`` versions of the extension only supports Pythons versions >= 3.7
 and Flask >= 2.0.
 
 If you are looking for support for older versions,
