@@ -182,17 +182,17 @@ For simple setups a utility function is provided:
 Please refer to :ref:`deploy-behind-proxy` for an example.
 
 
-Decorators
-----------
+Decorators to declare rate limits
+---------------------------------
 Decorators made available as instance methods of the :class:`~flask_limiter.Limiter`
 instance to be used with the :class:`flask.Flask` application.
 
 .. _ratelimit-decorator-limit:
 
-:meth:`~flask_limiter.Limiter.limit`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+limit()
+^^^^^^^
 
-There are a few ways of using this decorator depending on your preference and use-case.
+There are a few ways of using the :meth:`~flask_limiter.Limiter.limit` decorator depending on your preference and use-case.
 
 Single decorator
 
@@ -280,8 +280,8 @@ Exemption conditions
 
 .. _ratelimit-decorator-shared-limit:
 
-:meth:`~flask_limiter.Limiter.shared_limit`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+shared_limit()
+^^^^^^^^^^^^^^
 
 For scenarios where a rate limit should be shared by multiple routes
 (For example when you want to protect routes using the same resource
@@ -336,17 +336,20 @@ Dynamic shared limit
 
 .. _ratelimit-decorator-exempt:
 
-:meth:`~flask_limiter.Limiter.exempt`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Decorators for skipping rate limits
+-----------------------------------
 
-This decorator simply marks a route as being exempt from any rate limits.
+exempt()
+^^^^^^^^
+
+This decorator marks a route as being exempt from any rate limits.
 
 .. _ratelimit-decorator-request-filter:
 
-:meth:`~flask_limiter.Limiter.request_filter`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+request_filter()
+^^^^^^^^^^^^^^^^
 
-This decorator simply marks a function as a filter for requests that are going to be tested for rate limits. If any of the request filters return ``True`` no
+This decorator marks a function as a filter for requests that are going to be tested for rate limits. If any of the request filters return ``True`` no
 rate limiting will be performed for that request. This mechanism can be used to
 create custom white lists.
 

@@ -1,6 +1,10 @@
 Recipes
 =======
 
+.. contents:: Some common use cases
+   :backlinks: none
+   :local:
+
 .. _keyfunc-customization:
 
 Rate Limit Key Functions
@@ -42,12 +46,12 @@ The default configuration results in an ``abort(429)`` being called every time
 a rate limit is exceeded for a particular route. The exceeded limit is added to
 the response and results in an response body that looks something like:
 
-  .. code:: html
+.. code:: html
 
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-    <title>429 Too Many Requests</title>
-    <h1>Too Many Requests</h1>
-    <p>1 per 1 day</p>
+   <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+   <title>429 Too Many Requests</title>
+   <h1>Too Many Requests</h1>
+   <p>1 per 1 day</p>
 
 
 If you want to configure the response you can register an error handler for the
@@ -74,13 +78,13 @@ As an example, to only count non `200` responses towards the rate limit
 
 .. code-block:: python
 
-        @app.route("..")
-        @limiter.limit(
-            "1/second",
-            deduct_when=lambda response: response.status_code != 200
-        )
-        def route():
-           ...
+   @app.route("..")
+   @limiter.limit(
+       "1/second",
+       deduct_when=lambda response: response.status_code != 200
+   )
+   def route():
+       ...
 
 
 .. note:: All requests will be tested for the rate limit and rejected accordingly
@@ -98,16 +102,16 @@ work. You can add rate limits to your view classes using the following approach.
 
 .. code-block:: python
 
-    app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
+   app = Flask(__name__)
+   limiter = Limiter(app, key_func=get_remote_address)
 
-    class MyView(flask.views.MethodView):
-        decorators = [limiter.limit("10/second")]
-        def get(self):
-            return "get"
+   class MyView(flask.views.MethodView):
+       decorators = [limiter.limit("10/second")]
+       def get(self):
+           return "get"
 
-        def put(self):
-            return "put"
+       def put(self):
+           return "put"
 
 
 .. note:: This approach is limited to either sharing the same rate limit for
@@ -129,34 +133,34 @@ In the following example the **login** Blueprint has a special rate limit applie
 the **help** Blueprint is exempt from all rate limits. The **regular** Blueprint follows the default rate limits.
 
 
-    .. code-block:: python
+.. code-block:: python
 
 
-        app = Flask(__name__)
-        login = Blueprint("login", __name__, url_prefix = "/login")
-        regular = Blueprint("regular", __name__, url_prefix = "/regular")
-        doc = Blueprint("doc", __name__, url_prefix = "/doc")
+   app = Flask(__name__)
+   login = Blueprint("login", __name__, url_prefix = "/login")
+   regular = Blueprint("regular", __name__, url_prefix = "/regular")
+   doc = Blueprint("doc", __name__, url_prefix = "/doc")
 
-        @doc.route("/")
-        def doc_index():
-            return "doc"
+   @doc.route("/")
+   def doc_index():
+       return "doc"
 
-        @regular.route("/")
-        def regular_index():
-            return "regular"
+   @regular.route("/")
+   def regular_index():
+       return "regular"
 
-        @login.route("/")
-        def login_index():
-            return "login"
+   @login.route("/")
+   def login_index():
+       return "login"
 
 
-        limiter = Limiter(app, default_limits = ["1/second"], key_func=get_remote_address)
-        limiter.limit("60/hour")(login)
-        limiter.exempt(doc)
+   limiter = Limiter(app, default_limits = ["1/second"], key_func=get_remote_address)
+   limiter.limit("60/hour")(login)
+   limiter.exempt(doc)
 
-        app.register_blueprint(doc)
-        app.register_blueprint(login)
-        app.register_blueprint(regular)
+   app.register_blueprint(doc)
+   app.register_blueprint(login)
+   app.register_blueprint(regular)
 
 
 
@@ -189,24 +193,24 @@ Custom error messages
 argument to over ride the default `n per x` error message that is returned to the calling client.
 The `error_message` argument can either be a simple string or a callable that returns one.
 
-    .. code-block:: python
+.. code-block:: python
 
 
-        app = Flask(__name__)
-        limiter = Limiter(app, key_func=get_remote_address)
+    app = Flask(__name__)
+    limiter = Limiter(app, key_func=get_remote_address)
 
-        def error_handler():
-            return app.config.get("DEFAULT_ERROR_MESSAGE")
+    def error_handler():
+        return app.config.get("DEFAULT_ERROR_MESSAGE")
 
-        @app.route("/")
-        @limiter.limit("1/second", error_message='chill!')
-        def index():
-            ....
+    @app.route("/")
+    @limiter.limit("1/second", error_message='chill!')
+    def index():
+        ....
 
-        @app.route("/ping")
-        @limiter.limit("10/second", error_message=error_handler)
-        def ping():
-            ....
+    @app.route("/ping")
+    @limiter.limit("10/second", error_message=error_handler)
+    def ping():
+        ....
 
 Custom rate limit headers
 -------------------------
@@ -257,15 +261,15 @@ If your application is behind a proxy and you are using werkzeug > 0.9+ you can 
 fixer to reliably get the remote address of the user, while protecting your application against ip spoofing via headers.
 
 
-    .. code-block:: python
+.. code-block:: python
 
-        from flask import Flask
-        from flask_limiter import Limiter
-        from flask_limiter.util import get_remote_address
-        from werkzeug.middleware.proxy_fix import ProxyFix
+    from flask import Flask
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+    from werkzeug.middleware.proxy_fix import ProxyFix
 
-        app = Flask(__name__)
-        # for example if the request goes through one proxy
-        # before hitting your application server
-        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
-        limiter = Limiter(app, key_func=get_remote_address)
+    app = Flask(__name__)
+    # for example if the request goes through one proxy
+    # before hitting your application server
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+    limiter = Limiter(app, key_func=get_remote_address)

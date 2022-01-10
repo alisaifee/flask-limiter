@@ -3,19 +3,20 @@ API
 
 .. currentmodule:: flask_limiter
 
-Core
-----
+Extension
+---------
 .. autoclass:: Limiter
+
+Helpers
+-------
 .. autoclass:: RequestLimit
 .. autoclass:: HEADERS
+
+-------
+
+.. automodule:: flask_limiter.util
 
 Exceptions
 ----------
 .. autoexception:: RateLimitExceeded
-  :no-inherited-members:
-
-Utils
------
-
-.. automodule:: flask_limiter.util
-
+   :no-inherited-members:
