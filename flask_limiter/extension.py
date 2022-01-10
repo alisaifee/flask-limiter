@@ -167,11 +167,11 @@ class Limiter(object):
         self,
         app: Optional[Flask] = None,
         key_func: Callable[[], str] = None,
-        default_limits: List[str] = [],
+        default_limits: List[Union[str, Callable[[], str]]] = [],
         default_limits_per_method: bool = None,
         default_limits_exempt_when: Callable[[], bool] = None,
         default_limits_deduct_when: Callable[[], bool] = None,
-        application_limits: List[str] = [],
+        application_limits: List[Union[str, Callable[[], str]]] = [],
         headers_enabled: bool = None,
         header_name_mapping: Dict[HEADERS, str] = {},
         strategy: Optional[str] = None,
@@ -394,6 +394,119 @@ class Limiter(object):
         app.extensions["limiter"] = self
         self.initialized = True
 
+    def limit(
+        self,
+        limit_value: Union[str, Callable[[], str]],
+        key_func: Callable[[], str] = None,
+        per_method: bool = False,
+        methods: List[str] = None,
+        error_message: str = None,
+        exempt_when: Callable[[], bool] = None,
+        override_defaults: bool = True,
+        deduct_when: Callable[[Response], bool] = None,
+    ) -> Callable:
+        """
+        decorator to be used for rate limiting individual routes or blueprints.
+
+        :param limit_value: rate limit string or a callable that returns a
+         string. :ref:`ratelimit-string` for more details.
+        :param key_func: function/lambda to extract the unique
+         identifier for the rate limit. defaults to remote address of the
+         request.
+        :param per_method: whether the limit is sub categorized into the
+         http method of the request.
+        :param methods: if specified, only the methods in this list will
+         be rate limited (default: None).
+        :param error_message: string (or callable that returns one) to override
+         the error message used in the response.
+        :param exempt_when: function/lambda used to decide if the rate
+         limit should skipped.
+        :param override_defaults:  whether the decorated limit overrides
+         the default limits. (default: True)
+        :param deduct_when: a function that receives the current
+         :class:`flask.Response` object and returns True/False to decide if a
+         deduction should be done from the rate limit
+        """
+
+        return self.__limit_decorator(
+            limit_value,
+            key_func,
+            per_method=per_method,
+            methods=methods,
+            error_message=error_message,
+            exempt_when=exempt_when,
+            override_defaults=override_defaults,
+            deduct_when=deduct_when,
+        )
+
+    def shared_limit(
+        self,
+        limit_value: Union[str, Callable[[], str]],
+        scope: Union[str, Callable[[], str]],
+        key_func: Callable[[], str] = None,
+        error_message: str = None,
+        exempt_when: Callable[[], bool] = None,
+        override_defaults=True,
+        deduct_when: Callable[[Response], bool] = None,
+    ) -> Callable:
+        """
+        decorator to be applied to multiple routes sharing the same rate limit.
+
+        :param limit_value: rate limit string or a callable that returns a
+         string. :ref:`ratelimit-string` for more details.
+        :param scope: a string or callable that returns a string
+         for defining the rate limiting scope.
+        :param key_func: function/lambda to extract the unique
+         identifier for the rate limit. defaults to remote address of the
+         request.
+        :param error_message: string (or callable that returns one) to override
+         the error message used in the response.
+        :param function exempt_when: function/lambda used to decide if the rate
+         limit should skipped.
+        :param override_defaults:  whether the decorated limit overrides
+         the default limits. (default: True)
+        :param deduct_when: a function that receives the current
+         :class:`flask.Response`  object and returns True/False to decide if a
+         deduction should be done from the rate limit
+        """
+
+        return self.__limit_decorator(
+            limit_value,
+            key_func,
+            True,
+            scope,
+            error_message=error_message,
+            exempt_when=exempt_when,
+            override_defaults=override_defaults,
+            deduct_when=deduct_when,
+        )
+
+    def exempt(self, obj: Union[Callable, Blueprint]):
+        """
+        decorator to mark a view or all views in a blueprint as exempt from
+        rate limits.
+
+        :param obj: view or blueprint to mark as exempt.
+        """
+
+        if isinstance(obj, Blueprint):
+            self._blueprint_exempt.add(obj.name)
+        else:
+            self._exempt_routes.add(f"{obj.__module__}.{obj.__name__}")
+            return obj
+
+    def request_filter(self, fn: Callable[[], bool]) -> Callable:
+        """
+        decorator to mark a function as a filter to be executed
+        to check if the request is exempt from rate limiting.
+
+        :param fn: The function will be called before evaluating any rate limits
+         to decide whether to perform rate limit or skip it.
+        """
+        self._request_filters.append(fn)
+
+        return fn
+
     def __configure_fallbacks(self, app, strategy):
         config = app.config
         fallback_enabled = config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
@@ -471,6 +584,7 @@ class Limiter(object):
 
         .. important:: The value of ``remaining`` in :class:`RequestLimit` is after
            deduction for the current request.
+
 
         For example::
 
@@ -858,118 +972,3 @@ class Limiter(object):
                 return __inner
 
         return _inner
-
-    def limit(
-        self,
-        limit_value: Union[str, Callable[[], str]],
-        key_func: Callable[[], str] = None,
-        per_method: bool = False,
-        methods: List[str] = None,
-        error_message: str = None,
-        exempt_when: Callable[[], bool] = None,
-        override_defaults: bool = True,
-        deduct_when: Callable[[Response], bool] = None,
-    ) -> Callable:
-        """
-        decorator to be used for rate limiting individual routes or blueprints.
-
-        :param limit_value: rate limit string or a callable that returns a
-         string. :ref:`ratelimit-string` for more details.
-        :param key_func: function/lambda to extract the unique
-         identifier for the rate limit. defaults to remote address of the
-         request.
-        :param per_method: whether the limit is sub categorized into the
-         http method of the request.
-        :param methods: if specified, only the methods in this list will
-         be rate limited (default: None).
-        :param error_message: string (or callable that returns one) to override
-         the error message used in the response.
-        :param exempt_when: function/lambda used to decide if the rate
-         limit should skipped.
-        :param override_defaults:  whether the decorated limit overrides
-         the default limits. (default: True)
-        :param deduct_when: a function that receives the current
-         :class:`flask.Response` object and returns True/False to decide if a
-         deduction should be done from the rate limit
-        """
-
-        return self.__limit_decorator(
-            limit_value,
-            key_func,
-            per_method=per_method,
-            methods=methods,
-            error_message=error_message,
-            exempt_when=exempt_when,
-            override_defaults=override_defaults,
-            deduct_when=deduct_when,
-        )
-
-    def shared_limit(
-        self,
-        limit_value: Union[str, Callable[[], str]],
-        scope: Union[str, Callable[[], str]],
-        key_func: Callable[[], str] = None,
-        error_message: str = None,
-        exempt_when: Callable[[], bool] = None,
-        override_defaults=True,
-        deduct_when: Callable[[Response], bool] = None,
-    ) -> Callable:
-        """
-        decorator to be applied to multiple routes sharing the same rate limit.
-
-        :param limit_value: rate limit string or a callable that returns a
-         string. :ref:`ratelimit-string` for more details.
-        :param scope: a string or callable that returns a string
-         for defining the rate limiting scope.
-        :param key_func: function/lambda to extract the unique
-         identifier for the rate limit. defaults to remote address of the
-         request.
-        :param error_message: string (or callable that returns one) to override
-         the error message used in the response.
-        :param function exempt_when: function/lambda used to decide if the rate
-         limit should skipped.
-        :param override_defaults:  whether the decorated limit overrides
-         the default limits. (default: True)
-        :param deduct_when: a function that receives the current
-         :class:`flask.Response`  object and returns True/False to decide if a
-         deduction should be done from the rate limit
-        """
-
-        return self.__limit_decorator(
-            limit_value,
-            key_func,
-            True,
-            scope,
-            error_message=error_message,
-            exempt_when=exempt_when,
-            override_defaults=override_defaults,
-            deduct_when=deduct_when,
-        )
-
-    def exempt(self, obj):
-        """
-        decorator to mark a view or all views in a blueprint as exempt from
-        rate limits.
-        """
-
-        if not isinstance(obj, Blueprint):
-            name = f"{obj.__module__}.{obj.__name__}"
-
-            @wraps(obj)
-            def __inner(*a, **k):
-                return current_app.ensure_sync(obj)(*a, **k)
-
-            self._exempt_routes.add(name)
-
-            return __inner
-        else:
-            self._blueprint_exempt.add(obj.name)
-
-    def request_filter(self, fn: Callable) -> Callable:
-        """
-        decorator to mark a function as a filter to be executed
-        to check if the request is exempt from rate limiting.
-        """
-        self._request_filters.append(fn)
-
-        return fn
