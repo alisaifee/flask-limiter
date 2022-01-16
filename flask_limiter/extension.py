@@ -8,7 +8,6 @@ import logging
 import time
 from functools import wraps
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union, cast
-from weakref import ref
 
 from flask import Blueprint, Flask, Response, current_app, g, request
 from limits import RateLimitItem
@@ -83,7 +82,7 @@ class RequestLimit:
         request_args: List[str],
         breached: bool,
     ):
-        self.limiter = ref(limiter)
+        self.limiter = limiter
         self.limit = limit
         self.request_args = request_args
         self.key = limit.key_for(*request_args)
@@ -93,9 +92,7 @@ class RequestLimit:
     @property
     def window(self):
         if not self._window:
-            self._window = self.limiter().get_window_stats(
-                self.limit, *self.request_args
-            )
+            self._window = self.limiter.get_window_stats(self.limit, *self.request_args)
 
         return self._window
 
