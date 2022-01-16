@@ -5,4 +5,7 @@ git push origin master --tags
 git checkout 2.x
 git merge master
 git push origin 2.x
+git checkout stable
+git push origin stable
+git merge master
 git checkout $cur
