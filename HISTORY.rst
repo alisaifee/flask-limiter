@@ -3,6 +3,31 @@
 Changelog
 =========
 
+v2.1
+----
+Release Date: 2022-01-15
+
+* Feature
+
+  * Add ``current_limit`` attribute to extension to
+    allow clients to fetch the relevant current limit
+    that was evaluated.
+  * Update extension constructor parameters to match
+    flask config for header control
+  * Add ``on_breach`` callback for ``limit`` and ``shared_limit``
+    decorators to be used as hooks for when a limit is breached
+  * Add ``cost`` argument to ``limit`` and ``shared_limit`` to control
+    how much is deducted when a hit occurs.
+
+* Chore
+
+  * Improve documentation around configuration
+
+* Deprecation
+
+  * Remove hacks for managing incorrectly ordered
+    limit/route decorators
+
 v2.0.4
 ------
 Release Date: 2021-12-22
@@ -446,6 +471,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
