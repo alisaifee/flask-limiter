@@ -1,2 +1,2 @@
-limits>=2
+limits>=2.3
 Flask>=2

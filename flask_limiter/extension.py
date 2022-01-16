@@ -232,6 +232,7 @@ class Limiter(object):
                         None,
                         None,
                         None,
+                        1,
                     )
                 ]
             )
@@ -250,6 +251,7 @@ class Limiter(object):
                         None,
                         None,
                         None,
+                        1,
                     )
                 ]
             )
@@ -268,6 +270,7 @@ class Limiter(object):
                         None,
                         None,
                         None,
+                        1,
                     )
                 ]
             )
@@ -374,6 +377,7 @@ class Limiter(object):
                     None,
                     None,
                     None,
+                    1,
                 )
             ]
 
@@ -392,6 +396,7 @@ class Limiter(object):
                     None,
                     None,
                     None,
+                    1,
                 )
             ]
 
@@ -426,6 +431,7 @@ class Limiter(object):
         override_defaults: bool = True,
         deduct_when: Callable[[Response], bool] = None,
         on_breach: Callable[[RequestLimit], None] = None,
+        cost: int = 1,
     ) -> Callable:
         """
         decorator to be used for rate limiting individual routes or blueprints.
@@ -450,6 +456,7 @@ class Limiter(object):
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
+        :param cost: cost of a hit (default: 1).
         """
 
         return self.__limit_decorator(
@@ -462,6 +469,7 @@ class Limiter(object):
             override_defaults=override_defaults,
             deduct_when=deduct_when,
             on_breach=on_breach,
+            cost=cost,
         )
 
     def shared_limit(
@@ -474,6 +482,7 @@ class Limiter(object):
         override_defaults=True,
         deduct_when: Callable[[Response], bool] = None,
         on_breach: Callable[[RequestLimit], None] = None,
+        cost: int = 1,
     ) -> Callable:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -496,6 +505,7 @@ class Limiter(object):
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
+        :param cost: cost of a hit (default: 1).
         """
 
         return self.__limit_decorator(
@@ -508,6 +518,7 @@ class Limiter(object):
             override_defaults=override_defaults,
             deduct_when=deduct_when,
             on_breach=on_breach,
+            cost=cost,
         )
 
     def exempt(self, obj: Union[Callable, Blueprint]):
@@ -555,6 +566,7 @@ class Limiter(object):
                     None,
                     None,
                     None,
+                    1,
                 )
             ]
 
@@ -669,7 +681,7 @@ class Limiter(object):
             g, f"{self._key_prefix}_conditional_deductions", {}
         ).items():
             if lim.deduct_when(response):
-                self.limiter.hit(lim.limit, *args)
+                self.limiter.hit(lim.limit, *args, cost=lim.cost)
 
         return response
 
@@ -751,6 +763,7 @@ class Limiter(object):
                 limit_scope += ":%s" % request.method
             limit_key = lim.key_func()
             args = [limit_key, limit_scope]
+            kwargs = {}
 
             if not all(args):
                 self.logger.error(
@@ -767,13 +780,14 @@ class Limiter(object):
                 method = self.limiter.test
             else:
                 method = self.limiter.hit
+                kwargs["cost"] = lim.cost
 
             if not limit_for_header or lim.limit < limit_for_header[0]:
                 limit_for_header = [lim.limit] + args
 
             view_limits.append([lim.limit] + args)
 
-            if not method(lim.limit, *args):
+            if not method(lim.limit, *args, **kwargs):
                 self.logger.warning(
                     "ratelimit %s (%s) exceeded at endpoint: %s",
                     lim.limit,
@@ -866,6 +880,7 @@ class Limiter(object):
                                     limit.override_defaults,
                                     limit.deduct_when,
                                     limit.on_breach,
+                                    limit.cost,
                                 )
                                 for limit in limit_group
                             ]
@@ -947,6 +962,7 @@ class Limiter(object):
         override_defaults=True,
         deduct_when=None,
         on_breach=None,
+        cost=1,
     ):
         _scope = scope if shared else None
 
@@ -968,6 +984,7 @@ class Limiter(object):
                     override_defaults,
                     deduct_when,
                     on_breach,
+                    cost,
                 )
             else:
                 try:
@@ -983,6 +1000,7 @@ class Limiter(object):
                             override_defaults,
                             deduct_when,
                             on_breach,
+                            cost,
                         )
                     )
                 except ValueError as e:

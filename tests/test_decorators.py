@@ -633,3 +633,39 @@ def test_on_breach_callback(extension_factory):
         assert cli.get("/fail").status_code == 429
 
     assert len(callbacks) == 1
+
+
+def test_limit_multiple_cost(extension_factory):
+    app, limiter = extension_factory()
+
+    @app.route("/root")
+    @limiter.limit("4/second", cost=2)
+    def root():
+        return "root"
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/root").status_code
+            assert 200 == cli.get("/root").status_code
+            assert 429 == cli.get("/root").status_code
+
+
+def test_shared_limit_multiple_cost(extension_factory):
+    app, limiter = extension_factory()
+    shared_limit = limiter.shared_limit("4/minute", scope="a", cost=2)
+
+    @app.route("/t1")
+    @shared_limit
+    def route1():
+        return "route1"
+
+    @app.route("/t2")
+    @shared_limit
+    def route2():
+        return "route2"
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1").status_code
+            assert 200 == cli.get("/t2").status_code
+            assert 429 == cli.get("/t2").status_code

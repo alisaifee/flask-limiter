@@ -19,6 +19,7 @@ class Limit(object):
         override_defaults,
         deduct_when,
         on_breach,
+        cost,
     ):
         self.limit = limit
         self.key_func = key_func
@@ -30,6 +31,7 @@ class Limit(object):
         self.override_defaults = override_defaults
         self.deduct_when = deduct_when
         self.on_breach = on_breach
+        self.cost = cost
 
     @property
     def is_exempt(self):
@@ -68,6 +70,7 @@ class LimitGroup(object):
         override_defaults,
         deduct_when,
         on_breach,
+        cost,
     ):
         self.__limit_provider = limit_provider
         self.__scope = scope
@@ -79,6 +82,7 @@ class LimitGroup(object):
         self.override_defaults = override_defaults
         self.deduct_when = deduct_when
         self.on_breach = on_breach
+        self.cost = cost
 
     def __iter__(self):
         limit_items = parse_many(
@@ -99,4 +103,5 @@ class LimitGroup(object):
                 self.override_defaults,
                 self.deduct_when,
                 self.on_breach,
+                self.cost,
             )
