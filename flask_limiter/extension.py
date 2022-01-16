@@ -804,7 +804,7 @@ class Limiter(object):
         setattr(g, f"{self._key_prefix}_view_rate_limits", view_limits)
 
         if failed_limits:
-            inner_limits = [l[0] for l in failed_limits]
+            inner_limits = [limit[0] for limit in failed_limits]
 
             for limit in failed_limits:
                 if limit[0].on_breach:
