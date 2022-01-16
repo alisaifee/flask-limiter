@@ -598,7 +598,7 @@ def test_async_route(extension_factory):
         assert cli.get("/t2").status_code == 200
 
 
-def test_on_breach_callback(extension_factory):
+def test_on_breach_callback(extension_factory, caplog):
     app, limiter = extension_factory()
 
     callbacks = []
@@ -620,7 +620,7 @@ def test_on_breach_callback(extension_factory):
         return "other"
 
     @app.route("/fail")
-    @limiter.limit("1/second")
+    @limiter.limit("1/second", on_breach=failed_on_breach)
     def fail():
         return "fail"
 
@@ -633,6 +633,7 @@ def test_on_breach_callback(extension_factory):
         assert cli.get("/fail").status_code == 429
 
     assert len(callbacks) == 1
+    assert caplog.records[-1].message == "on_breach callback failed"
 
 
 def test_limit_multiple_cost(extension_factory):
