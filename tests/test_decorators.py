@@ -596,3 +596,40 @@ def test_async_route(extension_factory):
         assert cli.get("/t1").status_code == 429
         assert cli.get("/t2").status_code == 200
         assert cli.get("/t2").status_code == 200
+
+
+def test_on_breach_callback(extension_factory):
+    app, limiter = extension_factory()
+
+    callbacks = []
+
+    def on_breach(request_limit):
+        callbacks.append(request_limit)
+
+    def failed_on_breach(request_limit):
+        1 / 0
+
+    @app.route("/")
+    @limiter.limit("1/second", on_breach=on_breach)
+    def root():
+        return "root"
+
+    @app.route("/other")
+    @limiter.limit("1/second")
+    def other():
+        return "other"
+
+    @app.route("/fail")
+    @limiter.limit("1/second")
+    def fail():
+        return "fail"
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        assert cli.get("/").status_code == 429
+        assert cli.get("/other").status_code == 200
+        assert cli.get("/other").status_code == 429
+        assert cli.get("/fail").status_code == 200
+        assert cli.get("/fail").status_code == 429
+
+    assert len(callbacks) == 1

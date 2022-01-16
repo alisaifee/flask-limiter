@@ -222,7 +222,16 @@ class Limiter(object):
             self._default_limits.extend(
                 [
                     LimitGroup(
-                        limit, self._key_func, None, False, None, None, None, None, None
+                        limit,
+                        self._key_func,
+                        None,
+                        False,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
                     )
                 ]
             )
@@ -240,6 +249,7 @@ class Limiter(object):
                         None,
                         None,
                         None,
+                        None,
                     )
                 ]
             )
@@ -248,7 +258,16 @@ class Limiter(object):
             self._in_memory_fallback.extend(
                 [
                     LimitGroup(
-                        limit, self._key_func, None, False, None, None, None, None, None
+                        limit,
+                        self._key_func,
+                        None,
+                        False,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
                     )
                 ]
             )
@@ -354,6 +373,7 @@ class Limiter(object):
                     None,
                     None,
                     None,
+                    None,
                 )
             ]
 
@@ -366,6 +386,7 @@ class Limiter(object):
                     self._key_func,
                     None,
                     False,
+                    None,
                     None,
                     None,
                     None,
@@ -404,6 +425,7 @@ class Limiter(object):
         exempt_when: Callable[[], bool] = None,
         override_defaults: bool = True,
         deduct_when: Callable[[Response], bool] = None,
+        on_breach: Callable[[RequestLimit], None] = None,
     ) -> Callable:
         """
         decorator to be used for rate limiting individual routes or blueprints.
@@ -426,6 +448,8 @@ class Limiter(object):
         :param deduct_when: a function that receives the current
          :class:`flask.Response` object and returns True/False to decide if a
          deduction should be done from the rate limit
+        :param on_breach: a function that will be called when this limit
+         is breached.
         """
 
         return self.__limit_decorator(
@@ -437,6 +461,7 @@ class Limiter(object):
             exempt_when=exempt_when,
             override_defaults=override_defaults,
             deduct_when=deduct_when,
+            on_breach=on_breach,
         )
 
     def shared_limit(
@@ -448,6 +473,7 @@ class Limiter(object):
         exempt_when: Callable[[], bool] = None,
         override_defaults=True,
         deduct_when: Callable[[Response], bool] = None,
+        on_breach: Callable[[RequestLimit], None] = None,
     ) -> Callable:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -468,6 +494,8 @@ class Limiter(object):
         :param deduct_when: a function that receives the current
          :class:`flask.Response`  object and returns True/False to decide if a
          deduction should be done from the rate limit
+        :param on_breach: a function that will be called when this limit
+         is breached.
         """
 
         return self.__limit_decorator(
@@ -479,6 +507,7 @@ class Limiter(object):
             exempt_when=exempt_when,
             override_defaults=override_defaults,
             deduct_when=deduct_when,
+            on_breach=on_breach,
         )
 
     def exempt(self, obj: Union[Callable, Blueprint]):
@@ -493,6 +522,7 @@ class Limiter(object):
             self._blueprint_exempt.add(obj.name)
         else:
             self._exempt_routes.add(f"{obj.__module__}.{obj.__name__}")
+
             return obj
 
     def request_filter(self, fn: Callable[[], bool]) -> Callable:
@@ -519,6 +549,7 @@ class Limiter(object):
                     self._key_func,
                     None,
                     False,
+                    None,
                     None,
                     None,
                     None,
@@ -749,7 +780,7 @@ class Limiter(object):
                     limit_key,
                     limit_scope,
                 )
-                failed_limits.append(lim)
+                failed_limits.append([lim, args])
                 limit_for_header = [lim.limit] + args
 
                 if self._fail_on_first_breach:
@@ -759,12 +790,28 @@ class Limiter(object):
         setattr(g, f"{self._key_prefix}_view_rate_limits", view_limits)
 
         if failed_limits:
+            inner_limits = [l[0] for l in failed_limits]
+
+            for limit in failed_limits:
+                if limit[0].on_breach:
+                    try:
+                        limit[0].on_breach(
+                            RequestLimit(
+                                self.limiter,
+                                limit=limit[0].limit,
+                                request_args=limit[1:],
+                                breached=True,
+                            )
+                        )
+                    except Exception:  # noqa
+                        self.logger.warning("on_breach callback failed")
+
             setattr(
                 g,
                 f"{self._key_prefix}_breached_limits",
-                [limit.limit for limit in failed_limits],
+                [limit.limit for limit in inner_limits],
             )
-            raise RateLimitExceeded(sorted(failed_limits)[0])
+            raise RateLimitExceeded(sorted(inner_limits)[0])
 
     def __check_request_limit(self, in_middleware=True):
         endpoint = request.endpoint or ""
@@ -818,6 +865,7 @@ class Limiter(object):
                                     limit.exempt_when,
                                     limit.override_defaults,
                                     limit.deduct_when,
+                                    limit.on_breach,
                                 )
                                 for limit in limit_group
                             ]
@@ -898,6 +946,7 @@ class Limiter(object):
         exempt_when=None,
         override_defaults=True,
         deduct_when=None,
+        on_breach=None,
     ):
         _scope = scope if shared else None
 
@@ -918,6 +967,7 @@ class Limiter(object):
                     exempt_when,
                     override_defaults,
                     deduct_when,
+                    on_breach,
                 )
             else:
                 try:
@@ -932,6 +982,7 @@ class Limiter(object):
                             exempt_when,
                             override_defaults,
                             deduct_when,
+                            on_breach,
                         )
                     )
                 except ValueError as e:
