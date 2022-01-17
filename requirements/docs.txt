@@ -1,6 +1,6 @@
 -r main.txt
 docutils==0.16
-Sphinx==4.3.2
+Sphinx==4.4.0
 sphinx-autobuild==2021.3.14
 sphinx-panels==0.6.0
 sphinx-paramlinks==0.5.2
