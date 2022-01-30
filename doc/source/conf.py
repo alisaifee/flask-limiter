@@ -1,35 +1,42 @@
 # -*- coding: utf-8 -*-
 #
 
-import sys
 import os
+import re
+import sys
 
 sys.path.insert(0, os.path.abspath("../../"))
 sys.path.insert(0, os.path.abspath("./"))
 
 import flask_limiter
-from theme_config import *
 
+from theme_config import *
 
 description = "Flask-Limiter provides rate limiting features to flask applications."
 copyright = "2021, Ali-Akber Saifee"
 project = "Flask-Limiter"
 
-release = flask_limiter.__version__.split("+")[0]
+release, part = flask_limiter.__version__.split("+")
 version = flask_limiter.__version__
+try:
+    ahead = int(part.rsplit(".")[0])
+    if ahead > 0:
+        html_theme_options["announcement"] = f"""
+        This is a development version. The documentation for the latest version: <b>{release}</b> can be found <a href="/en/stable">here</a>
+        """
+        html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{dev}}</b></small>"
+except Exception:
+        html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{{release}}}</b></small>"
 
 html_favicon = "_static/tap-icon.ico"
 html_static_path = ["./_static"]
 templates_path = ["./_templates"]
 html_css_files = [
     "custom.css",
-    "https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;700&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+    "https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;700&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap",
 ]
 
-html_theme_options.update({
-    "light_logo": "tap-icon.png",
-    "dark_logo": "tap-icon.png"
-})
+html_theme_options.update({"light_logo": "tap-icon.png", "dark_logo": "tap-icon.png"})
 
 extensions = [
     "alabaster",
@@ -60,7 +67,6 @@ autosectionlabel_prefix_document = True
 extlinks = {
     "pypi": ("https://pypi.org/project/%s", "%s"),
     "githubsrc": ("https://github.com/alisaifee/flask-limiter/blob/master/%s", "%s"),
-
 }
 
 intersphinx_mapping = {
@@ -74,4 +80,3 @@ intersphinx_mapping = {
     "werkzeug": ("https://werkzeug.palletsprojects.com/en/latest/", None),
     "flaskrestful": ("http://flask-restful.readthedocs.org/en/latest/", None),
 }
-
