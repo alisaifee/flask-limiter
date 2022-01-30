@@ -4,6 +4,7 @@
 .. _flask apps and ip spoofing: http://esd.io/blog/flask-apps-heroku-real-ip-spoofing.html
 
 .. image:: _static/logo.png
+    :target: /
     :width: 600px
     :align: center
     :class: logo
