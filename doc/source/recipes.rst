@@ -1,10 +1,6 @@
 Recipes
 =======
 
-.. contents:: Some common use cases
-   :backlinks: none
-   :local:
-
 .. _keyfunc-customization:
 
 Rate Limit Key Functions

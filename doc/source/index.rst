@@ -29,16 +29,16 @@ Flask-Limiter
 
 .. container:: badges
 
-   .. image:: https://img.shields.io/github/last-commit/alisaifee/flask-limiter?logo=github&style=flat-square&labelColor=#282828
+   .. image:: https://img.shields.io/github/last-commit/alisaifee/flask-limiter?logo=github&style=for-the-badge&labelColor=#282828
       :target: https://github.com/alisaifee/flask-limiter
       :class: header-badge
-   .. image:: https://img.shields.io/github/workflow/status/alisaifee/flask-limiter/CI?logo=github&style=flat-square&labelColor=#282828
+   .. image:: https://img.shields.io/github/workflow/status/alisaifee/flask-limiter/CI?logo=github&style=for-the-badge&labelColor=#282828
       :target: https://github.com/alisaifee/flask-limiter/actions/workflows/main.yml
       :class: header-badge
-   .. image:: https://img.shields.io/codecov/c/github/alisaifee/flask-limiter?logo=codecov&style=flat-square&labelColor=#282828
+   .. image:: https://img.shields.io/codecov/c/github/alisaifee/flask-limiter?logo=codecov&style=for-the-badge&labelColor=#282828
       :target: https://app.codecov.io/gh/alisaifee/flask-limiter
       :class: header-badge
-   .. image:: https://img.shields.io/pypi/pyversions/flask-limiter?style=flat-square&logo=pypi
+   .. image:: https://img.shields.io/pypi/pyversions/flask-limiter?style=for-the-badge&logo=pypi
       :target: https://pypi.org/project/flask-limiter
       :class: header-badge
 
@@ -52,10 +52,7 @@ routes, resource etc).
 commonly used storage backends via the :doc:`limits:index` library.
 
 
-.. contents:: Let's get started!
-   :backlinks: none
-   :local:
-
+Let's get started!
 
 Installation
 ============

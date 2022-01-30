@@ -25,18 +25,11 @@ html_css_files = [
     "custom.css",
     "https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;700&family=Fira+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
 ]
-html_theme_options["github_repo"] = "flask-limiter"
-html_theme_options["description"] = description
-html_sidebars = {
-    "**": [
-        "about.html",
-        "searchbox.html",
-        "navigation.html",
-        "relations.html",
-        "donate.html",
-    ]
-}
 
+html_theme_options.update({
+    "light_logo": "tap-icon.png",
+    "dark_logo": "tap-icon.png"
+})
 
 extensions = [
     "alabaster",
@@ -48,7 +41,6 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinxcontrib.programoutput",
-    "sphinx_autodoc_typehints",
     "sphinx_panels",
     "sphinx_paramlinks",
 ]
@@ -60,7 +52,8 @@ autodoc_default_options = {
     "member-order": "bysource",
 }
 add_module_names = False
-
+autoclass_content = "both"
+autodoc_typehints_format = "short"
 autosectionlabel_maxdepth = 3
 autosectionlabel_prefix_document = True
 

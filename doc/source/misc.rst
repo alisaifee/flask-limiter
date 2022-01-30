@@ -1,3 +1,7 @@
+========
+Appendix
+========
+
 References
 ==========
 * `Redis rate limiting pattern #2 <http://redis.io/commands/INCR>`_
