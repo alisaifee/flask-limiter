@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v2.1.1
+------
+Release Date: 2022-01-30
+
+* Chore
+
+  * Update documentation theme
+
 v2.1
 ----
 Release Date: 2022-01-15
@@ -471,6 +479,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
