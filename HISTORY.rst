@@ -3,7 +3,7 @@
 Changelog
 =========
 
-v2.1.1
+v2.1.2
 ------
 Release Date: 2022-01-30
 
@@ -479,6 +479,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
