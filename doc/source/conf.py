@@ -18,6 +18,7 @@ project = "Flask-Limiter"
 
 release, part = flask_limiter.__version__.split("+")
 version = flask_limiter.__version__
+html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{{release}}}</b></small>"
 try:
     ahead = int(part.rsplit(".")[0])
     if ahead > 0:
@@ -25,8 +26,8 @@ try:
         This is a development version. The documentation for the latest version: <b>{release}</b> can be found <a href="/en/stable">here</a>
         """
         html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{dev}}</b></small>"
-except Exception:
-        html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{{release}}}</b></small>"
+except:
+    pass
 
 html_favicon = "_static/tap-icon.ico"
 html_static_path = ["./_static"]
