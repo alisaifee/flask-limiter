@@ -3,6 +3,7 @@ omit =
     /*/flask_limiter/_version*
     /*/flask_limiter/backports/*
     /*/tests/*.py
+    /*/flask_limiter/contrib/*.py
     versioneer.py
     setup.py
 [report]
