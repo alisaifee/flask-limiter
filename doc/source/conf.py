@@ -66,6 +66,8 @@ autodoc_typehints_format = "short"
 autosectionlabel_maxdepth = 3
 autosectionlabel_prefix_document = True
 
+ogp_image = "_static/logo.png"
+
 extlinks = {
     "pypi": ("https://pypi.org/project/%s", "%s"),
     "githubsrc": ("https://github.com/alisaifee/flask-limiter/blob/master/%s", "%s"),
