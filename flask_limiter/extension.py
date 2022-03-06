@@ -453,8 +453,8 @@ class Limiter(object):
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
-        :param cost: The cost of a hit (default: 1) or a function that
-         returns the cost..
+        :param cost: The cost of a hit or a function that
+         takes no parameters and returns the cost as an integer (default: 1).
         """
 
         return self.__limit_decorator(
@@ -503,8 +503,8 @@ class Limiter(object):
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
-        :param cost: The cost of a hit (default: 1) or a function that
-         returns the cost..
+        :param cost: The cost of a hit or a function that
+         takes no parameters and returns the cost as an integer (default: 1).
         """
 
         return self.__limit_decorator(
