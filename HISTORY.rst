@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.2.0
+------
+Release Date: 2022-03-05
+
+* Feature
+
+  * Allow a function to be used for the ``cost`` parameter
+    to limiter decorators.
+
 v2.1.3
 ------
 Release Date: 2022-01-30
@@ -479,6 +488,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
