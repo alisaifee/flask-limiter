@@ -1,5 +1,5 @@
 lint:
-	black --check
+	black --check tests flask_limiter
 	mypy flask_limiter
 	flake8 flask_limiter tests
 
