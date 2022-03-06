@@ -31,7 +31,7 @@ class Limit(object):
         self.override_defaults = override_defaults
         self.deduct_when = deduct_when
         self.on_breach = on_breach
-        self.cost = cost
+        self._cost = cost
 
     @property
     def is_exempt(self):
@@ -44,6 +44,13 @@ class Limit(object):
         return (
             self.__scope(request.endpoint) if callable(self.__scope) else self.__scope
         )
+
+    @property
+    def cost(self):
+        if isinstance(self._cost, int):
+            return self._cost
+
+        return self._cost()
 
     @property
     def method_exempt(self):

@@ -428,7 +428,7 @@ class Limiter(object):
         override_defaults: bool = True,
         deduct_when: Callable[[Response], bool] = None,
         on_breach: Callable[[RequestLimit], None] = None,
-        cost: int = 1,
+        cost: Union[int, Callable[[], int]] = 1,
     ) -> Callable:
         """
         decorator to be used for rate limiting individual routes or blueprints.
@@ -453,7 +453,8 @@ class Limiter(object):
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
-        :param cost: cost of a hit (default: 1).
+        :param cost: The cost of a hit (default: 1) or a function that
+         returns the cost..
         """
 
         return self.__limit_decorator(
@@ -479,7 +480,7 @@ class Limiter(object):
         override_defaults=True,
         deduct_when: Callable[[Response], bool] = None,
         on_breach: Callable[[RequestLimit], None] = None,
-        cost: int = 1,
+        cost: Union[int, Callable[[], int]] = 1,
     ) -> Callable:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -502,7 +503,8 @@ class Limiter(object):
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
-        :param cost: cost of a hit (default: 1).
+        :param cost: The cost of a hit (default: 1) or a function that
+         returns the cost..
         """
 
         return self.__limit_decorator(
