@@ -3,6 +3,7 @@
 """
 import logging
 import time
+from collections import Counter
 
 import hiro
 import mock
@@ -542,6 +543,35 @@ def test_no_fail_on_first_breach(extension_factory):
             timeline.forward(1)
             assert 429 == cli.get("/").status_code
             assert [False, True] == [k.breached for k in limiter.current_limits]
+
+
+def test_default_on_breach_callback(extension_factory):
+    collected = Counter()
+
+    def on_breach(limit):
+        collected[limit.key] += 1
+
+    app, limiter = extension_factory(on_breach=on_breach, default_limits=["2/second"])
+
+    @app.route("/")
+    def root():
+        return "groot"
+
+    @app.route("/sub")
+    @limiter.limit("1/second")
+    def sub_path():
+        return "subgroot"
+
+    with app.test_client() as cli:
+        cli.get("/")
+        cli.get("/")
+        cli.get("/")
+        cli.get("/sub")
+        cli.get("/sub")
+        cli.get("/sub")
+
+    assert collected["LIMITER/127.0.0.1/root/2/1/second"] == 1
+    assert collected["LIMITER/127.0.0.1/sub_path/1/1/second"] == 2
 
 
 def test_custom_key_prefix(redis_connection, extension_factory):

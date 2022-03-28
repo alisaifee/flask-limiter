@@ -148,6 +148,10 @@ class Limiter(object):
      limit. An exception will still be logged. default ``False``
     :param fail_on_first_breach: whether to stop processing remaining limits
      after the first breach. default ``True``
+    :param on_breach: a function that will be called when any limit in this
+     extension is breached.
+    :param on_breach: whether to stop processing remaining limits
+     after the first breach. default ``True``
     :param in_memory_fallback: a variable list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
@@ -177,6 +181,7 @@ class Limiter(object):
         auto_check: bool = True,
         swallow_errors: bool = None,
         fail_on_first_breach: bool = None,
+        on_breach: Callable[[RequestLimit], None] = None,
         in_memory_fallback: List[str] = [],
         in_memory_fallback_enabled: bool = None,
         retry_after: str = None,
@@ -208,6 +213,7 @@ class Limiter(object):
         self._auto_check = auto_check
         self._swallow_errors = swallow_errors
         self._fail_on_first_breach = fail_on_first_breach
+        self._on_breach = on_breach
 
         # No longer optional
         assert key_func
@@ -804,20 +810,20 @@ class Limiter(object):
 
         if failed_limits:
             inner_limits = [limit[0] for limit in failed_limits]
-
             for limit in failed_limits:
-                if limit[0].on_breach:
-                    try:
-                        limit[0].on_breach(
-                            RequestLimit(
-                                self.limiter,
-                                limit=limit[0].limit,
-                                request_args=limit[1:],
-                                breached=True,
+                for cb in {self._on_breach, limit[0].on_breach}:
+                    if cb:
+                        try:
+                            cb(
+                                RequestLimit(
+                                    self.limiter,
+                                    limit=limit[0].limit,
+                                    request_args=limit[1],
+                                    breached=True,
+                                )
                             )
-                        )
-                    except Exception:  # noqa
-                        self.logger.warning("on_breach callback failed")
+                        except Exception:  # noqa
+                            self.logger.warning("on_breach callback failed")
 
             setattr(
                 g,
