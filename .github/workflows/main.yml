@@ -7,6 +7,41 @@ on:
     branches: [ master ]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, "3.10"]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Cache dependencies
+      uses: actions/cache@v1
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements/**') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip setuptools wheel
+        pip install -r requirements/ci.txt
+    - name: Lint with flake8
+      run: |
+        flake8 . --count --show-source --statistics
+        flake8 . --count --exit-zero --max-complexity=10
+    - name: Lint with black
+      run: |
+        black tests flask_limiter
+    - name: Check imports
+      run: |
+        isort -c --profile=black limits tests
+    - name: Type checking
+      run: |
+        mypy flask_limiter
   test:
     runs-on: ubuntu-latest
     strategy:
