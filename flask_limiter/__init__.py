@@ -7,3 +7,7 @@ __version__ = get_versions()["version"]
 del get_versions
 
 __all__ = ["RateLimitExceeded", "Limiter", "RequestLimit", "HEADERS"]
+
+from . import _version
+
+__version__ = _version.get_versions()["version"]

@@ -16,13 +16,23 @@ description = "Flask-Limiter provides rate limiting features to flask applicatio
 copyright = "2021, Ali-Akber Saifee"
 project = "Flask-Limiter"
 
-release, part = flask_limiter.__version__.split("+")
-version = flask_limiter.__version__
+ahead = 0
+
+if ".post0.dev" in flask_limiter.__version__:
+    version, ahead = flask_limiter.__version__.split(".post0.dev")
+else:
+    version = flask_limiter.__version__
+
+release = version
+
 html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{{release}}}</b></small>"
 try:
-    ahead = int(part.rsplit(".")[0])
+    ahead = int(ahead)
+
     if ahead > 0:
-        html_theme_options["announcement"] = f"""
+        html_theme_options[
+            "announcement"
+        ] = f"""
         This is a development version. The documentation for the latest version: <b>{release}</b> can be found <a href="/en/stable">here</a>
         """
         html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{dev}}</b></small>"
