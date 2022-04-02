@@ -84,9 +84,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.4.0
-        env:
-          CIBW_SKIP: '*musllinux*'
+        run: pip wheel -w DEST_DIR .
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
