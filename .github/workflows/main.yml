@@ -11,12 +11,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements/**') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements/**') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.python-version }}-pip-
+          ${{ runner.os }}-pip-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -46,12 +46,12 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
-      uses: actions/cache@v1
+      uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-${{ matrix.python-version }}-pip-${{ hashFiles('requirements/**') }}
+        key: ${{ runner.os }}-pip-${{ hashFiles('requirements/**') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.python-version }}-pip-
+          ${{ runner.os }}-pip-
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
