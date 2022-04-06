@@ -18,5 +18,7 @@ Helpers
 
 Exceptions
 ----------
+.. currentmodule:: flask_limiter
+
 .. autoexception:: RateLimitExceeded
    :no-inherited-members:

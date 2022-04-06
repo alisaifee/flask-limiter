@@ -464,20 +464,25 @@ class Limiter(object):
         :param per_method: whether the limit is sub categorized into the
          http method of the request.
         :param methods: if specified, only the methods in this list will
-         be rate limited (default: None).
+         be rate limited (default: ``None``).
         :param error_message: string (or callable that returns one) to override
          the error message used in the response.
         :param exempt_when: function/lambda used to decide if the rate
          limit should skipped.
         :param override_defaults:  whether the decorated limit overrides
-         the default limits. (default: True)
+         the default limits (Default: ``True``).
+
+         .. note:: When used with a :class:`~flask.Blueprint` the meaning
+            of the parameter extends to any parents the blueprint instance is
+            registered under. For more details see :ref:`recipes:nested blueprints`
+
         :param deduct_when: a function that receives the current
          :class:`flask.Response` object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
         :param cost: The cost of a hit or a function that
-         takes no parameters and returns the cost as an integer (default: 1).
+         takes no parameters and returns the cost as an integer (Default: ``1``).
         """
 
         return self.__limit_decorator(
@@ -519,15 +524,19 @@ class Limiter(object):
          the error message used in the response.
         :param function exempt_when: function/lambda used to decide if the rate
          limit should skipped.
-        :param override_defaults:  whether the decorated limit overrides
-         the default limits. (default: True)
+        :param override_defaults: whether the decorated limit overrides
+         the default limits. (default: ``True``)
+
+         .. note:: When used with a :class:`~flask.Blueprint` the meaning
+            of the parameter extends to any parents the blueprint instance is
+            registered under. For more details see :ref:`recipes:nested blueprints`
         :param deduct_when: a function that receives the current
          :class:`flask.Response`  object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
         :param cost: The cost of a hit or a function that
-         takes no parameters and returns the cost as an integer (default: 1).
+         takes no parameters and returns the cost as an integer (default: ``1``).
         """
 
         return self.__limit_decorator(
@@ -543,19 +552,19 @@ class Limiter(object):
             cost=cost,
         )
 
-    def exempt(self, obj: Union[Callable, Blueprint], recursive: bool = False):
+    def exempt(self, obj: Union[Callable, Blueprint], nested: bool = False):
         """
         decorator to mark a view or all views in a blueprint as exempt from
         rate limits.
 
         :param obj: view or blueprint to mark as exempt.
-        :param recursive: Only applies to blueprints. This will recursively
-         exempt any blueprints nested under the blueprint referenced by
-         :paramref:`obj`
+        :param nested: Only applies to blueprints. Setting it to ``True``
+         will exempt any blueprints nested under the blueprint referenced by
+         :paramref:`obj` (See :ref:`recipes:nested blueprints`)
         """
 
         if isinstance(obj, Blueprint):
-            if recursive:
+            if nested:
                 self._nested_blueprint_exempt.add(obj.name)
             else:
                 self._blueprint_exempt.add(obj.name)
