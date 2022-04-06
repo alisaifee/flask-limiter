@@ -1,16 +1,20 @@
 -r main.txt
-docker-compose
-pytest
-pytest-cov
-pytest-docker
-mock
-coverage
-hiro>0.1.6
-ordereddict
+# For interop / recipes
+Flask[async]>=2.0.0
 flask-restful
 flask-restx
+asgiref>=3.2
+
+# Storage related dependencies
 redis
 pymemcache
 pymongo
-Flask[async]>=2.0.0
-asgiref>=3.2
+
+# For the tests themselves
+coverage
+hiro>0.1.6
+mock
+pytest
+pytest-cov
+lovely-pytest-docker
+pytest-testmon
