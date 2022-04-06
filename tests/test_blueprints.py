@@ -28,6 +28,38 @@ def test_blueprint(extension_factory):
         assert cli.get("/t2").status_code == 429
 
 
+def test_nested_blueprint(extension_factory):
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
+    child_bp = Blueprint("child", __name__, url_prefix="/child")
+
+    limiter.exempt(parent_bp)
+    limiter.exempt(child_bp)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    @parent_bp.route("/")
+    def parent():
+        return "41"
+
+    @child_bp.route("/")
+    def child():
+        return "40"
+
+    parent_bp.register_blueprint(child_bp)
+    app.register_blueprint(parent_bp)
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        assert cli.get("/").status_code == 429
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 200
+
+
 def test_register_blueprint(extension_factory):
     app, limiter = extension_factory(default_limits=["1/minute"])
     bp_1 = Blueprint("bp1", __name__)
