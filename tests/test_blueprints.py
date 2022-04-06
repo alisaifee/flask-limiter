@@ -65,7 +65,7 @@ def test_nested_blueprint_exemption_explicit(extension_factory):
 def test_nested_blueprint_exemption_legacy(extension_factory):
     """
     To capture legacy behavior, exempting a blueprint
-    will not automatically recursively exempt child blueprints
+    will not automatically exempt nested blueprints
     """
     app, limiter = extension_factory(default_limits=["1/minute"])
     parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
@@ -97,16 +97,12 @@ def test_nested_blueprint_exemption_legacy(extension_factory):
         assert cli.get("/parent/child/").status_code == 429
 
 
-def test_nested_blueprint_exemption_recursive(extension_factory):
-    """
-    To capture legacy behavior, exempting a blueprint
-    will not automatically recursively exempt child blueprints
-    """
+def test_nested_blueprint_exemption_nested(extension_factory):
     app, limiter = extension_factory(default_limits=["1/minute"])
     parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
     child_bp = Blueprint("child", __name__, url_prefix="/child")
 
-    limiter.exempt(parent_bp, recursive=True)
+    limiter.exempt(parent_bp, nested=True)
 
     @app.route("/")
     def root():
