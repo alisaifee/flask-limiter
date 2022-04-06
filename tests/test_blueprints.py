@@ -1,3 +1,5 @@
+import datetime
+
 import hiro
 from flask import Blueprint, Flask, current_app
 
@@ -28,7 +30,7 @@ def test_blueprint(extension_factory):
         assert cli.get("/t2").status_code == 429
 
 
-def test_nested_blueprint(extension_factory):
+def test_nested_blueprint_exemption_explicit(extension_factory):
     app, limiter = extension_factory(default_limits=["1/minute"])
     parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
     child_bp = Blueprint("child", __name__, url_prefix="/child")
@@ -58,6 +60,204 @@ def test_nested_blueprint(extension_factory):
         assert cli.get("/parent/").status_code == 200
         assert cli.get("/parent/child/").status_code == 200
         assert cli.get("/parent/child/").status_code == 200
+
+
+def test_nested_blueprint_exemption_legacy(extension_factory):
+    """
+    To capture legacy behavior, exempting a blueprint
+    will not automatically recursively exempt child blueprints
+    """
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
+    child_bp = Blueprint("child", __name__, url_prefix="/child")
+
+    limiter.exempt(parent_bp)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    @parent_bp.route("/")
+    def parent():
+        return "41"
+
+    @child_bp.route("/")
+    def child():
+        return "40"
+
+    parent_bp.register_blueprint(child_bp)
+    app.register_blueprint(parent_bp)
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        assert cli.get("/").status_code == 429
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 429
+
+
+def test_nested_blueprint_exemption_recursive(extension_factory):
+    """
+    To capture legacy behavior, exempting a blueprint
+    will not automatically recursively exempt child blueprints
+    """
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
+    child_bp = Blueprint("child", __name__, url_prefix="/child")
+
+    limiter.exempt(parent_bp, recursive=True)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    @parent_bp.route("/")
+    def parent():
+        return "41"
+
+    @child_bp.route("/")
+    def child():
+        return "40"
+
+    parent_bp.register_blueprint(child_bp)
+    app.register_blueprint(parent_bp)
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        assert cli.get("/").status_code == 429
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 200
+
+
+def test_nested_blueprint_exemption_child_only(extension_factory):
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
+    child_bp = Blueprint("child", __name__, url_prefix="/child")
+
+    limiter.exempt(child_bp)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    @parent_bp.route("/")
+    def parent():
+        return "41"
+
+    @child_bp.route("/")
+    def child():
+        return "40"
+
+    parent_bp.register_blueprint(child_bp)
+    app.register_blueprint(parent_bp)
+    app.register_blueprint(child_bp)  # weird
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        assert cli.get("/").status_code == 429
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/").status_code == 429
+        assert cli.get("/parent/child/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 200
+        assert cli.get("/child/").status_code == 200
+        assert cli.get("/child/").status_code == 200
+
+
+def test_nested_blueprint_child_explicit_limit(extension_factory):
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
+    child_bp = Blueprint("child", __name__, url_prefix="/child")
+
+    limiter.limit("2/minute")(child_bp)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    @parent_bp.route("/")
+    def parent():
+        return "41"
+
+    @child_bp.route("/")
+    def child():
+        return "40"
+
+    parent_bp.register_blueprint(child_bp)
+    app.register_blueprint(parent_bp)
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        assert cli.get("/").status_code == 429
+        assert cli.get("/parent/").status_code == 200
+        assert cli.get("/parent/").status_code == 429
+        assert cli.get("/parent/child/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 200
+        assert cli.get("/parent/child/").status_code == 429
+
+
+def test_nested_blueprint_child_explicit_nested_limits(extension_factory):
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    parent_bp = Blueprint("parent", __name__, url_prefix="/parent")
+    child_bp = Blueprint("child", __name__, url_prefix="/child")
+    grand_child_bp = Blueprint("grand_child", __name__, url_prefix="/grand_child")
+
+    limiter.limit("3/hour")(parent_bp)
+    limiter.limit("2/minute")(child_bp)
+    limiter.limit("5/day", override_defaults=False)(grand_child_bp)
+
+    @app.route("/")
+    def root():
+        return "42"
+
+    @parent_bp.route("/")
+    def parent():
+        return "41"
+
+    @child_bp.route("/")
+    def child():
+        return "40"
+
+    @grand_child_bp.route("/")
+    def grand_child():
+        return "39"
+
+    child_bp.register_blueprint(grand_child_bp)
+    parent_bp.register_blueprint(child_bp)
+    app.register_blueprint(parent_bp)
+
+    with hiro.Timeline() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 429
+            assert cli.get("/parent/").status_code == 200
+            assert cli.get("/parent/").status_code == 200
+            assert cli.get("/parent/").status_code == 200
+            assert cli.get("/parent/").status_code == 429
+            assert cli.get("/parent/child/").status_code == 200
+            assert cli.get("/parent/child/").status_code == 200
+            assert cli.get("/parent/child/").status_code == 429
+            timeline.forward(datetime.timedelta(minutes=1))
+            assert cli.get("/parent/child/").status_code == 200
+            # parent's limit is ignored as override_defaults is True by default
+            assert cli.get("/parent/child/").status_code == 200
+            assert cli.get("/parent/child/grand_child/").status_code == 200
+            # global limit is ignored as parent override's default
+            assert cli.get("/parent/child/grand_child/").status_code == 200
+            # child's limit is not ignored as grandchild sets override default to False
+            assert cli.get("/parent/child/grand_child/").status_code == 429
+            timeline.forward(datetime.timedelta(minutes=1))
+            assert cli.get("/parent/child/grand_child/").status_code == 200
+            assert cli.get("/parent/child/grand_child/").status_code == 429
+            timeline.forward(datetime.timedelta(minutes=60))
+            assert cli.get("/parent/child/grand_child/").status_code == 200
+            timeline.forward(datetime.timedelta(minutes=60))
+            assert cli.get("/parent/child/grand_child/").status_code == 200
+            timeline.forward(datetime.timedelta(minutes=60))
+            # grand child's own limit kicks in
+            assert cli.get("/parent/child/grand_child/").status_code == 429
 
 
 def test_register_blueprint(extension_factory):

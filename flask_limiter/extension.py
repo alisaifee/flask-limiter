@@ -7,7 +7,7 @@ import itertools
 import logging
 import time
 from functools import wraps
-from typing import Callable, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union, cast
 
 from flask import (
     Blueprint,
@@ -289,6 +289,7 @@ class Limiter(object):
         self._blueprint_limits: Dict[str, List[Limit]] = {}
         self._blueprint_dynamic_limits: Dict[str, List[LimitGroup]] = {}
         self._blueprint_exempt: Set[str] = set()
+        self._nested_blueprint_exempt: Set[str] = set()
         self._storage: Optional[Storage] = None
         self._limiter: Optional[RateLimiter] = None
         self._storage_dead = False
@@ -542,16 +543,22 @@ class Limiter(object):
             cost=cost,
         )
 
-    def exempt(self, obj: Union[Callable, Blueprint]):
+    def exempt(self, obj: Union[Callable, Blueprint], recursive: bool = False):
         """
         decorator to mark a view or all views in a blueprint as exempt from
         rate limits.
 
         :param obj: view or blueprint to mark as exempt.
+        :param recursive: Only applies to blueprints. This will recursively
+         exempt any blueprints nested under the blueprint referenced by
+         :paramref:`obj`
         """
 
         if isinstance(obj, Blueprint):
-            self._blueprint_exempt.add(obj.name)
+            if recursive:
+                self._nested_blueprint_exempt.add(obj.name)
+            else:
+                self._blueprint_exempt.add(obj.name)
         else:
             self._exempt_routes.add(f"{obj.__module__}.{obj.__name__}")
 
@@ -853,12 +860,21 @@ class Limiter(object):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+        blueprint_name = (
+            current_app.blueprints[request.blueprint].name
+            if request.blueprint
+            else None
+        )
+        blueprint_ancestory = set(
+            request.blueprint.split(".") if request.blueprint else []
+        )
         if (
             not request.endpoint
             or not (self.enabled and self.initialized)
             or request.endpoint == "static"
             or name in self._exempt_routes
-            or request.blueprint in self._blueprint_exempt
+            or blueprint_name in self._blueprint_exempt
+            or blueprint_ancestory.intersection(self._nested_blueprint_exempt)
             or any(fn() for fn in self._request_filters)
             or self.context.get(f"{self._key_prefix}_rate_limiting_complete")
         ):
@@ -880,13 +896,32 @@ class Limiter(object):
                             name,
                             e,
                         )
-
         if request.blueprint:
-            if (
-                request.blueprint in self._blueprint_dynamic_limits
-                and not dynamic_limits
-            ):
-                for limit_group in self._blueprint_dynamic_limits[request.blueprint]:
+            # Selection of the specific limits include
+            # - any limits specifically registered on the blueprint,
+            # - any limits registered on the parent if this is a nested
+            #   blueprint
+
+            blueprint_self_dynamic_limits = self._blueprint_dynamic_limits.get(
+                blueprint_name, []
+            )
+            blueprint_dynamic_limits: Iterable[LimitGroup] = (
+                itertools.chain(
+                    *(
+                        self._blueprint_dynamic_limits.get(member, [])
+                        for member in blueprint_ancestory.intersection(
+                            self._blueprint_dynamic_limits
+                        )
+                    )
+                )
+                if not all(
+                    limit.override_defaults for limit in blueprint_self_dynamic_limits
+                )
+                else blueprint_self_dynamic_limits
+            )
+
+            if blueprint_dynamic_limits and not dynamic_limits:
+                for limit_group in blueprint_dynamic_limits:
                     try:
                         dynamic_limits.extend(
                             [
@@ -913,9 +948,15 @@ class Limiter(object):
                             e,
                         )
 
-            if request.blueprint in self._blueprint_limits and not limits:
-                limits.extend(self._blueprint_limits[request.blueprint])
-
+            if not limits:
+                blueprint_self_limits = self._blueprint_limits.get(blueprint_name, [])
+                if not all(limit.override_defaults for limit in blueprint_self_limits):
+                    for member in blueprint_ancestory.intersection(
+                        self._blueprint_limits
+                    ):
+                        limits.extend(self._blueprint_limits[member])
+                else:
+                    limits.extend(blueprint_self_limits)
         try:
             all_limits = []
 
