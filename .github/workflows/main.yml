@@ -70,17 +70,17 @@ jobs:
         coverage report --fail-under=100 || (echo 'Insufficient coverage' && $(exit 1))
   build_wheels:
     needs: [lint]
-    name: Build wheels on ${{ matrix.os }}
+    name: Build wheel
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Build wheels
-        run: pip wheel -w DEST_DIR .
+        run: python -m build --wheel
       - uses: actions/upload-artifact@v2
         with:
-          path: ./wheelhouse/*.whl
+          path: ./dist/*.whl
   build_sdist:
     needs: [lint]
     name: Build source distribution
