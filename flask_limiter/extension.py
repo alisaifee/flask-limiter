@@ -9,7 +9,15 @@ import time
 from functools import wraps
 from typing import Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
-from flask import Blueprint, Flask, Response, current_app, g, request
+from flask import (
+    Blueprint,
+    Flask,
+    Response,
+    _request_ctx_stack,
+    current_app,
+    g,
+    request,
+)
 from limits import RateLimitItem
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
@@ -363,7 +371,7 @@ class Limiter(object):
         }
         self._retry_after = self._retry_after or config.get(C.HEADER_RETRY_AFTER_VALUE)
 
-        self._key_prefix = self._key_prefix or config.get(C.KEY_PREFIX)
+        self._key_prefix = self._key_prefix or config.get(C.KEY_PREFIX, "")
 
         app_limits = config.get(C.APPLICATION_LIMITS, None)
 
@@ -419,9 +427,18 @@ class Limiter(object):
             if self._auto_check:
                 app.before_request(self.__check_request_limit)
             app.after_request(self.__inject_headers)
+            app.teardown_request(self.__release_context)
 
         app.extensions["limiter"] = self
         self.initialized = True
+
+    @property
+    def context(self):
+        ctx = _request_ctx_stack.top
+        if ctx is not None:
+            if not hasattr(ctx, "_limiter_request_context"):
+                ctx._limiter_request_context = {}
+            return ctx._limiter_request_context
 
     def limit(
         self,
@@ -646,8 +663,8 @@ class Limiter(object):
         - Request 2 at ``t=1`` (no breach): it will still return the details for ``1/second``
         - Request 3 at ``t=2`` (breach): it will return the details for ``2/day``
         """
-        last_limit = getattr(g, f"{self._key_prefix}_view_rate_limit", None)
-        breached_limits = getattr(g, f"{self._key_prefix}_breached_limits", [])
+        last_limit = self.context.get(f"{self._key_prefix}_view_rate_limit", None)
+        breached_limits = self.context.get(f"{self._key_prefix}_breached_limits", [])
 
         if last_limit:
             return RequestLimit(
@@ -667,8 +684,8 @@ class Limiter(object):
 
         The limits are returned in a sorted order by smallest window size first.
         """
-        all_limits = getattr(g, f"{self._key_prefix}_view_rate_limits", [])
-        breached_limits = getattr(g, f"{self._key_prefix}_breached_limits", [])
+        all_limits = self.context.get(f"{self._key_prefix}_view_rate_limits", [])
+        breached_limits = self.context.get(f"{self._key_prefix}_breached_limits", [])
 
         return list(
             RequestLimit(
@@ -682,8 +699,8 @@ class Limiter(object):
 
     def __check_conditional_deductions(self, response):
 
-        for lim, args in getattr(
-            g, f"{self._key_prefix}_conditional_deductions", {}
+        for lim, args in self.context.get(
+            f"{self._key_prefix}_conditional_deductions", {}
         ).items():
             if lim.deduct_when(response):
                 self.limiter.hit(lim.limit, *args, cost=lim.cost)
@@ -755,8 +772,8 @@ class Limiter(object):
         limit_for_header = None
         view_limits = []
 
-        if not getattr(g, "%s_conditional_deductions" % self._key_prefix, None):
-            setattr(g, "%s_conditional_deductions" % self._key_prefix, {})
+        if not self.context.get(f"{self._key_prefix}_conditional_deductions"):
+            self.context["%s_conditional_deductions" % self._key_prefix] = {}
 
         for lim in sorted(limits, key=lambda x: x.limit):
             limit_scope = lim.scope or endpoint
@@ -781,7 +798,9 @@ class Limiter(object):
                 args = [self._key_prefix] + args
 
             if lim.deduct_when:
-                getattr(g, "%s_conditional_deductions" % self._key_prefix)[lim] = args
+                self.context.get(f"{self._key_prefix}_conditional_deductions")[
+                    lim
+                ] = args
                 method = self.limiter.test
             else:
                 method = self.limiter.hit
@@ -805,8 +824,8 @@ class Limiter(object):
                 if self._fail_on_first_breach:
                     break
 
-        setattr(g, f"{self._key_prefix}_view_rate_limit", limit_for_header)
-        setattr(g, f"{self._key_prefix}_view_rate_limits", view_limits)
+        self.context[f"{self._key_prefix}_view_rate_limit"] = limit_for_header
+        self.context[f"{self._key_prefix}_view_rate_limits"] = view_limits
 
         if failed_limits:
             inner_limits = [limit[0] for limit in failed_limits]
@@ -825,18 +844,16 @@ class Limiter(object):
                         except Exception:  # noqa
                             self.logger.warning("on_breach callback failed")
 
-            setattr(
-                g,
-                f"{self._key_prefix}_breached_limits",
-                [limit.limit for limit in inner_limits],
-            )
+            self.context[f"{self._key_prefix}_breached_limits"] = [
+                limit.limit for limit in inner_limits
+            ]
+
             raise RateLimitExceeded(sorted(inner_limits)[0])
 
     def __check_request_limit(self, in_middleware=True):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
-
         if (
             not request.endpoint
             or not (self.enabled and self.initialized)
@@ -954,6 +971,10 @@ class Limiter(object):
                 else:
                     raise e
 
+    def __release_context(self, _):
+        if self.context:
+            self.context.clear()
+
     def __limit_decorator(
         self,
         limit_value,
@@ -1035,12 +1056,13 @@ class Limiter(object):
 
                 @wraps(obj)
                 def __inner(*a, **k):
-                    if self._auto_check and not g.get(
+                    if self._auto_check and not self.context.get(
                         f"{self._key_prefix}_rate_limiting_complete"
                     ):
                         self.__check_request_limit(False)
-                        setattr(g, f"{self._key_prefix}_rate_limiting_complete", True)
-
+                        self.context[
+                            f"{self._key_prefix}_rate_limiting_complete"
+                        ] = True
                     return current_app.ensure_sync(obj)(*a, **k)
 
                 return __inner
