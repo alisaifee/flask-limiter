@@ -4,10 +4,7 @@ from werkzeug import exceptions
 
 
 class RateLimitExceeded(exceptions.TooManyRequests):
-    """exception raised when a rate limit is hit.
-
-    The exception results in ``abort(429)`` being called.
-    """
+    """Exception raised when a rate limit is hit."""
 
     def __init__(self, limit):
         self.limit = limit

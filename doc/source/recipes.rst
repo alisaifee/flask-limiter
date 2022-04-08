@@ -1,5 +1,6 @@
 Recipes
 =======
+.. currentmodule:: flask_limiter
 
 .. _keyfunc-customization:
 
@@ -7,8 +8,8 @@ Rate Limit Key Functions
 -------------------------
 
 You can easily customize your rate limits to be based on any
-characteristic of the incoming request. Both the :class:`~flask_limiter.Limiter` constructor
-and the :meth:`~flask_limiter.Limiter.limit` decorator accept a keyword argument
+characteristic of the incoming request. Both the :class:`~Limiter` constructor
+and the :meth:`~Limiter.limit` decorator accept a keyword argument
 ``key_func`` that should return a string (or an object that has a string representation).
 
 Rate limiting a route by current user (using Flask-Login)::
@@ -38,9 +39,10 @@ Rate limiting all requests by country::
 
 Custom Rate limit exceeded responses
 ------------------------------------
-The default configuration results in an ``abort(429)`` being called every time
-a rate limit is exceeded for a particular route. The exceeded limit is added to
-the response and results in an response body that looks something like:
+The default configuration results in a :exc:`RateLimitExceeded` exception being
+thrown (**which effectively halts any further processing and a response with status `429`**).
+
+The exceeded limit is added to the response and results in an response body that looks something like:
 
 .. code:: html
 
@@ -65,8 +67,8 @@ Customizing rate limits based on response
 -----------------------------------------
 For scenarios where the decision to count the current request towards a rate limit
 can only be made after the request has completed, a callable that accepts the current
-:class:`flask.Response` object as its argument can be provided to the :meth:`~flask_limiter.Limiter.limit` or
-:meth:`~flask_limiter.Limiter.shared_limit` decorators through the ``deduct_when`` keyword arugment.
+:class:`flask.Response` object as its argument can be provided to the :meth:`~Limiter.limit` or
+:meth:`~Limiter.shared_limit` decorators through the ``deduct_when`` keyword arugment.
 A truthy response from the callable will result in a deduction from the rate limit.
 
 As an example, to only count non `200` responses towards the rate limit
@@ -113,7 +115,7 @@ work. You can add rate limits to your view classes using the following approach.
 .. note:: This approach is limited to either sharing the same rate limit for
  all http methods of a given :class:`flask.views.View` or applying the declared
  rate limit independently for each http method (to accomplish this, pass in ``True`` to
- the ``per_method`` keyword argument to :meth:`~flask_limiter.Limiter.limit`). Alternatively, the limit
+ the ``per_method`` keyword argument to :meth:`~Limiter.limit`). Alternatively, the limit
  can be restricted to only certain http methods by passing them as a list to the `methods`
  keyword argument.
 
@@ -121,10 +123,18 @@ work. You can add rate limits to your view classes using the following approach.
 The above approach has been tested with sub-classes of  :class:`flask.views.View`,
 :class:`flask.views.MethodView` and :class:`flask_restful.Resource`.
 
-Rate limiting all routes in a :class:`flask.Blueprint`
+Rate limiting all routes in a :class:`~flask.Blueprint`
 ------------------------------------------------------
-:meth:`~flask_limiter.Limiter.limit`, :meth:`~flask_limiter.Limiter.shared_limit` &
-:meth:`~flask_limiter.Limiter.exempt` can all be tpplied to :class:`flask.Blueprint` instances as well.
+
+.. warning:: :class:`~flask.Blueprint` instances that are registered on another blueprint
+   instead of on the main :class:`~flask.Flask` instance had not been considered
+   upto :ref:`changelog:v2.3.0`. Effectively **they neither inherited** the rate limits
+   explicitely registered on the parent :class:`~flask.Blueprint` **nor were they
+   exempt** from rate limits if the parent had been marked exempt.
+   (See :issue:`326`, and the :ref:`recipes:nested blueprints` section below).
+
+:meth:`~Limiter.limit`, :meth:`~Limiter.shared_limit` &
+:meth:`~Limiter.exempt` can all be tpplied to :class:`flask.Blueprint` instances as well.
 In the following example the **login** Blueprint has a special rate limit applied to all its routes, while
 the **help** Blueprint is exempt from all rate limits. The **regular** Blueprint follows the default rate limits.
 
@@ -159,12 +169,98 @@ the **help** Blueprint is exempt from all rate limits. The **regular** Blueprint
    app.register_blueprint(regular)
 
 
+Nested Blueprints
+^^^^^^^^^^^^^^^^^
+.. versionadded:: 2.3.0
+
+`Nested Blueprints <https://flask.palletsprojects.com/en/latest/blueprints/#nesting-blueprints>`__
+require some special considerations.
+
+=====================================
+Exempting routes in nested Blueprints
+=====================================
+
+Expanding the example from the Flask documentation::
+
+    parent = Blueprint('parent', __name__, url_prefix='/parent')
+    child = Blueprint('child', __name__, url_prefix='/child')
+    parent.register_blueprint(child)
+
+    limiter.exempt(parent)
+
+    app.register_blueprint(parent)
+
+Routes under the ``child`` blueprint **do not** automatically get exempted by default
+and have to be marked exempt explicitly. This behavior is to maintain backward compatibility
+and can be opted out of by adding :attr:`~flask_limiter.ExemptionScope.DESCENDENTS`
+to :paramref:`~Limiter.exempt.flags` when calling :meth:`Limiter.exempt`::
+
+    limiter.exempt(parent, flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.DESCENDENTS)
+
+===========================================================
+Explicitly setting limits / exemptions on nested Blueprints
+===========================================================
+
+Using combinations of :paramref:`~Limiter.limit.override_defaults` parameter
+when explicitely declaring limits on Blueprints and the :paramref:`~Limiter.exempt.flags`
+parameter when exempting Blueprints with :meth:`~Limiter.exempt`
+the resolution of inherited and descendent limits within the scope of a Blueprint
+can be controlled.
+
+Here's a slightly involved example::
+
+    limiter = Limiter(
+        ...,
+        default_limits = ["100/hour"],
+        application_limits = ["100/minute"]
+    )
+
+    parent = Blueprint('parent', __name__, url_prefix='/parent')
+    child = Blueprint('child', __name__, url_prefix='/child')
+    grandchild = Blueprint('grandchild', __name__, url_prefix='/grandchild')
+
+    health = Blueprint('health', __name__, url_prefix='/health')
+
+    parent.register_blueprint(child)
+    parent.register_blueprint(health)
+    child.register_blueprint(grandchild)
+    child.register_blueprint(health)
+    grandchild.register_blueprint(health)
+
+    app.register_blueprint(parent)
+
+    limiter.limit("2/minute")(parent)
+    limiter.limit("1/second", override_defaults=False)(child)
+    limiter.limit("10/minute")(grandchild)
+
+    limiter.exempt(
+        health,
+        flags=ExemptionScope.DEFAULT|ExemptionScope.APPLICATION|ExemptionScope.ANCESTORS
+    )
+
+Effectively this means:
+
+#. Routes under ``parent`` will override the application defaults and will be
+   limited to ``2 per minute``
+
+#. Routes under ``child`` will respect both the parent and the application defaults
+   and effectively be limited to ``At most 1 per second, 2 per minute and 100 per hour``
+
+#. Routes under ``grandchild`` will not inherit either the limits from `child` or `parent`
+   or the application defaults and allow ``10 per minute``
+
+#. All calls to ``/health/`` will be exempt from all limits (including any limits that would
+   otherwise be inherited from the Blueprints it is nested under due to the addition of the
+   :class:`~ExemptionScope.ANCESTORS` flag).
+
+.. note:: Only calls to `/health` will be exempt from the application wide global
+   limit of `100/minute`.
 
 .. _logging:
 
 Logging
 -------
-Each :class:`~flask_limiter.Limiter` instance has a ``logger`` instance variable that is by
+Each :class:`~Limiter` instance has a ``logger`` instance variable that is by
 default **not** configured with a handler. You can add your own handler to obtain
 log messages emitted by :mod:`flask_limiter`.
 
@@ -185,7 +281,7 @@ Reusing all the handlers of the ``logger`` instance of the :class:`flask.Flask` 
 
 Custom error messages
 ---------------------
-:meth:`~flask_limiter.Limiter.limit` & :meth:`~flask_limiter.Limiter.shared_limit` can be provided with an `error_message`
+:meth:`~Limiter.limit` & :meth:`~Limiter.shared_limit` can be provided with an `error_message`
 argument to over ride the default `n per x` error message that is returned to the calling client.
 The `error_message` argument can either be a simple string or a callable that returns one.
 
@@ -214,8 +310,8 @@ Though you can get pretty far with configuring the standard headers associated
 with rate limiting using configuration parameters available as described under
 :ref:`configuration:rate-limiting headers` - this may not be sufficient for your use case.
 
-For such cases you can access the :attr:`~flask_limiter.Limiter.current_limit`
-property from the :class:`~flask_limiter.Limiter` instance from anywhere within a :doc:`request context <flask:reqcontext>`.
+For such cases you can access the :attr:`~Limiter.current_limit`
+property from the :class:`~Limiter` instance from anywhere within a :doc:`request context <flask:reqcontext>`.
 
 As an example you could leave the built in header population disabled
 and add your own with an :meth:`~flask.Flask.after_request` hook::

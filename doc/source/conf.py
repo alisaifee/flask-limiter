@@ -60,6 +60,7 @@ extensions = [
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
     "sphinxcontrib.programoutput",
+    "sphinx_issues",
     "sphinx_panels",
     "sphinx_paramlinks",
 ]
@@ -75,6 +76,7 @@ autoclass_content = "both"
 autodoc_typehints_format = "short"
 autosectionlabel_maxdepth = 3
 autosectionlabel_prefix_document = True
+issues_github_path = "alisaifee/flask-limiter"
 
 ogp_image = "_static/logo.png"
 
