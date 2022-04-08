@@ -74,6 +74,7 @@ autodoc_default_options = {
 add_module_names = False
 autoclass_content = "both"
 autodoc_typehints_format = "short"
+autodoc_preserve_defaults = True
 autosectionlabel_maxdepth = 3
 autosectionlabel_prefix_document = True
 issues_github_path = "alisaifee/flask-limiter"
