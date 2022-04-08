@@ -7,13 +7,11 @@ Extension
 ---------
 .. autoclass:: Limiter
 
-Helpers
--------
+Utilities
+---------
+.. autoclass:: ExemptionScope
 .. autoclass:: RequestLimit
 .. autoclass:: HEADERS
-
--------
-
 .. automodule:: flask_limiter.util
 
 Exceptions

@@ -192,22 +192,28 @@ Expanding the example from the Flask documentation::
 
 Routes under the ``child`` blueprint **do not** automatically get exempted by default
 and have to be marked exempt explicitly. This behavior is to maintain backward compatibility
-and can be opted out of by setting :paramref:`~Limiter.exempt.nested` to ``True``
-when calling :meth:`Limiter.exempt`::
+and can be opted out of by adding :attr:`~flask_limiter.ExemptionScope.DESCENDENTS`
+to :paramref:`~Limiter.exempt.flags` when calling :meth:`Limiter.exempt`::
 
-    limiter.exempt(parent, nested=True)
+    limiter.exempt(parent, flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.DESCENDENTS)
 
 ===========================================================
 Explicitly setting limits / exemptions on nested Blueprints
 ===========================================================
 
-Using the :paramref:`~Limiter.limit.override_defaults` parameter when
-setting rate limits results in the ancestory of a Blueprint to be taken
-into consideration when selecting the limits to be applied.
+Using combinations of :paramref:`~Limiter.limit.override_defaults` parameter
+when explicitely declaring limits on Blueprints and the :paramref:`~Limiter.exempt.flags`
+parameter when exempting Blueprints with :meth:`~Limiter.exempt`
+the resolution of inherited and descendent limits within the scope of a Blueprint
+can be controlled.
 
-For example::
+Here's a slightly involved example::
 
-    limiter = Limiter(..., default_limits = ["100/hour"])
+    limiter = Limiter(
+        ...,
+        default_limits = ["100/hour"],
+        application_limits = ["100/minute"]
+    )
 
     parent = Blueprint('parent', __name__, url_prefix='/parent')
     child = Blueprint('child', __name__, url_prefix='/child')
@@ -225,9 +231,12 @@ For example::
 
     limiter.limit("2/minute")(parent)
     limiter.limit("1/second", override_defaults=False)(child)
-    limiter.limit("1000/second")(grandchild)
+    limiter.limit("10/minute")(grandchild)
 
-    limiter.exempt(health)
+    limiter.exempt(
+        health,
+        flags=ExemptionScope.DEFAULT|ExemptionScope.APPLICATION|ExemptionScope.ANCESTORS
+    )
 
 Effectively this means:
 
@@ -237,10 +246,15 @@ Effectively this means:
 #. Routes under ``child`` will respect both the parent and the application defaults
    and effectively be limited to ``At most 1 per second, 2 per minute and 100 per hour``
 
-#. Routes under ``grandchild`` will ignore all other limits and allow ``1000 per second``
+#. Routes under ``grandchild`` will not inherit either the limits from `child` or `parent`
+   or the application defaults and allow ``10 per minute``
 
-#. All calls to ``/health/`` will be exempt from all limits.
+#. All calls to ``/health/`` will be exempt from all limits (including any limits that would
+   otherwise be inherited from the Blueprints it is nested under due to the addition of the
+   :class:`~ExemptionScope.ANCESTORS` flag).
 
+.. note:: Only calls to `/health` will be exempt from the application wide global
+   limit of `100/minute`.
 
 .. _logging:
 

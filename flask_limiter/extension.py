@@ -6,8 +6,9 @@ import enum
 import itertools
 import logging
 import time
+from collections import defaultdict
 from functools import wraps
-from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, Union, cast
+from typing import Callable, Dict, Iterable, List, Optional, Tuple, Union, cast
 
 from flask import (
     Blueprint,
@@ -116,6 +117,25 @@ class RequestLimit:
         return self.window[1]
 
 
+class ExemptionScope(enum.Flag):
+    """
+    Flags used to configure the scope of exemption when used
+    in conjunction with :meth:`~flask_limiter.Limiter.exempt`.
+    """
+
+    NONE = 0
+
+    #: Exempt from application wide "global" limits
+    APPLICATION = enum.auto()
+    #: Exempt from default limits configured on the extension
+    DEFAULT = enum.auto()
+    #: Exempts any nested blueprints. See :ref:`recipes:nested blueprints`
+    DESCENDENTS = enum.auto()
+    #: Exempt from any rate limits inherited from ancestor blueprints.
+    #: See :ref:`recipes:nested blueprints`
+    ANCESTORS = enum.auto()
+
+
 MAX_BACKEND_CHECKS = 5
 
 
@@ -209,8 +229,14 @@ class Limiter(object):
         self._in_memory_fallback_enabled = (
             in_memory_fallback_enabled or len(in_memory_fallback) > 0
         )
-        self._exempt_routes: Set[str] = set()
+        self._route_exemptions: Dict[str, ExemptionScope] = defaultdict(
+            lambda: ExemptionScope.NONE
+        )
+        self._blueprint_exemptions: Dict[str, ExemptionScope] = defaultdict(
+            lambda: ExemptionScope.NONE
+        )
         self._request_filters: List[Callable[[], bool]] = []
+
         self._headers_enabled = headers_enabled
         self._header_mapping = header_name_mapping
         self._retry_after = retry_after
@@ -286,14 +312,15 @@ class Limiter(object):
             )
         self._route_limits: Dict[str, List[Limit]] = {}
         self._dynamic_route_limits: Dict[str, List[LimitGroup]] = {}
+
         self._blueprint_limits: Dict[str, List[Limit]] = {}
         self._blueprint_dynamic_limits: Dict[str, List[LimitGroup]] = {}
-        self._blueprint_exempt: Set[str] = set()
-        self._nested_blueprint_exempt: Set[str] = set()
+
         self._storage: Optional[Storage] = None
         self._limiter: Optional[RateLimiter] = None
         self._storage_dead = False
         self._fallback_limiter: Optional[RateLimiter] = None
+
         self.__check_backend_count = 0
         self.__last_check_backend = time.time()
         self.__marked_for_limiting: Dict[str, List[str]] = {}
@@ -552,26 +579,28 @@ class Limiter(object):
             cost=cost,
         )
 
-    def exempt(self, obj: Union[Callable, Blueprint], nested: bool = False):
+    def exempt(
+        self,
+        obj: Union[Callable, Blueprint],
+        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
+    ):
         """
         decorator to mark a view or all views in a blueprint as exempt from
         rate limits.
 
         :param obj: view or blueprint to mark as exempt.
-        :param nested: Only applies to blueprints. Setting it to ``True``
-         will exempt any blueprints nested under the blueprint referenced by
-         :paramref:`obj` (See :ref:`recipes:nested blueprints`)
+        :param flags: Controls the scope of the exemption. By default
+         application wide limits and defaults configured on the extension
+         are opted out of. Additional flags can be used to control the behavior
+         when :paramref:`obj` is a Blueprint that is nested under another Blueprint
+         or has other Blueprints nested under it (See :ref:`recipes:nested blueprints`)
         """
 
         if isinstance(obj, Blueprint):
-            if nested:
-                self._nested_blueprint_exempt.add(obj.name)
-            else:
-                self._blueprint_exempt.add(obj.name)
+            self._blueprint_exemptions[obj.name] = flags
         else:
-            self._exempt_routes.add(f"{obj.__module__}.{obj.__name__}")
-
-            return obj
+            self._route_exemptions[f"{obj.__module__}.{obj.__name__}"] = flags
+        return obj
 
     def request_filter(self, fn: Callable[[], bool]) -> Callable:
         """
@@ -869,21 +898,10 @@ class Limiter(object):
         endpoint = request.endpoint or ""
         view_func = current_app.view_functions.get(endpoint, None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
-        blueprint_name = (
-            current_app.blueprints[request.blueprint].name
-            if request.blueprint
-            else None
-        )
-        blueprint_ancestory = set(
-            request.blueprint.split(".") if request.blueprint else []
-        )
         if (
             not request.endpoint
             or not (self.enabled and self.initialized)
             or request.endpoint == "static"
-            or name in self._exempt_routes
-            or blueprint_name in self._blueprint_exempt
-            or blueprint_ancestory.intersection(self._nested_blueprint_exempt)
             or any(fn() for fn in self._request_filters)
             or self.context.get(f"{self._key_prefix}_rate_limiting_complete")
         ):
@@ -892,77 +910,113 @@ class Limiter(object):
         dynamic_limits: List[Limit] = []
 
         if not in_middleware:
-            limits = name in self._route_limits and self._route_limits[name] or []
-            dynamic_limits = []
+            if not self._route_exemptions[name]:
+                limits = name in self._route_limits and self._route_limits[name] or []
+                dynamic_limits = []
 
-            if name in self._dynamic_route_limits:
-                for lim in self._dynamic_route_limits[name]:
-                    try:
-                        dynamic_limits.extend(list(lim))
-                    except ValueError as e:
-                        self.logger.error(
-                            "failed to load ratelimit for " "view function %s (%s)",
-                            name,
-                            e,
-                        )
-        if request.blueprint:
-            # Selection of the specific limits include
-            # - any limits specifically registered on the blueprint,
-            # - any limits registered on the parent if this is a nested
-            #   blueprint
+                if name in self._dynamic_route_limits:
+                    for lim in self._dynamic_route_limits[name]:
+                        try:
+                            dynamic_limits.extend(list(lim))
+                        except ValueError as e:
+                            self.logger.error(
+                                "failed to load ratelimit for " "view function %s (%s)",
+                                name,
+                                e,
+                            )
+        blueprint_name = (
+            current_app.blueprints[request.blueprint].name
+            if request.blueprint
+            else None
+        )
+        blueprint_exemptions = ExemptionScope.NONE
 
-            blueprint_self_dynamic_limits = self._blueprint_dynamic_limits.get(
-                blueprint_name, []
+        if blueprint_name:
+            blueprint_exemptions = self._blueprint_exemptions[blueprint_name] & ~(
+                ExemptionScope.ANCESTORS
             )
-            blueprint_dynamic_limits: Iterable[LimitGroup] = (
-                itertools.chain(
-                    *(
-                        self._blueprint_dynamic_limits.get(member, [])
-                        for member in blueprint_ancestory.intersection(
-                            self._blueprint_dynamic_limits
+
+            blueprint_ancestory = set(
+                request.blueprint.split(".") if request.blueprint else []
+            )
+            exemption_from_ancestors = {
+                k
+                for k, f in self._blueprint_exemptions.items()
+                if f & ExemptionScope.DESCENDENTS
+            }.intersection(blueprint_ancestory)
+            if (
+                blueprint_exemptions
+                & ~(ExemptionScope.DEFAULT | ExemptionScope.APPLICATION)
+                or exemption_from_ancestors
+            ):
+                for exemption in exemption_from_ancestors:
+                    blueprint_exemptions |= self._blueprint_exemptions[exemption]
+            else:
+                blueprint_self_dynamic_limits = self._blueprint_dynamic_limits.get(
+                    blueprint_name, []
+                )
+                blueprint_dynamic_limits: Iterable[LimitGroup] = (
+                    itertools.chain(
+                        *(
+                            self._blueprint_dynamic_limits.get(member, [])
+                            for member in blueprint_ancestory.intersection(
+                                self._blueprint_dynamic_limits
+                            )
                         )
                     )
-                )
-                if not all(
-                    limit.override_defaults for limit in blueprint_self_dynamic_limits
-                )
-                else blueprint_self_dynamic_limits
-            )
-
-            if blueprint_dynamic_limits and not dynamic_limits:
-                for limit_group in blueprint_dynamic_limits:
-                    try:
-                        dynamic_limits.extend(
-                            [
-                                Limit(
-                                    limit.limit,
-                                    limit.key_func,
-                                    limit.scope,
-                                    limit.per_method,
-                                    limit.methods,
-                                    limit.error_message,
-                                    limit.exempt_when,
-                                    limit.override_defaults,
-                                    limit.deduct_when,
-                                    limit.on_breach,
-                                    limit.cost,
-                                )
-                                for limit in limit_group
-                            ]
+                    if not (
+                        blueprint_self_dynamic_limits
+                        or all(
+                            limit.override_defaults
+                            for limit in blueprint_self_dynamic_limits
                         )
-                    except ValueError as e:
-                        self.logger.error(
-                            "failed to load ratelimit for blueprint %s (%s)",
-                            request.blueprint,
-                            e,
-                        )
-
+                    )
+                    and not self._blueprint_exemptions[blueprint_name]
+                    & ExemptionScope.ANCESTORS
+                    else blueprint_self_dynamic_limits
+                )
+                if blueprint_dynamic_limits and not dynamic_limits:
+                    for limit_group in blueprint_dynamic_limits:
+                        try:
+                            dynamic_limits.extend(
+                                [
+                                    Limit(
+                                        limit.limit,
+                                        limit.key_func,
+                                        limit.scope,
+                                        limit.per_method,
+                                        limit.methods,
+                                        limit.error_message,
+                                        limit.exempt_when,
+                                        limit.override_defaults,
+                                        limit.deduct_when,
+                                        limit.on_breach,
+                                        limit.cost,
+                                    )
+                                    for limit in limit_group
+                                ]
+                            )
+                        except ValueError as e:
+                            self.logger.error(
+                                "failed to load ratelimit for blueprint %s (%s)",
+                                request.blueprint,
+                                e,
+                            )
             if not limits:
                 blueprint_self_limits = self._blueprint_limits.get(blueprint_name, [])
-                if not all(limit.override_defaults for limit in blueprint_self_limits):
+                if (
+                    not (
+                        blueprint_self_limits
+                        and all(
+                            limit.override_defaults for limit in blueprint_self_limits
+                        )
+                    )
+                    and not self._blueprint_exemptions[blueprint_name]
+                    & ExemptionScope.ANCESTORS
+                ):
                     for member in blueprint_ancestory.intersection(
                         self._blueprint_limits
-                    ):
+                    ).difference(exemption_from_ancestors):
                         limits.extend(self._blueprint_limits[member])
                 else:
                     limits.extend(blueprint_self_limits)
@@ -985,6 +1039,10 @@ class Limiter(object):
                 all_limits = (
                     list(itertools.chain(*self._application_limits))
                     if in_middleware
+                    and not (
+                        self._route_exemptions[name] & ExemptionScope.APPLICATION
+                        or blueprint_exemptions & ExemptionScope.APPLICATION
+                    )
                     else []
                 )
                 all_limits += route_limits
@@ -998,9 +1056,11 @@ class Limiter(object):
                     in_middleware and name in self.__marked_for_limiting
                 )
 
-                if (
-                    explicit_limits_exempt or combined_defaults
-                ) and not before_request_context:
+                if (explicit_limits_exempt or combined_defaults) and not (
+                    before_request_context
+                    or self._route_exemptions[name] & ExemptionScope.DEFAULT
+                    or blueprint_exemptions & ExemptionScope.DEFAULT
+                ):
                     all_limits += list(itertools.chain(*self._default_limits))
             self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:
