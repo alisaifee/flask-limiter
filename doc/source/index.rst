@@ -337,20 +337,23 @@ Dynamic shared limit
 Decorators for skipping rate limits
 -----------------------------------
 
-exempt()
-^^^^^^^^
+Registering exemptions from rate limits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This decorator marks a route as being exempt from any rate limits.
+.. automethod:: Limiter.exempt
+   :noindex:
 
 .. _ratelimit-decorator-request-filter:
 
-request_filter()
-^^^^^^^^^^^^^^^^
+Skipping a rate limit based on a request
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This decorator marks a function as a filter for requests that are going to be tested for rate limits. If any of the request filters return ``True`` no
 rate limiting will be performed for that request. This mechanism can be used to
 create custom white lists.
 
+.. automethod:: Limiter.request_filter
+   :noindex:
 
 .. code-block:: python
 
