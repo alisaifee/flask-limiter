@@ -3,7 +3,7 @@ docutils==0.16
 enum-tools[sphinx]==0.9.0
 furo==2022.4.7
 sphinx-copybutton==0.4.0
-sphinxext-opengraph==0.5.1
+sphinxext-opengraph==0.6.3
 Sphinx==4.5.0
 sphinx-autobuild==2021.3.14
 sphinx-issues==3.0.1
