@@ -15,7 +15,6 @@ from flask import (
     Response,
     _request_ctx_stack,
     current_app,
-    g,
     request,
 )
 from limits import RateLimitItem
@@ -861,7 +860,7 @@ class Limiter(object):
             or name in self._exempt_routes
             or request.blueprint in self._blueprint_exempt
             or any(fn() for fn in self._request_filters)
-            or g.get(f"{self._key_prefix}_rate_limiting_complete")
+            or self.context.get(f"{self._key_prefix}_rate_limiting_complete")
         ):
             return
         limits: List[Limit] = []
