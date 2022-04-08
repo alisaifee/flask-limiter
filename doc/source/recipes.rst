@@ -124,7 +124,7 @@ The above approach has been tested with sub-classes of  :class:`flask.views.View
 :class:`flask.views.MethodView` and :class:`flask_restful.Resource`.
 
 Rate limiting all routes in a :class:`~flask.Blueprint`
-------------------------------------------------------
+-------------------------------------------------------
 
 .. warning:: :class:`~flask.Blueprint` instances that are registered on another blueprint
    instead of on the main :class:`~flask.Flask` instance had not been considered
@@ -195,7 +195,10 @@ and have to be marked exempt explicitly. This behavior is to maintain backward c
 and can be opted out of by adding :attr:`~flask_limiter.ExemptionScope.DESCENDENTS`
 to :paramref:`~Limiter.exempt.flags` when calling :meth:`Limiter.exempt`::
 
-    limiter.exempt(parent, flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.DESCENDENTS)
+    limiter.exempt(
+        parent,
+        flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.DESCENDENTS
+    )
 
 ===========================================================
 Explicitly setting limits / exemptions on nested Blueprints
