@@ -10,12 +10,13 @@ import mock
 from flask import Flask, request
 from werkzeug.exceptions import BadRequest
 
-from flask_limiter.extension import C, Limiter
+from flask_limiter.extension import Limiter
+from flask_limiter.constants import ConfigVars
 from flask_limiter.util import get_remote_address
 
 
 def test_reset(extension_factory):
-    app, limiter = extension_factory({C.DEFAULT_LIMITS: "1 per day"})
+    app, limiter = extension_factory({ConfigVars.DEFAULT_LIMITS: "1 per day"})
 
     @app.route("/")
     def null():
@@ -31,7 +32,10 @@ def test_reset(extension_factory):
 
 def test_reset_unsupported(extension_factory, memcached_connection):
     app, limiter = extension_factory(
-        {C.DEFAULT_LIMITS: "1 per day", C.STORAGE_URI: "memcached://localhost:31211"}
+        {
+            ConfigVars.DEFAULT_LIMITS: "1 per day",
+            ConfigVars.STORAGE_URI: "memcached://localhost:31211",
+        }
     )
 
     @app.route("/")
@@ -47,7 +51,9 @@ def test_reset_unsupported(extension_factory, memcached_connection):
 
 
 def test_combined_rate_limits(extension_factory):
-    app, limiter = extension_factory({C.DEFAULT_LIMITS: "1 per hour; 10 per day"})
+    app, limiter = extension_factory(
+        {ConfigVars.DEFAULT_LIMITS: "1 per hour; 10 per day"}
+    )
 
     @app.route("/t1")
     @limiter.limit("100 per hour;10/minute")
@@ -67,7 +73,10 @@ def test_combined_rate_limits(extension_factory):
 
 def test_defaults_per_method(extension_factory):
     app, limiter = extension_factory(
-        {C.DEFAULT_LIMITS: "1 per hour", C.DEFAULT_LIMITS_PER_METHOD: True}
+        {
+            ConfigVars.DEFAULT_LIMITS: "1 per hour",
+            ConfigVars.DEFAULT_LIMITS_PER_METHOD: True,
+        }
     )
 
     @app.route("/t1", methods=["GET", "POST"])
@@ -87,7 +96,10 @@ def test_default_limit_with_exemption(extension_factory):
         return request.headers.get("backdoor") == "true"
 
     app, limiter = extension_factory(
-        {C.DEFAULT_LIMITS: "1 per hour", C.DEFAULT_LIMITS_EXEMPT_WHEN: is_backdoor}
+        {
+            ConfigVars.DEFAULT_LIMITS: "1 per hour",
+            ConfigVars.DEFAULT_LIMITS_EXEMPT_WHEN: is_backdoor,
+        }
     )
 
     @app.route("/t1")
@@ -109,7 +121,10 @@ def test_default_limit_with_conditional_deduction(extension_factory):
         return response.status_code != 200
 
     app, limiter = extension_factory(
-        {C.DEFAULT_LIMITS: "1 per hour", C.DEFAULT_LIMITS_DEDUCT_WHEN: failed_request}
+        {
+            ConfigVars.DEFAULT_LIMITS: "1 per hour",
+            ConfigVars.DEFAULT_LIMITS_DEDUCT_WHEN: failed_request,
+        }
     )
 
     @app.route("/t1/<path:path>")
@@ -191,7 +206,7 @@ def test_reuse_logging():
 
 def test_disabled_flag(extension_factory):
     app, limiter = extension_factory(
-        config={C.ENABLED: False}, default_limits=["1/minute"]
+        config={ConfigVars.ENABLED: False}, default_limits=["1/minute"]
     )
 
     @app.route("/t1")
@@ -399,9 +414,9 @@ def test_retry_after_exists_rfc1123():
 
 def test_custom_headers_from_config():
     app = Flask(__name__)
-    app.config.setdefault(C.HEADER_LIMIT, "X-Limit")
-    app.config.setdefault(C.HEADER_REMAINING, "X-Remaining")
-    app.config.setdefault(C.HEADER_RESET, "X-Reset")
+    app.config.setdefault(ConfigVars.HEADER_LIMIT, "X-Limit")
+    app.config.setdefault(ConfigVars.HEADER_REMAINING, "X-Remaining")
+    app.config.setdefault(ConfigVars.HEADER_RESET, "X-Reset")
     limiter = Limiter(
         app,
         default_limits=["10/minute"],
@@ -579,7 +594,7 @@ def test_custom_key_prefix(redis_connection, extension_factory):
         key_prefix="moo", storage_uri="redis://localhost:46379"
     )
     app2, limiter2 = extension_factory(
-        {C.KEY_PREFIX: "cow"}, storage_uri="redis://localhost:46379"
+        {ConfigVars.KEY_PREFIX: "cow"}, storage_uri="redis://localhost:46379"
     )
     app3, limiter3 = extension_factory(storage_uri="redis://localhost:46379")
 

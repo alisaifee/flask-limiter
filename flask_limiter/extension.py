@@ -2,7 +2,6 @@
 the flask extension
 """
 import datetime
-import enum
 import itertools
 import logging
 import time
@@ -17,49 +16,11 @@ from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
 from werkzeug.http import http_date, parse_date
 
-from flask_limiter.wrappers import Limit, LimitGroup
-
+from .constants import HeaderNames, ExemptionScope
+from .constants import ConfigVars
+from .constants import MAX_BACKEND_CHECKS
 from .errors import RateLimitExceeded
-
-
-class C:
-    ENABLED = "RATELIMIT_ENABLED"
-    HEADERS_ENABLED = "RATELIMIT_HEADERS_ENABLED"
-    STORAGE_URI = "RATELIMIT_STORAGE_URI"
-    STORAGE_URL = "RATELIMIT_STORAGE_URL"  # Deprecated due to inconsistency.
-    STORAGE_OPTIONS = "RATELIMIT_STORAGE_OPTIONS"
-    STRATEGY = "RATELIMIT_STRATEGY"
-    DEFAULT_LIMITS = "RATELIMIT_DEFAULT"
-    DEFAULT_LIMITS_PER_METHOD = "RATELIMIT_DEFAULTS_PER_METHOD"
-    DEFAULT_LIMITS_EXEMPT_WHEN = "RATELIMIT_DEFAULTS_EXEMPT_WHEN"
-    DEFAULT_LIMITS_DEDUCT_WHEN = "RATELIMIT_DEFAULTS_DEDUCT_WHEN"
-    APPLICATION_LIMITS = "RATELIMIT_APPLICATION"
-    HEADER_LIMIT = "RATELIMIT_HEADER_LIMIT"
-    HEADER_REMAINING = "RATELIMIT_HEADER_REMAINING"
-    HEADER_RESET = "RATELIMIT_HEADER_RESET"
-    SWALLOW_ERRORS = "RATELIMIT_SWALLOW_ERRORS"
-    IN_MEMORY_FALLBACK = "RATELIMIT_IN_MEMORY_FALLBACK"
-    IN_MEMORY_FALLBACK_ENABLED = "RATELIMIT_IN_MEMORY_FALLBACK_ENABLED"
-    HEADER_RETRY_AFTER = "RATELIMIT_HEADER_RETRY_AFTER"
-    HEADER_RETRY_AFTER_VALUE = "RATELIMIT_HEADER_RETRY_AFTER_VALUE"
-    KEY_PREFIX = "RATELIMIT_KEY_PREFIX"
-    FAIL_ON_FIRST_BREACH = "RATELIMIT_FAIL_ON_FIRST_BREACH"
-
-
-class HEADERS(enum.Enum):
-    """
-    Enumeration of supported rate limit related headers to
-    be used when configuring via :paramref:`~flask_limiter.Limiter.header_name_mapping`
-    """
-
-    #: Timestamp at which this rate limit will be reset
-    RESET = "X-RateLimit-Reset"
-    #: Remaining number of requests within the current window
-    REMAINING = "X-RateLimit-Remaining"
-    #: Total number of allowed requests within a window
-    LIMIT = "X-RateLimit-Limit"
-    #: Number of seconds to retry after at
-    RETRY_AFTER = "Retry-After"
+from .wrappers import Limit, LimitGroup
 
 
 class RequestLimit:
@@ -108,28 +69,6 @@ class RequestLimit:
         """Quantity remaining for this rate limit"""
 
         return self.window[1]
-
-
-class ExemptionScope(enum.Flag):
-    """
-    Flags used to configure the scope of exemption when used
-    in conjunction with :meth:`~flask_limiter.Limiter.exempt`.
-    """
-
-    NONE = 0
-
-    #: Exempt from application wide "global" limits
-    APPLICATION = enum.auto()
-    #: Exempt from default limits configured on the extension
-    DEFAULT = enum.auto()
-    #: Exempts any nested blueprints. See :ref:`recipes:nested blueprints`
-    DESCENDENTS = enum.auto()
-    #: Exempt from any rate limits inherited from ancestor blueprints.
-    #: See :ref:`recipes:nested blueprints`
-    ANCESTORS = enum.auto()
-
-
-MAX_BACKEND_CHECKS = 5
 
 
 class Limiter(object):
@@ -194,7 +133,7 @@ class Limiter(object):
         default_limits_deduct_when: Callable[[], bool] = None,
         application_limits: List[Union[str, Callable[[], str]]] = [],
         headers_enabled: bool = None,
-        header_name_mapping: Dict[HEADERS, str] = {},
+        header_name_mapping: Dict[HeaderNames, str] = {},
         strategy: Optional[str] = None,
         storage_uri: Optional[str] = None,
         storage_options={},
@@ -332,34 +271,38 @@ class Limiter(object):
         :param app: :class:`flask.Flask` instance to rate limit.
         """
         config = app.config
-        self.enabled = config.setdefault(C.ENABLED, self.enabled)
+        self.enabled = config.setdefault(ConfigVars.ENABLED, self.enabled)
 
         if not self.enabled:
             return
 
         if self._default_limits_per_method is None:
             self._default_limits_per_method = config.get(
-                C.DEFAULT_LIMITS_PER_METHOD, False
+                ConfigVars.DEFAULT_LIMITS_PER_METHOD, False
             )
         self._default_limits_exempt_when = (
-            self._default_limits_exempt_when or config.get(C.DEFAULT_LIMITS_EXEMPT_WHEN)
+            self._default_limits_exempt_when
+            or config.get(ConfigVars.DEFAULT_LIMITS_EXEMPT_WHEN)
         )
         self._default_limits_deduct_when = (
-            self._default_limits_deduct_when or config.get(C.DEFAULT_LIMITS_DEDUCT_WHEN)
+            self._default_limits_deduct_when
+            or config.get(ConfigVars.DEFAULT_LIMITS_DEDUCT_WHEN)
         )
 
         if self._swallow_errors is None:
-            self._swallow_errors = config.get(C.SWALLOW_ERRORS, False)
+            self._swallow_errors = config.get(ConfigVars.SWALLOW_ERRORS, False)
 
         if self._fail_on_first_breach is None:
-            self._fail_on_first_breach = config.get(C.FAIL_ON_FIRST_BREACH, True)
+            self._fail_on_first_breach = config.get(
+                ConfigVars.FAIL_ON_FIRST_BREACH, True
+            )
 
         if self._headers_enabled is None:
-            self._headers_enabled = config.get(C.HEADERS_ENABLED, False)
+            self._headers_enabled = config.get(ConfigVars.HEADERS_ENABLED, False)
 
-        self._storage_options.update(config.get(C.STORAGE_OPTIONS, {}))
+        self._storage_options.update(config.get(ConfigVars.STORAGE_OPTIONS, {}))
         storage_uri_from_config = config.get(
-            C.STORAGE_URI, config.get(C.STORAGE_URL, "memory://")
+            ConfigVars.STORAGE_URI, config.get(ConfigVars.STORAGE_URL, "memory://")
         )
         self._storage = cast(
             Storage,
@@ -367,33 +310,41 @@ class Limiter(object):
                 self._storage_uri or storage_uri_from_config, **self._storage_options
             ),
         )
-        strategy = self._strategy or config.setdefault(C.STRATEGY, "fixed-window")
+        strategy = self._strategy or config.setdefault(
+            ConfigVars.STRATEGY, "fixed-window"
+        )
 
         if strategy not in STRATEGIES:
             raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
         self._limiter = STRATEGIES[strategy](self._storage)
 
         self._header_mapping = {
-            HEADERS.RESET: self._header_mapping.get(
-                HEADERS.RESET, config.get(C.HEADER_RESET, HEADERS.RESET.value)
+            HeaderNames.RESET: self._header_mapping.get(
+                HeaderNames.RESET,
+                config.get(ConfigVars.HEADER_RESET, HeaderNames.RESET.value),
             ),
-            HEADERS.REMAINING: self._header_mapping.get(
-                HEADERS.REMAINING,
-                config.get(C.HEADER_REMAINING, HEADERS.REMAINING.value),
+            HeaderNames.REMAINING: self._header_mapping.get(
+                HeaderNames.REMAINING,
+                config.get(ConfigVars.HEADER_REMAINING, HeaderNames.REMAINING.value),
             ),
-            HEADERS.LIMIT: self._header_mapping.get(
-                HEADERS.LIMIT, config.get(C.HEADER_LIMIT, HEADERS.LIMIT.value)
+            HeaderNames.LIMIT: self._header_mapping.get(
+                HeaderNames.LIMIT,
+                config.get(ConfigVars.HEADER_LIMIT, HeaderNames.LIMIT.value),
             ),
-            HEADERS.RETRY_AFTER: self._header_mapping.get(
-                HEADERS.RETRY_AFTER,
-                config.get(C.HEADER_RETRY_AFTER, HEADERS.RETRY_AFTER.value),
+            HeaderNames.RETRY_AFTER: self._header_mapping.get(
+                HeaderNames.RETRY_AFTER,
+                config.get(
+                    ConfigVars.HEADER_RETRY_AFTER, HeaderNames.RETRY_AFTER.value
+                ),
             ),
         }
-        self._retry_after = self._retry_after or config.get(C.HEADER_RETRY_AFTER_VALUE)
+        self._retry_after = self._retry_after or config.get(
+            ConfigVars.HEADER_RETRY_AFTER_VALUE
+        )
 
-        self._key_prefix = self._key_prefix or config.get(C.KEY_PREFIX, "")
+        self._key_prefix = self._key_prefix or config.get(ConfigVars.KEY_PREFIX, "")
 
-        app_limits = config.get(C.APPLICATION_LIMITS, None)
+        app_limits = config.get(ConfigVars.APPLICATION_LIMITS, None)
 
         if not self._application_limits and app_limits:
             self._application_limits = [
@@ -412,7 +363,7 @@ class Limiter(object):
                 )
             ]
 
-        conf_limits = config.get(C.DEFAULT_LIMITS, None)
+        conf_limits = config.get(ConfigVars.DEFAULT_LIMITS, None)
 
         if not self._default_limits and conf_limits:
             self._default_limits = [
@@ -609,8 +560,8 @@ class Limiter(object):
 
     def __configure_fallbacks(self, app, strategy):
         config = app.config
-        fallback_enabled = config.get(C.IN_MEMORY_FALLBACK_ENABLED, False)
-        fallback_limits = config.get(C.IN_MEMORY_FALLBACK, None)
+        fallback_enabled = config.get(ConfigVars.IN_MEMORY_FALLBACK_ENABLED, False)
+        fallback_limits = config.get(ConfigVars.IN_MEMORY_FALLBACK, None)
 
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
@@ -752,13 +703,13 @@ class Limiter(object):
             try:
                 reset_at = header_limit.reset_at
                 response.headers.add(
-                    self._header_mapping[HEADERS.LIMIT],
+                    self._header_mapping[HeaderNames.LIMIT],
                     str(header_limit.limit.amount),
                 )
                 response.headers.add(
-                    self._header_mapping[HEADERS.REMAINING], header_limit.remaining
+                    self._header_mapping[HeaderNames.REMAINING], header_limit.remaining
                 )
-                response.headers.add(self._header_mapping[HEADERS.RESET], reset_at)
+                response.headers.add(self._header_mapping[HeaderNames.RESET], reset_at)
 
                 # response may have an existing retry after
                 existing_retry_after_header = response.headers.get("Retry-After")
@@ -781,7 +732,7 @@ class Limiter(object):
 
                 # set the header instead of using add
                 response.headers.set(
-                    self._header_mapping[HEADERS.RETRY_AFTER],
+                    self._header_mapping[HeaderNames.RETRY_AFTER],
                     self._retry_after == "http-date"
                     and http_date(reset_at)
                     or int(reset_at - time.time()),

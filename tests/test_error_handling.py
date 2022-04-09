@@ -4,11 +4,11 @@ import hiro
 from flask import make_response
 from mock import patch
 
-from flask_limiter.extension import C
+from flask_limiter.constants import ConfigVars
 
 
 def test_error_message(extension_factory):
-    app, limiter = extension_factory({C.DEFAULT_LIMITS: "1 per day"})
+    app, limiter = extension_factory({ConfigVars.DEFAULT_LIMITS: "1 per day"})
 
     @app.route("/")
     def null():
@@ -78,9 +78,9 @@ def test_custom_error_message(extension_factory):
 def test_swallow_error(extension_factory):
     app, limiter = extension_factory(
         {
-            C.DEFAULT_LIMITS: "1 per day",
-            C.HEADERS_ENABLED: True,
-            C.SWALLOW_ERRORS: True,
+            ConfigVars.DEFAULT_LIMITS: "1 per day",
+            ConfigVars.HEADERS_ENABLED: True,
+            ConfigVars.SWALLOW_ERRORS: True,
         }
     )
 
@@ -109,7 +109,7 @@ def test_swallow_error(extension_factory):
 
 def test_no_swallow_error(extension_factory):
     app, limiter = extension_factory(
-        {C.DEFAULT_LIMITS: "1 per day", C.HEADERS_ENABLED: True}
+        {ConfigVars.DEFAULT_LIMITS: "1 per day", ConfigVars.HEADERS_ENABLED: True}
     )
 
     @app.route("/")
@@ -140,7 +140,7 @@ def test_no_swallow_error(extension_factory):
 
 def test_fallback_to_memory_config(redis_connection, extension_factory):
     _, limiter = extension_factory(
-        config={C.ENABLED: True},
+        config={ConfigVars.ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:46379",
         in_memory_fallback=["1/minute"],
@@ -149,7 +149,7 @@ def test_fallback_to_memory_config(redis_connection, extension_factory):
     assert limiter._in_memory_fallback_enabled
 
     _, limiter = extension_factory(
-        config={C.ENABLED: True, C.IN_MEMORY_FALLBACK: "1/minute"},
+        config={ConfigVars.ENABLED: True, ConfigVars.IN_MEMORY_FALLBACK: "1/minute"},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:46379",
     )
@@ -157,14 +157,14 @@ def test_fallback_to_memory_config(redis_connection, extension_factory):
     assert limiter._in_memory_fallback_enabled
 
     _, limiter = extension_factory(
-        config={C.ENABLED: True, C.IN_MEMORY_FALLBACK_ENABLED: True},
+        config={ConfigVars.ENABLED: True, ConfigVars.IN_MEMORY_FALLBACK_ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:46379",
     )
     assert limiter._in_memory_fallback_enabled
 
     _, limiter = extension_factory(
-        config={C.ENABLED: True},
+        config={ConfigVars.ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:46379",
         in_memory_fallback_enabled=True,
@@ -173,7 +173,7 @@ def test_fallback_to_memory_config(redis_connection, extension_factory):
 
 def test_fallback_to_memory_backoff_check(redis_connection, extension_factory):
     app, limiter = extension_factory(
-        config={C.ENABLED: True},
+        config={ConfigVars.ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:46379",
         in_memory_fallback=["1/minute"],
@@ -222,7 +222,7 @@ def test_fallback_to_memory_backoff_check(redis_connection, extension_factory):
 
 def test_fallback_to_memory_with_global_override(redis_connection, extension_factory):
     app, limiter = extension_factory(
-        config={C.ENABLED: True},
+        config={ConfigVars.ENABLED: True},
         default_limits=["5/minute"],
         storage_uri="redis://localhost:46379",
         in_memory_fallback=["1/minute"],
@@ -272,7 +272,7 @@ def test_fallback_to_memory_with_global_override(redis_connection, extension_fac
 
 def test_fallback_to_memory(extension_factory):
     app, limiter = extension_factory(
-        config={C.ENABLED: True},
+        config={ConfigVars.ENABLED: True},
         default_limits=["2/minute"],
         storage_uri="redis://localhost:46379",
         in_memory_fallback_enabled=True,

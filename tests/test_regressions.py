@@ -5,16 +5,16 @@ import time
 
 import hiro
 
-from flask_limiter.extension import C
+from flask_limiter.constants import ConfigVars
 
 
 def test_redis_request_slower_than_fixed_window(redis_connection, extension_factory):
     app, limiter = extension_factory(
         {
-            C.DEFAULT_LIMITS: "5 per second",
-            C.STORAGE_URI: "redis://localhost:46379",
-            C.STRATEGY: "fixed-window",
-            C.HEADERS_ENABLED: True,
+            ConfigVars.DEFAULT_LIMITS: "5 per second",
+            ConfigVars.STORAGE_URI: "redis://localhost:46379",
+            ConfigVars.STRATEGY: "fixed-window",
+            ConfigVars.HEADERS_ENABLED: True,
         }
     )
 
@@ -31,10 +31,10 @@ def test_redis_request_slower_than_fixed_window(redis_connection, extension_fact
 def test_redis_request_slower_than_moving_window(redis_connection, extension_factory):
     app, limiter = extension_factory(
         {
-            C.DEFAULT_LIMITS: "5 per second",
-            C.STORAGE_URI: "redis://localhost:46379",
-            C.STRATEGY: "moving-window",
-            C.HEADERS_ENABLED: True,
+            ConfigVars.DEFAULT_LIMITS: "5 per second",
+            ConfigVars.STORAGE_URI: "redis://localhost:46379",
+            ConfigVars.STRATEGY: "moving-window",
+            ConfigVars.HEADERS_ENABLED: True,
         }
     )
 
@@ -50,7 +50,7 @@ def test_redis_request_slower_than_moving_window(redis_connection, extension_fac
 
 def test_dynamic_limits(extension_factory):
     app, limiter = extension_factory(
-        {C.STRATEGY: "moving-window", C.HEADERS_ENABLED: True}
+        {ConfigVars.STRATEGY: "moving-window", ConfigVars.HEADERS_ENABLED: True}
     )
 
     def func(*a):
@@ -71,7 +71,7 @@ def test_dynamic_limits(extension_factory):
 
 
 def test_invalid_ratelimit_key(extension_factory):
-    app, limiter = extension_factory({C.HEADERS_ENABLED: True})
+    app, limiter = extension_factory({ConfigVars.HEADERS_ENABLED: True})
 
     def func(*a):
         return None
@@ -149,9 +149,9 @@ def test_default_limits_with_per_route_limit(extension_factory):
 def test_application_limits_from_config(extension_factory):
     app, limiter = extension_factory(
         config={
-            C.APPLICATION_LIMITS: "4/second",
-            C.DEFAULT_LIMITS: "1/second",
-            C.DEFAULT_LIMITS_PER_METHOD: True,
+            ConfigVars.APPLICATION_LIMITS: "4/second",
+            ConfigVars.DEFAULT_LIMITS: "1/second",
+            ConfigVars.DEFAULT_LIMITS_PER_METHOD: True,
         }
     )
 
