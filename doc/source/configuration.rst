@@ -18,6 +18,19 @@ take priority.
        Constructor argument: :paramref:`~flask_limiter.Limiter.enabled`
 
      - Overall kill switch for rate limits. Defaults to ``True``
+   * - .. data:: RATELIMIT_KEY_FUNC
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.key_func`
+
+     - A callable that returns the domain to rate limit (e.g. username, ip address etc)
+   * - .. data:: RATELIMIT_KEY_PREFIX
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.key_prefix`
+
+     - Prefix that is prepended to each stored rate limit key and app context
+       global name. This can be useful when using a shared storage for multiple
+       applications or rate limit domains. For multi-instance use cases, explicitly
+       pass ``key_prefix`` keyword argument to :class:`~flask_limiter.Limiter` constructor instead.
    * - .. data:: RATELIMIT_APPLICATION
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.application_limits`
@@ -137,14 +150,18 @@ take priority.
 
      - A comma (or some other delimiter) separated string
        that will be used when the configured storage is down.
-   * - .. data:: RATELIMIT_KEY_PREFIX
+   * - .. data:: RATELIMIT_FAIL_ON_FIRST_BREACH
 
-       Constructor argument: :paramref:`~flask_limiter.Limiter.key_prefix`
+       Constructor argument: :paramref:`~flask_limiter.Limiter.fail_on_first_breach`
 
-     - Prefix that is prepended to each stored rate limit key and app context
-       global name. This can be useful when using a shared storage for multiple
-       applications or rate limit domains. For multi-instance use cases, explicitly
-       pass ``key_prefix`` keyword argument to :class:`~flask_limiter.Limiter` constructor instead.
+     - Whether to stop processing remaining limits after the first breach.
+       Default to ``True``
+   * - .. data:: RATELIMIT_ON_BREACH_CALLBACK
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.on_breach_callback`
+
+     - A function that will be called when any limit in this
+       extension is breached.
 
 .. _ratelimit-string:
 
