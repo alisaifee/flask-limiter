@@ -1,9 +1,8 @@
 """Flask-Limiter extension for rate limiting."""
 from . import _version
+from .constants import ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded
 from .extension import Limiter, RequestLimit
-from .constants import ExemptionScope, HeaderNames
-
 
 __all__ = [
     "ExemptionScope",

@@ -10,8 +10,8 @@ import mock
 from flask import Flask, request
 from werkzeug.exceptions import BadRequest
 
-from flask_limiter.extension import Limiter
 from flask_limiter.constants import ConfigVars
+from flask_limiter.extension import Limiter
 from flask_limiter.util import get_remote_address
 
 
