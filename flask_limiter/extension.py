@@ -151,11 +151,9 @@ class Limiter(object):
 
         self.enabled = enabled
         self.initialized = False
-        self._default_limits = []
         self._default_limits_per_method = default_limits_per_method
         self._default_limits_exempt_when = default_limits_exempt_when
         self._default_limits_deduct_when = default_limits_deduct_when
-        self._application_limits = []
         self._in_memory_fallback = []
         self._in_memory_fallback_enabled = (
             in_memory_fallback_enabled or len(in_memory_fallback) > 0
@@ -185,43 +183,39 @@ class Limiter(object):
         self._key_func = key_func
         self._key_prefix = key_prefix
 
-        for limit in default_limits:
-            self._default_limits.extend(
-                [
-                    LimitGroup(
-                        limit,
-                        self._key_func,
-                        None,
-                        False,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        1,
-                    )
-                ]
+        _default_limits = [
+            LimitGroup(
+                limit,
+                self._key_func,
+                None,
+                False,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                1,
             )
+            for limit in default_limits
+        ]
 
-        for limit in application_limits:
-            self._application_limits.extend(
-                [
-                    LimitGroup(
-                        limit,
-                        self._key_func,
-                        "global",
-                        False,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        1,
-                    )
-                ]
+        _application_limits = [
+            LimitGroup(
+                limit,
+                self._key_func,
+                "global",
+                False,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                1,
             )
+            for limit in application_limits
+        ]
 
         for limit in in_memory_fallback:
             self._in_memory_fallback.extend(
@@ -241,11 +235,6 @@ class Limiter(object):
                     )
                 ]
             )
-        self._route_limits: Dict[str, List[Limit]] = {}
-        self._dynamic_route_limits: Dict[str, List[LimitGroup]] = {}
-
-        self._blueprint_limits: Dict[str, List[Limit]] = {}
-        self._blueprint_dynamic_limits: Dict[str, List[LimitGroup]] = {}
 
         self._storage: Optional[Storage] = None
         self._limiter: Optional[RateLimiter] = None
@@ -263,12 +252,12 @@ class Limiter(object):
         self.logger.addHandler(BlackHoleHandler())
 
         self.limit_manager = LimitManager(
-            application_limits=self._application_limits,
-            default_limits=self._default_limits,
-            static_route_limits=self._route_limits,
-            dynamic_route_limits=self._dynamic_route_limits,
-            static_blueprint_limits=self._blueprint_limits,
-            dynamic_blueprint_limits=self._blueprint_dynamic_limits,
+            application_limits=_application_limits,
+            default_limits=_default_limits,
+            static_route_limits={},
+            dynamic_route_limits={},
+            static_blueprint_limits={},
+            dynamic_blueprint_limits={},
             route_exemptions=self._route_exemptions,
             blueprint_exemptions=self._blueprint_exemptions,
         )
@@ -356,8 +345,8 @@ class Limiter(object):
 
         app_limits = config.get(ConfigVars.APPLICATION_LIMITS, None)
 
-        if not self._application_limits and app_limits:
-            self._application_limits.extend(
+        if not self.limit_manager.application_limits and app_limits:
+            self.limit_manager.set_application_limits(
                 [
                     LimitGroup(
                         app_limits,
@@ -374,37 +363,38 @@ class Limiter(object):
                     )
                 ]
             )
-
         conf_limits = config.get(ConfigVars.DEFAULT_LIMITS, None)
 
-        if not self._default_limits and conf_limits:
-            self._default_limits.extend(
+        if not self.limit_manager.default_limits and conf_limits:
+            self.limit_manager.set_default_limits(
                 [
                     LimitGroup(
                         conf_limits,
                         self._key_func,
                         None,
-                        False,
+                        self._default_limits_per_method,
                         None,
                         None,
+                        self._default_limits_exempt_when,
                         None,
-                        None,
-                        None,
+                        self._default_limits_deduct_when,
                         None,
                         1,
                     )
                 ]
             )
-
-        for limit in self._default_limits:
-            limit.per_method = self._default_limits_per_method
-            limit.exempt_when = self._default_limits_exempt_when
-            limit.deduct_when = self._default_limits_deduct_when
+        else:
+            # This is dumb but just keeping it since it is existing behavior.
+            default_limit_groups = self.limit_manager._default_limits
+            for group in default_limit_groups:
+                group.per_method = self._default_limits_per_method
+                group.exempt_when = self._default_limits_exempt_when
+                group.deduct_when = self._default_limits_deduct_when
+            self.limit_manager.set_default_limits(default_limit_groups)
 
         self.__configure_fallbacks(app, strategy)
 
         # purely for backward compatibility as stated in flask documentation
-
         if not hasattr(app, "extensions"):
             app.extensions = {}  # pragma: no cover
 
@@ -555,9 +545,11 @@ class Limiter(object):
         """
 
         if isinstance(obj, Blueprint):
-            self._blueprint_exemptions[obj.name] = flags
+            self.limit_manager.add_blueprint_exemption(obj.name, flags)
         else:
-            self._route_exemptions[f"{obj.__module__}.{obj.__name__}"] = flags
+            self.limit_manager.add_route_exemption(
+                f"{obj.__module__}.{obj.__name__}", flags
+            )
         return obj
 
     def request_filter(self, fn: Callable[[], bool]) -> Callable:
@@ -1000,20 +992,16 @@ class Limiter(object):
 
             if isinstance(obj, Blueprint):
                 if dynamic_limit:
-                    self._blueprint_dynamic_limits.setdefault(name, []).append(
-                        dynamic_limit
-                    )
+                    self.limit_manager.add_runtime_blueprint_limits(name, dynamic_limit)
                 else:
-                    self._blueprint_limits.setdefault(name, []).extend(static_limits)
+                    self.limit_manager.add_static_blueprint_limits(name, *static_limits)
             else:
                 self.__marked_for_limiting.setdefault(name, []).append(obj)
 
                 if dynamic_limit:
-                    self._dynamic_route_limits.setdefault(name, []).append(
-                        dynamic_limit
-                    )
+                    self.limit_manager.add_runtime_route_limits(name, dynamic_limit)
                 else:
-                    self._route_limits.setdefault(name, []).extend(static_limits)
+                    self.limit_manager.add_static_route_limits(name, *static_limits)
 
                 @wraps(obj)
                 def __inner(*a, **k):

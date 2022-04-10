@@ -11,8 +11,8 @@ from .wrappers import Limit, LimitGroup
 class LimitManager:
     def __init__(
         self,
-        application_limits: Iterable[LimitGroup],
-        default_limits: Iterable[LimitGroup],
+        application_limits: List[LimitGroup],
+        default_limits: List[LimitGroup],
         static_route_limits: Dict[str, List[Limit]],
         dynamic_route_limits: Dict[str, List[LimitGroup]],
         static_blueprint_limits: Dict[str, List[Limit]],
@@ -23,9 +23,9 @@ class LimitManager:
         self._application_limits = application_limits
         self._default_limits = default_limits
         self._static_route_limits = static_route_limits
-        self._dynamic_route_limits = dynamic_route_limits
+        self._runtime_route_limits = dynamic_route_limits
         self._static_blueprint_limits = static_blueprint_limits
-        self._dynamic_blueprint_limits = dynamic_blueprint_limits
+        self._runtime_blueprint_limits = dynamic_blueprint_limits
         self._route_exemptions = route_exemptions
         self._blueprint_exemptions = blueprint_exemptions
         self._logger = logging.getLogger("flask-limiter")
@@ -37,6 +37,30 @@ class LimitManager:
     @property
     def default_limits(self) -> List[Limit]:
         return list(itertools.chain(*self._default_limits))
+
+    def set_application_limits(self, limits: List[LimitGroup]):
+        self._application_limits = limits
+
+    def set_default_limits(self, limits: List[LimitGroup]):
+        self._default_limits = limits
+
+    def add_runtime_route_limits(self, route: str, limit: LimitGroup):
+        self._runtime_route_limits.setdefault(route, []).append(limit)
+
+    def add_runtime_blueprint_limits(self, blueprint: str, limit: LimitGroup):
+        self._runtime_blueprint_limits.setdefault(blueprint, []).append(limit)
+
+    def add_static_route_limits(self, route: str, *limits: Limit):
+        self._static_route_limits.setdefault(route, []).extend(limits)
+
+    def add_static_blueprint_limits(self, blueprint: str, *limits: Limit):
+        self._static_blueprint_limits.setdefault(blueprint, []).extend(limits)
+
+    def add_route_exemption(self, route: str, scope: ExemptionScope):
+        self._route_exemptions[route] = scope
+
+    def add_blueprint_exemption(self, blueprint: str, scope: ExemptionScope):
+        self._blueprint_exemptions[blueprint] = scope
 
     def exemption_scope(self, request) -> ExemptionScope:
         endpoint = request.endpoint or ""
@@ -69,8 +93,8 @@ class LimitManager:
             for limit in self._static_route_limits.get(name, []):
                 limits.append(limit)
 
-            if name in self._dynamic_route_limits:
-                for group in self._dynamic_route_limits[name]:
+            if name in self._runtime_route_limits:
+                for group in self._runtime_route_limits[name]:
                     try:
                         for limit in group:
                             limits.append(limit)
@@ -101,15 +125,15 @@ class LimitManager:
                 self_exemption & ~(ExemptionScope.DEFAULT | ExemptionScope.APPLICATION)
                 or ancestor_exemptions
             ):
-                blueprint_self_dynamic_limits = self._dynamic_blueprint_limits.get(
+                blueprint_self_dynamic_limits = self._runtime_blueprint_limits.get(
                     blueprint_name, []
                 )
                 blueprint_dynamic_limits: Iterable[LimitGroup] = (
                     itertools.chain(
                         *(
-                            self._dynamic_blueprint_limits.get(member, [])
+                            self._runtime_blueprint_limits.get(member, [])
                             for member in blueprint_ancestory.intersection(
-                                self._dynamic_blueprint_limits
+                                self._runtime_blueprint_limits
                             )
                         )
                     )
