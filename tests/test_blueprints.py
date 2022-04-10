@@ -30,6 +30,52 @@ def test_blueprint(extension_factory):
         assert cli.get("/t2").status_code == 429
 
 
+def test_blueprint_limit_with_route_limits(extension_factory):
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    bp = Blueprint("main", __name__)
+
+    @app.route("/")
+    def root():
+        return "root"
+
+    @bp.route("/t1")
+    def t1():
+        return "test"
+
+    @bp.route("/t2")
+    @limiter.limit("10 per minute")
+    def t2():
+        return "test"
+
+    @bp.route("/t3")
+    @limiter.limit("3 per hour", override_defaults=False)
+    def t3():
+        return "test"
+
+    limiter.limit("2/minute")(bp)
+
+    app.register_blueprint(bp)
+
+    with hiro.Timeline() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 429
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            for i in range(0, 10):
+                assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 429
+
+            assert cli.get("/t3").status_code == 200
+            assert cli.get("/t3").status_code == 200
+            assert cli.get("/t3").status_code == 429
+            timeline.forward(datetime.timedelta(minutes=1))
+            assert cli.get("/t3").status_code == 200
+            timeline.forward(datetime.timedelta(minutes=1))
+            assert cli.get("/t3").status_code == 429
+
+
 def test_nested_blueprint_exemption_explicit(extension_factory):
     app, limiter = extension_factory(default_limits=["1/minute"])
     parent_bp = Blueprint("parent", __name__, url_prefix="/parent")

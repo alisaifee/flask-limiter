@@ -780,11 +780,17 @@ class Limiter(object):
 
         route_limits: List[Limit] = []
 
+        before_request_context = in_middleware and name in self.__marked_for_limiting
+
         if not in_middleware:
             route_limits.extend(self.limit_manager.route_limits(request))
 
         if request.blueprint:
-            route_limits.extend(self.limit_manager.blueprint_limits(request))
+            if not before_request_context and (
+                not route_limits
+                or all(not limit.override_defaults for limit in route_limits)
+            ):
+                route_limits.extend(self.limit_manager.blueprint_limits(request))
 
         exemption_scope = self.limit_manager.exemption_scope(request)
         all_limits = []
@@ -809,9 +815,6 @@ class Limiter(object):
             explicit_limits_exempt = all(limit.method_exempt for limit in route_limits)
             combined_defaults = all(
                 not limit.override_defaults for limit in route_limits
-            )
-            before_request_context = (
-                in_middleware and name in self.__marked_for_limiting
             )
 
             if (explicit_limits_exempt or combined_defaults) and not (
