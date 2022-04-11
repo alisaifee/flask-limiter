@@ -6,7 +6,7 @@ import time
 from collections import Counter
 
 import hiro
-import mock
+from unittest import mock
 from flask import Flask, request
 from werkzeug.exceptions import BadRequest
 

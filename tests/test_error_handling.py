@@ -2,7 +2,7 @@ import json
 
 import hiro
 from flask import make_response
-from mock import patch
+from unittest.mock import patch
 
 from flask_limiter.constants import ConfigVars
 

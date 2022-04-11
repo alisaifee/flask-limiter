@@ -13,7 +13,6 @@ pymongo
 # For the tests themselves
 coverage
 hiro>0.1.6
-mock
 pytest
 pytest-cov
 lovely-pytest-docker

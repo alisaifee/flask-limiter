@@ -2,7 +2,7 @@ import asyncio
 from functools import wraps
 
 import hiro
-import mock
+from unittest import mock
 from flask import Blueprint, Flask, current_app, g, request
 from werkzeug.exceptions import BadRequest
 
