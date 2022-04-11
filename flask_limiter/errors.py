@@ -17,4 +17,4 @@ class RateLimitExceeded(exceptions.TooManyRequests):
             )
         else:
             description = str(limit.limit)
-        super(RateLimitExceeded, self).__init__(description=description)
+        super().__init__(description=description)

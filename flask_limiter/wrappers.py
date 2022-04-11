@@ -2,7 +2,7 @@ from flask import request
 from limits import parse_many
 
 
-class Limit(object):
+class Limit:
     """
     simple wrapper to encapsulate limits and their context
     """
@@ -59,7 +59,7 @@ class Limit(object):
         return self.methods is not None and request.method.lower() not in self.methods
 
 
-class LimitGroup(object):
+class LimitGroup:
     """
     represents a group of related limits either from a string or a callable
     that returns one

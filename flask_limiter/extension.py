@@ -70,7 +70,7 @@ class RequestLimit:
         return self.window[1]
 
 
-class Limiter(object):
+class Limiter:
     """
     The :class:`Limiter` class initializes the Flask-Limiter extension.
 
