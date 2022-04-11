@@ -1,8 +1,8 @@
 import json
+from unittest.mock import patch
 
 import hiro
 from flask import make_response
-from unittest.mock import patch
 
 from flask_limiter.constants import ConfigVars
 

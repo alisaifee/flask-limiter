@@ -4,9 +4,9 @@
 import logging
 import time
 from collections import Counter
+from unittest import mock
 
 import hiro
-from unittest import mock
 from flask import Flask, request
 from werkzeug.exceptions import BadRequest
 
