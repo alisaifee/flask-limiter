@@ -3,6 +3,28 @@
 Changelog
 =========
 
+v2.3.0
+------
+Release Date: 2022-04-11
+
+* Features
+
+  * Expose option to register a callback for rate limit breaches
+    of default limits via the :paramref:`~flask_limiter.Limiter.on_breach`
+    constructor parameter
+  * Replace use of `flask.g` with request context for keeping track of
+    extension state (:issue:`327`)
+  * Rework implementation of :meth:`~flask_limiter.Limiter.exempt` to accomodate
+    nested blueprints. (:issue:`326`)
+
+* Chores
+
+  * Add python 3.11 to CI
+  * Extract management and filtering of limits to LimitManager
+  * Improve correctness of resolving inherited limits & extensions
+    when working with Blueprints (especially nested ones)
+
+
 v2.2.0
 ------
 Release Date: 2022-03-05
@@ -488,6 +510,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
