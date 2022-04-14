@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.3.1
+------
+Release Date: 2022-04-14
+
+* Bug Fixes
+
+  * Add missing extras requirements for installation
+  * Add py.typed for PEP 561 compliance
+
 v2.3.0
 ------
 Release Date: 2022-04-11
@@ -510,6 +519,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
