@@ -15,7 +15,11 @@ this_dir = os.path.abspath(os.path.dirname(__file__))
 REQUIREMENTS = filter(
     None, open(os.path.join(this_dir, "requirements", "main.txt")).read().splitlines()
 )
-
+EXTRA_REQUIREMENTS = {
+    "redis": ["limits[redis]"],
+    "memcached": ["limits[memcached]"],
+    "mongodb": ["limits[mongodb]"],
+}
 
 setup(
     name="Flask-Limiter",
@@ -35,4 +39,9 @@ setup(
     long_description=open("README.rst").read(),
     packages=find_packages(exclude=["tests*"]),
     python_requires=">=3.7",
+    extras_require=EXTRA_REQUIREMENTS,
+    include_package_data=True,
+    package_data={
+        "flask_limiter": ["py.typed"],
+    },
 )
