@@ -5,7 +5,7 @@ setup.py for Flask-Limiter
 """
 __author__ = "Ali-Akber Saifee"
 __email__ = "ali@indydevs.org"
-__copyright__ = "Copyright 2014, Ali-Akber Saifee"
+__copyright__ = "Copyright 2022, Ali-Akber Saifee"
 
 from setuptools import setup, find_packages
 import os
