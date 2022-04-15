@@ -2,7 +2,8 @@
 from . import _version
 from .constants import ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded
-from .extension import Limiter, RequestLimit
+from .extension import Limiter
+from .wrappers import RequestLimit
 
 __all__ = [
     "ExemptionScope",

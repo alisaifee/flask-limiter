@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+import dataclasses
+
 """
 Flask-Limiter Extension
 """
@@ -5,12 +9,27 @@ import datetime
 import itertools
 import logging
 import time
+import weakref
 from collections import defaultdict
 from functools import wraps
-from typing import Callable, Dict, List, Optional, Tuple, Union, cast
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Union,
+    cast,
+    Sequence,
+    Tuple,
+    TypeVar,
+    overload,
+    Set,
+)
+from typing_extensions import ParamSpec
 
-from flask import Blueprint, Flask, Response, _request_ctx_stack, current_app, request
-from limits import RateLimitItem
+import flask
+from werkzeug import Response
+
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
@@ -19,55 +38,26 @@ from werkzeug.http import http_date, parse_date
 from .constants import MAX_BACKEND_CHECKS, ConfigVars, ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded
 from .manager import LimitManager
-from .wrappers import Limit, LimitGroup
+from .wrappers import Limit, LimitGroup, RequestLimit
+
+R = TypeVar("R")
+P = ParamSpec("P")
 
 
-class RequestLimit:
-    """
-    Provides details of a rate limit within the context of a request
-    """
+@dataclasses.dataclass
+class LimiterContext:
+    rate_limiting_complete: bool = False
+    view_rate_limit: Optional[RequestLimit] = None
+    view_rate_limits: List[RequestLimit] = dataclasses.field(default_factory=list)
+    conditional_deductions: Dict[Limit, List[str]] = dataclasses.field(
+        default_factory=dict
+    )
 
-    #: The instance of the rate limit
-    limit: RateLimitItem
-
-    #: The full key for the request against which the rate limit is tested
-    key: str
-
-    #: Whether the limit was breached within the context of this request
-    breached: bool
-
-    def __init__(
-        self,
-        limiter: RateLimiter,
-        limit: RateLimitItem,
-        request_args: List[str],
-        breached: bool,
-    ):
-        self.limiter = limiter
-        self.limit = limit
-        self.request_args = request_args
-        self.key = limit.key_for(*request_args)
-        self.breached = breached
-        self._window: Optional[Tuple[int, int]] = None
-
-    @property
-    def window(self):
-        if not self._window:
-            self._window = self.limiter.get_window_stats(self.limit, *self.request_args)
-
-        return self._window
-
-    @property
-    def reset_at(self) -> int:
-        """Timestamp at which the rate limit will be reset"""
-
-        return int(self.window[0] + 1)
-
-    @property
-    def remaining(self) -> int:
-        """Quantity remaining for this rate limit"""
-
-        return self.window[1]
+    def reset(self) -> None:
+        self.rate_limiting_complete = False
+        self.view_rate_limit = None
+        self.view_rate_limits.clear()
+        self.conditional_deductions.clear()
 
 
 class Limiter:
@@ -85,7 +75,7 @@ class Limiter:
     :param default_limits_exempt_when: a function that should return
      True/False to decide if the default limits should be skipped
     :param default_limits_deduct_when: a function that receives the
-     current :class:`flask.Response` object and returns True/False to decide
+     current :class:`werkzeug.Response` object and returns True/False to decide
      if a deduction should be made from the default rate limit(s)
     :param application_limits: a variable list of strings or callables
      returning strings for limits that are applied to the entire application
@@ -124,28 +114,28 @@ class Limiter:
 
     def __init__(
         self,
-        app: Optional[Flask] = None,
-        key_func: Callable[[], str] = None,
-        default_limits: List[Union[str, Callable[[], str]]] = [],
-        default_limits_per_method: bool = None,
-        default_limits_exempt_when: Callable[[], bool] = None,
-        default_limits_deduct_when: Callable[[], bool] = None,
-        application_limits: List[Union[str, Callable[[], str]]] = [],
-        headers_enabled: bool = None,
-        header_name_mapping: Dict[HeaderNames, str] = {},
+        app: Optional[flask.Flask] = None,
+        key_func: Optional[Callable[[], str]] = None,
+        default_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
+        default_limits_per_method: Optional[bool] = None,
+        default_limits_exempt_when: Optional[Callable[[], bool]] = None,
+        default_limits_deduct_when: Optional[Callable[[Response], bool]] = None,
+        application_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
+        headers_enabled: Optional[bool] = None,
+        header_name_mapping: Optional[Dict[HeaderNames, str]] = None,
         strategy: Optional[str] = None,
         storage_uri: Optional[str] = None,
-        storage_options={},
+        storage_options: Optional[Dict[str, Union[str, int]]] = None,
         auto_check: bool = True,
-        swallow_errors: bool = None,
-        fail_on_first_breach: bool = None,
-        on_breach: Callable[[RequestLimit], None] = None,
-        in_memory_fallback: List[str] = [],
-        in_memory_fallback_enabled: bool = None,
-        retry_after: str = None,
+        swallow_errors: Optional[bool] = None,
+        fail_on_first_breach: Optional[bool] = None,
+        on_breach: Optional[Callable[[RequestLimit], None]] = None,
+        in_memory_fallback: Optional[List[str]] = None,
+        in_memory_fallback_enabled: Optional[bool] = None,
+        retry_after: Optional[str] = None,
         key_prefix: str = "",
         enabled: bool = True,
-    ):
+    ) -> None:
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
 
@@ -155,8 +145,8 @@ class Limiter:
         self._default_limits_exempt_when = default_limits_exempt_when
         self._default_limits_deduct_when = default_limits_deduct_when
         self._in_memory_fallback = []
-        self._in_memory_fallback_enabled = (
-            in_memory_fallback_enabled or len(in_memory_fallback) > 0
+        self._in_memory_fallback_enabled = in_memory_fallback_enabled or (
+            in_memory_fallback and len(in_memory_fallback) > 0
         )
         self._route_exemptions: Dict[str, ExemptionScope] = defaultdict(
             lambda: ExemptionScope.NONE
@@ -167,11 +157,11 @@ class Limiter:
         self._request_filters: List[Callable[[], bool]] = []
 
         self._headers_enabled = headers_enabled
-        self._header_mapping = header_name_mapping
+        self._header_mapping = header_name_mapping or {}
         self._retry_after = retry_after
         self._strategy = strategy
         self._storage_uri = storage_uri
-        self._storage_options = storage_options
+        self._storage_options = storage_options or {}
         self._auto_check = auto_check
         self._swallow_errors = swallow_errors
         self._fail_on_first_breach = fail_on_first_breach
@@ -183,43 +173,51 @@ class Limiter:
         self._key_func = key_func
         self._key_prefix = key_prefix
 
-        _default_limits = [
-            LimitGroup(
-                limit,
-                self._key_func,
-                None,
-                False,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                1,
-            )
-            for limit in default_limits
-        ]
+        _default_limits = (
+            [
+                LimitGroup(
+                    limit,
+                    self._key_func,
+                    None,
+                    False,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    1,
+                )
+                for limit in default_limits
+            ]
+            if default_limits
+            else []
+        )
 
-        _application_limits = [
-            LimitGroup(
-                limit,
-                self._key_func,
-                "global",
-                False,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                1,
-            )
-            for limit in application_limits
-        ]
+        _application_limits = (
+            [
+                LimitGroup(
+                    limit,
+                    self._key_func,
+                    "global",
+                    False,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    1,
+                )
+                for limit in application_limits
+            ]
+            if application_limits
+            else []
+        )
 
-        for limit in in_memory_fallback:
-            self._in_memory_fallback.extend(
-                [
+        if in_memory_fallback:
+            for limit in in_memory_fallback:
+                self._in_memory_fallback.append(
                     LimitGroup(
                         limit,
                         self._key_func,
@@ -233,8 +231,7 @@ class Limiter:
                         None,
                         1,
                     )
-                ]
-            )
+                )
 
         self._storage: Optional[Storage] = None
         self._limiter: Optional[RateLimiter] = None
@@ -243,13 +240,9 @@ class Limiter:
 
         self.__check_backend_count = 0
         self.__last_check_backend = time.time()
-        self.__marked_for_limiting: Dict[str, List[str]] = {}
+        self._marked_for_limiting: Set[str] = set()
 
-        class BlackHoleHandler(logging.StreamHandler):
-            def emit(*_):
-                return
-
-        self.logger.addHandler(BlackHoleHandler())
+        self.logger.addHandler(logging.NullHandler())
 
         self.limit_manager = LimitManager(
             application_limits=_application_limits,
@@ -265,7 +258,7 @@ class Limiter:
         if app:
             self.init_app(app)
 
-    def init_app(self, app: Flask):
+    def init_app(self, app: flask.Flask) -> None:
         """
         :param app: :class:`flask.Flask` instance to rate limit.
         """
@@ -276,8 +269,8 @@ class Limiter:
             return
 
         if self._default_limits_per_method is None:
-            self._default_limits_per_method = config.get(
-                ConfigVars.DEFAULT_LIMITS_PER_METHOD, False
+            self._default_limits_per_method = bool(
+                config.get(ConfigVars.DEFAULT_LIMITS_PER_METHOD, False)
             )
         self._default_limits_exempt_when = (
             self._default_limits_exempt_when
@@ -289,15 +282,15 @@ class Limiter:
         )
 
         if self._swallow_errors is None:
-            self._swallow_errors = config.get(ConfigVars.SWALLOW_ERRORS, False)
+            self._swallow_errors = bool(config.get(ConfigVars.SWALLOW_ERRORS, False))
 
         if self._fail_on_first_breach is None:
-            self._fail_on_first_breach = config.get(
-                ConfigVars.FAIL_ON_FIRST_BREACH, True
+            self._fail_on_first_breach = bool(
+                config.get(ConfigVars.FAIL_ON_FIRST_BREACH, True)
             )
 
         if self._headers_enabled is None:
-            self._headers_enabled = config.get(ConfigVars.HEADERS_ENABLED, False)
+            self._headers_enabled = bool(config.get(ConfigVars.HEADERS_ENABLED, False))
 
         self._storage_options.update(config.get(ConfigVars.STORAGE_OPTIONS, {}))
         storage_uri_from_config = config.get(
@@ -400,7 +393,7 @@ class Limiter:
 
         if not app.extensions.get("limiter"):
             if self._auto_check:
-                app.before_request(self.__check_request_limit)
+                app.before_request(self._check_request_limit)
             app.after_request(self.__inject_headers)
             app.teardown_request(self.__release_context)
 
@@ -408,26 +401,28 @@ class Limiter:
         self.initialized = True
 
     @property
-    def context(self):
-        ctx = _request_ctx_stack.top
-        if ctx is not None:
-            if not hasattr(ctx, "_limiter_request_context"):
-                ctx._limiter_request_context = {}
-            return ctx._limiter_request_context
+    def context(self) -> LimiterContext:
+        ctx = flask._request_ctx_stack.top
+        assert ctx
+        if not hasattr(ctx, "_limiter_request_context"):
+            ctx._limiter_request_context = defaultdict(LimiterContext)
+        return cast(Dict[str, LimiterContext], ctx._limiter_request_context)[
+            self._key_prefix
+        ]
 
     def limit(
         self,
         limit_value: Union[str, Callable[[], str]],
-        key_func: Callable[[], str] = None,
+        key_func: Optional[Callable[[], str]] = None,
         per_method: bool = False,
-        methods: List[str] = None,
-        error_message: str = None,
-        exempt_when: Callable[[], bool] = None,
+        methods: Optional[List[str]] = None,
+        error_message: Optional[str] = None,
+        exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
-        deduct_when: Callable[[Response], bool] = None,
-        on_breach: Callable[[RequestLimit], None] = None,
+        deduct_when: Optional[Callable[[Response], bool]] = None,
+        on_breach: Optional[Callable[[RequestLimit], None]] = None,
         cost: Union[int, Callable[[], int]] = 1,
-    ) -> Callable:
+    ) -> LimitDecorator:
         """
         decorator to be used for rate limiting individual routes or blueprints.
 
@@ -452,7 +447,7 @@ class Limiter:
             registered under. For more details see :ref:`recipes:nested blueprints`
 
         :param deduct_when: a function that receives the current
-         :class:`flask.Response` object and returns True/False to decide if a
+         :class:`werkzeug.Response` object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
@@ -460,7 +455,8 @@ class Limiter:
          takes no parameters and returns the cost as an integer (Default: ``1``).
         """
 
-        return self.__limit_decorator(
+        return LimitDecorator(
+            self,
             limit_value,
             key_func,
             per_method=per_method,
@@ -476,15 +472,15 @@ class Limiter:
     def shared_limit(
         self,
         limit_value: Union[str, Callable[[], str]],
-        scope: Union[str, Callable[[], str]],
-        key_func: Callable[[], str] = None,
-        error_message: str = None,
-        exempt_when: Callable[[], bool] = None,
-        override_defaults=True,
-        deduct_when: Callable[[Response], bool] = None,
-        on_breach: Callable[[RequestLimit], None] = None,
+        scope: Union[str, Callable[[str], str]],
+        key_func: Optional[Callable[[], str]] = None,
+        error_message: Optional[str] = None,
+        exempt_when: Optional[Callable[[], bool]] = None,
+        override_defaults: bool = True,
+        deduct_when: Optional[Callable[[Response], bool]] = None,
+        on_breach: Optional[Callable[[RequestLimit], None]] = None,
         cost: Union[int, Callable[[], int]] = 1,
-    ) -> Callable:
+    ) -> LimitDecorator:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
@@ -506,7 +502,7 @@ class Limiter:
             of the parameter extends to any parents the blueprint instance is
             registered under. For more details see :ref:`recipes:nested blueprints`
         :param deduct_when: a function that receives the current
-         :class:`flask.Response`  object and returns True/False to decide if a
+         :class:`werkzeug.Response`  object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
@@ -514,7 +510,8 @@ class Limiter:
          takes no parameters and returns the cost as an integer (default: ``1``).
         """
 
-        return self.__limit_decorator(
+        return LimitDecorator(
+            self,
             limit_value,
             key_func,
             True,
@@ -529,9 +526,9 @@ class Limiter:
 
     def exempt(
         self,
-        obj: Union[Callable, Blueprint],
+        obj: Union[Callable[P, R], flask.Blueprint],
         flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
-    ):
+    ) -> Union[Callable[P, R], flask.Blueprint]:
         """
         decorator to mark a view or all views in a blueprint as exempt from
         rate limits.
@@ -544,7 +541,7 @@ class Limiter:
          or has other Blueprints nested under it (See :ref:`recipes:nested blueprints`)
         """
 
-        if isinstance(obj, Blueprint):
+        if isinstance(obj, flask.Blueprint):
             self.limit_manager.add_blueprint_exemption(obj.name, flags)
         else:
             self.limit_manager.add_route_exemption(
@@ -552,7 +549,7 @@ class Limiter:
             )
         return obj
 
-    def request_filter(self, fn: Callable[[], bool]) -> Callable:
+    def request_filter(self, fn: Callable[[], bool]) -> Callable[[], bool]:
         """
         decorator to mark a function as a filter to be executed
         to check if the request is exempt from rate limiting.
@@ -564,7 +561,7 @@ class Limiter:
 
         return fn
 
-    def __configure_fallbacks(self, app, strategy):
+    def __configure_fallbacks(self, app: flask.Flask, strategy: str) -> None:
         config = app.config
         fallback_enabled = config.get(ConfigVars.IN_MEMORY_FALLBACK_ENABLED, False)
         fallback_limits = config.get(ConfigVars.IN_MEMORY_FALLBACK, None)
@@ -595,7 +592,7 @@ class Limiter:
             self._fallback_storage = MemoryStorage()
             self._fallback_limiter = STRATEGIES[strategy](self._fallback_storage)
 
-    def __should_check_backend(self):
+    def __should_check_backend(self) -> bool:
         if self.__check_backend_count > MAX_BACKEND_CHECKS:
             self.__check_backend_count = 0
 
@@ -613,24 +610,27 @@ class Limiter:
 
         :raises: RateLimitExceeded
         """
-        self.__check_request_limit(False)
+        self._check_request_limit(False)
 
     def reset(self) -> None:
         """
         resets the storage if it supports being reset
         """
         try:
-            self._storage.reset()
-            self.logger.info("Storage has been reset and all limits cleared")
+            if self._storage:
+                self._storage.reset()
+                self.logger.info("Storage has been reset and all limits cleared")
         except NotImplementedError:
             self.logger.warning("This storage type does not support being reset")
 
     @property
     def limiter(self) -> RateLimiter:
         if self._storage_dead and self._in_memory_fallback_enabled:
-            return self._fallback_limiter
+            limiter = self._fallback_limiter
         else:
-            return self._limiter
+            limiter = self._limiter
+        assert limiter
+        return limiter
 
     @property
     def current_limit(self) -> Optional[RequestLimit]:
@@ -657,18 +657,7 @@ class Limiter:
         - Request 2 at ``t=1`` (no breach): it will still return the details for ``1/second``
         - Request 3 at ``t=2`` (breach): it will return the details for ``2/day``
         """
-        last_limit = self.context.get(f"{self._key_prefix}_view_rate_limit", None)
-        breached_limits = self.context.get(f"{self._key_prefix}_breached_limits", [])
-
-        if last_limit:
-            return RequestLimit(
-                limit=last_limit[0],
-                limiter=self.limiter,
-                request_args=last_limit[1:],
-                breached=last_limit[0] in breached_limits,
-            )
-
-        return None
+        return self.context.view_rate_limit
 
     @property
     def current_limits(self) -> List[RequestLimit]:
@@ -678,34 +667,25 @@ class Limiter:
 
         The limits are returned in a sorted order by smallest window size first.
         """
-        all_limits = self.context.get(f"{self._key_prefix}_view_rate_limits", [])
-        breached_limits = self.context.get(f"{self._key_prefix}_breached_limits", [])
 
-        return list(
-            RequestLimit(
-                limit=limit[0],
-                limiter=self.limiter,
-                request_args=limit[1:],
-                breached=limit[0] in breached_limits,
-            )
-            for limit in sorted(all_limits)
-        )
+        return self.context.view_rate_limits
 
-    def __check_conditional_deductions(self, response):
+    def __check_conditional_deductions(self, response: Response) -> None:
 
-        for lim, args in self.context.get(
-            f"{self._key_prefix}_conditional_deductions", {}
-        ).items():
-            if lim.deduct_when(response):
+        for lim, args in self.context.conditional_deductions.items():
+            if lim.deduct_when and lim.deduct_when(response):
                 self.limiter.hit(lim.limit, *args, cost=lim.cost)
 
-        return response
-
-    def __inject_headers(self, response):
+    def __inject_headers(self, response: Response) -> Response:
         self.__check_conditional_deductions(response)
         header_limit = self.current_limit
 
-        if self.enabled and self._headers_enabled and header_limit:
+        if (
+            self.enabled
+            and self._headers_enabled
+            and header_limit
+            and self._header_mapping
+        ):
             try:
                 reset_at = header_limit.reset_at
                 response.headers.add(
@@ -722,7 +702,7 @@ class Limiter:
 
                 if existing_retry_after_header is not None:
                     # might be in http-date format
-                    retry_after: Union[float, datetime.datetime] = parse_date(
+                    retry_after: Optional[Union[float, datetime.datetime]] = parse_date(
                         existing_retry_after_header
                     )
 
@@ -761,44 +741,52 @@ class Limiter:
 
         return response
 
-    def __check_all_limits_exempt(self, request) -> bool:
-        return (
-            not request.endpoint
+    def __check_all_limits_exempt(self, endpoint: Optional[str]) -> bool:
+        return bool(
+            not endpoint
             or not (self.enabled and self.initialized)
-            or request.endpoint == "static"
+            or endpoint == "static"
             or any(fn() for fn in self._request_filters)
-            or self.context.get(f"{self._key_prefix}_rate_limiting_complete")
+            or self.context.rate_limiting_complete
         )
 
-    def __filter_limits(self, request, in_middleware: bool = False) -> List[Limit]:
-        endpoint = request.endpoint or ""
-        view_func = current_app.view_functions.get(endpoint, None)
+    def __filter_limits(
+        self,
+        endpoint: Optional[str],
+        blueprint: Optional[str],
+        in_middleware: bool = False,
+    ) -> List[Limit]:
+        view_func = flask.current_app.view_functions.get(endpoint or "", None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
 
-        if self.__check_all_limits_exempt(request):
+        if self.__check_all_limits_exempt(endpoint):
             return []
 
         route_limits: List[Limit] = []
 
-        before_request_context = in_middleware and name in self.__marked_for_limiting
+        before_request_context = in_middleware and name in self._marked_for_limiting
 
-        if not in_middleware:
-            route_limits.extend(self.limit_manager.route_limits(request))
+        if not in_middleware and endpoint:
+            route_limits.extend(self.limit_manager.route_limits(endpoint))
 
-        if request.blueprint:
+        if blueprint:
             if not before_request_context and (
                 not route_limits
                 or all(not limit.override_defaults for limit in route_limits)
             ):
-                route_limits.extend(self.limit_manager.blueprint_limits(request))
+                route_limits.extend(self.limit_manager.blueprint_limits(blueprint))
 
-        exemption_scope = self.limit_manager.exemption_scope(request)
+        exemption_scope = self.limit_manager.exemption_scope(endpoint, blueprint)
         all_limits = []
         if self._storage_dead and self._fallback_limiter:
-            if in_middleware and name in self.__marked_for_limiting:
+            if in_middleware and name in self._marked_for_limiting:
                 pass
             else:
-                if self.__should_check_backend() and self._storage.check():
+                if (
+                    self.__should_check_backend()
+                    and self._storage
+                    and self._storage.check()
+                ):
                     self.logger.info("Rate limit storage recovered")
                     self._storage_dead = False
                     self.__check_backend_count = 0
@@ -823,13 +811,10 @@ class Limiter:
                 all_limits += self.limit_manager.default_limits
         return all_limits
 
-    def __evaluate_limits(self, endpoint, limits):
-        failed_limits = []
-        limit_for_header = None
-        view_limits = []
-        if not self.context.get(f"{self._key_prefix}_conditional_deductions"):
-            self.context["%s_conditional_deductions" % self._key_prefix] = {}
-
+    def __evaluate_limits(self, endpoint: str, limits: List[Limit]) -> None:
+        failed_limits: List[Tuple[Limit, List[str]]] = []
+        limit_for_header: Optional[RequestLimit] = None
+        view_limits: List[RequestLimit] = []
         for lim in sorted(limits, key=lambda x: x.limit):
             limit_scope = lim.scope or endpoint
 
@@ -837,34 +822,32 @@ class Limiter:
                 continue
 
             if lim.per_method:
-                limit_scope += ":%s" % request.method
+                limit_scope += f":{flask.request.method}"
             limit_key = lim.key_func()
             args = [limit_key, limit_scope]
             kwargs = {}
 
             if not all(args):
                 self.logger.error(
-                    "Skipping limit: %s. Empty value found in parameters.", lim.limit
+                    f"Skipping limit: {lim.limit}. Empty value found in parameters."
                 )
 
                 continue
 
             if self._key_prefix:
-                args = [self._key_prefix] + args
+                args = [self._key_prefix, *args]
 
             if lim.deduct_when:
-                self.context.get(f"{self._key_prefix}_conditional_deductions")[
-                    lim
-                ] = args
+                self.context.conditional_deductions[lim] = args
                 method = self.limiter.test
             else:
                 method = self.limiter.hit
                 kwargs["cost"] = lim.cost
 
-            if not limit_for_header or lim.limit < limit_for_header[0]:
-                limit_for_header = [lim.limit] + args
+            if not limit_for_header or lim.limit < limit_for_header.limit:
+                limit_for_header = RequestLimit(self, lim.limit, args, False)
 
-            view_limits.append([lim.limit] + args)
+            view_limits.append(RequestLimit(self, lim.limit, args, False))
 
             if not method(lim.limit, *args, **kwargs):
                 self.logger.warning(
@@ -873,42 +856,35 @@ class Limiter:
                     limit_key,
                     limit_scope,
                 )
-                failed_limits.append([lim, args])
-                limit_for_header = [lim.limit] + args
-
+                failed_limits.append((lim, args))
+                view_limits[-1].breached = True
+                limit_for_header = view_limits[-1]
                 if self._fail_on_first_breach:
                     break
 
-        self.context[f"{self._key_prefix}_view_rate_limit"] = limit_for_header
-        self.context[f"{self._key_prefix}_view_rate_limits"] = view_limits
+        self.context.view_rate_limit = limit_for_header or None
+        self.context.view_rate_limits = view_limits
+
+        for limit in failed_limits:
+            request_limit = RequestLimit(self, limit[0].limit, limit[1], True)
+            for cb in {self._on_breach, limit[0].on_breach}:
+                if cb:
+                    try:
+                        cb(request_limit)
+                    except Exception:  # noqa
+                        self.logger.warning("on_breach callback failed")
 
         if failed_limits:
-            inner_limits = [limit[0] for limit in failed_limits]
-            for limit in failed_limits:
-                for cb in {self._on_breach, limit[0].on_breach}:
-                    if cb:
-                        try:
-                            cb(
-                                RequestLimit(
-                                    self.limiter,
-                                    limit=limit[0].limit,
-                                    request_args=limit[1],
-                                    breached=True,
-                                )
-                            )
-                        except Exception:  # noqa
-                            self.logger.warning("on_breach callback failed")
+            raise RateLimitExceeded(
+                sorted(failed_limits, key=lambda x: x[0].limit)[0][0]
+            )
 
-            self.context[f"{self._key_prefix}_breached_limits"] = [
-                limit.limit for limit in inner_limits
-            ]
-
-            raise RateLimitExceeded(sorted(inner_limits)[0])
-
-    def __check_request_limit(self, in_middleware=True):
-        endpoint = request.endpoint or ""
+    def _check_request_limit(self, in_middleware: bool = True) -> None:
+        endpoint = flask.request.endpoint or ""
         try:
-            all_limits = self.__filter_limits(request, in_middleware)
+            all_limits = self.__filter_limits(
+                flask.request.endpoint, flask.request.blueprint, in_middleware
+            )
             self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:
             if isinstance(e, RateLimitExceeded):
@@ -920,103 +896,140 @@ class Limiter:
                     " in-memory storage"
                 )
                 self._storage_dead = True
-                self.__check_request_limit(in_middleware)
+                self._check_request_limit(in_middleware)
             else:
                 if self._swallow_errors:
                     self.logger.exception("Failed to rate limit. Swallowing error")
                 else:
                     raise e
 
-    def __release_context(self, _):
+    def __release_context(self, _: Optional[BaseException] = None) -> None:
         if self.context:
-            self.context.clear()
+            self.context.reset()
 
-    def __limit_decorator(
+
+class LimitDecorator:
+    """
+    Wrapper used by :meth:`~flask_limiter.Limiter.limit`
+    and :meth:`~flask_limiter.Limiter.shared_limit`
+    when wrapping view functions or blueprints.
+    """
+
+    def __init__(
         self,
-        limit_value,
-        key_func=None,
-        shared=False,
-        scope=None,
-        per_method=False,
-        methods=None,
-        error_message=None,
-        exempt_when=None,
-        override_defaults=True,
-        deduct_when=None,
-        on_breach=None,
-        cost=1,
+        limiter: Limiter,
+        limit_value: Union[Callable[[], str], str],
+        key_func: Optional[Callable[[], str]] = None,
+        shared: bool = False,
+        scope: Optional[Union[Callable[[str], str], str]] = None,
+        per_method: bool = False,
+        methods: Optional[Sequence[str]] = None,
+        error_message: Optional[str] = None,
+        exempt_when: Optional[Callable[[], bool]] = None,
+        override_defaults: bool = True,
+        deduct_when: Optional[Callable[[Response], bool]] = None,
+        on_breach: Optional[Callable[[RequestLimit], None]] = None,
+        cost: Union[Callable[[], int], int] = 1,
     ):
-        _scope = scope if shared else None
+        self.limiter: weakref.ProxyType[Limiter] = weakref.proxy(limiter)
+        self.limit_value = limit_value
+        self.key_func = key_func or self.limiter._key_func
+        self.scope = scope if shared else None
+        self.per_method = per_method
+        self.methods = methods
+        self.error_message = error_message
+        self.exempt_when = exempt_when
+        self.override_defaults = override_defaults
+        self.deduct_when = deduct_when
+        self.on_breach = on_breach
+        self.cost = cost
 
-        def _inner(obj):
-            func = key_func or self._key_func
-            is_route = not isinstance(obj, Blueprint)
-            name = f"{obj.__module__}.{obj.__name__}" if is_route else obj.name
-            dynamic_limit, static_limits = None, []
+    @overload
+    def __call__(self, obj: Callable[P, R]) -> Callable[P, R]:
+        ...
 
-            if callable(limit_value):
-                dynamic_limit = LimitGroup(
-                    limit_value,
-                    func,
-                    _scope,
-                    per_method,
-                    methods,
-                    error_message,
-                    exempt_when,
-                    override_defaults,
-                    deduct_when,
-                    on_breach,
-                    cost,
+    @overload
+    def __call__(self, obj: flask.Blueprint) -> None:
+        ...
+
+    def __call__(
+        self, obj: Union[Callable[P, R], flask.Blueprint]
+    ) -> Optional[Callable[P, R]]:
+        is_route = not isinstance(obj, flask.Blueprint)
+        if isinstance(obj, flask.Blueprint):
+            name = obj.name
+        else:
+            name = f"{obj.__module__}.{obj.__name__}"
+
+        dynamic_limit, static_limits = None, []
+
+        if callable(self.limit_value):
+            dynamic_limit = LimitGroup(
+                self.limit_value,
+                self.key_func,
+                self.scope,
+                self.per_method,
+                self.methods,
+                self.error_message,
+                self.exempt_when,
+                self.override_defaults,
+                self.deduct_when,
+                self.on_breach,
+                self.cost,
+            )
+        else:
+            try:
+                static_limits = list(
+                    LimitGroup(
+                        self.limit_value,
+                        self.key_func,
+                        self.scope,
+                        self.per_method,
+                        self.methods,
+                        self.error_message,
+                        self.exempt_when,
+                        self.override_defaults,
+                        self.deduct_when,
+                        self.on_breach,
+                        self.cost,
+                    )
+                )
+            except ValueError as e:
+                self.limiter.logger.error(
+                    "failed to configure %s %s (%s)",
+                    "view function" if is_route else "blueprint",
+                    name,
+                    e,
+                )
+
+        if isinstance(obj, flask.Blueprint):
+            if dynamic_limit:
+                self.limiter.limit_manager.add_runtime_blueprint_limits(
+                    name, dynamic_limit
                 )
             else:
-                try:
-                    static_limits = list(
-                        LimitGroup(
-                            limit_value,
-                            func,
-                            _scope,
-                            per_method,
-                            methods,
-                            error_message,
-                            exempt_when,
-                            override_defaults,
-                            deduct_when,
-                            on_breach,
-                            cost,
-                        )
-                    )
-                except ValueError as e:
-                    self.logger.error(
-                        "failed to configure %s %s (%s)",
-                        "view function" if is_route else "blueprint",
-                        name,
-                        e,
-                    )
+                self.limiter.limit_manager.add_static_blueprint_limits(
+                    name, *static_limits
+                )
+            return None
+        else:
+            self.limiter._marked_for_limiting.add(name)
 
-            if isinstance(obj, Blueprint):
-                if dynamic_limit:
-                    self.limit_manager.add_runtime_blueprint_limits(name, dynamic_limit)
-                else:
-                    self.limit_manager.add_static_blueprint_limits(name, *static_limits)
+            if dynamic_limit:
+                self.limiter.limit_manager.add_runtime_route_limits(name, dynamic_limit)
             else:
-                self.__marked_for_limiting.setdefault(name, []).append(obj)
+                self.limiter.limit_manager.add_static_route_limits(name, *static_limits)
 
-                if dynamic_limit:
-                    self.limit_manager.add_runtime_route_limits(name, dynamic_limit)
-                else:
-                    self.limit_manager.add_static_route_limits(name, *static_limits)
+            @wraps(obj)
+            def __inner(*a: P.args, **k: P.kwargs) -> R:
+                if (
+                    self.limiter._auto_check
+                    and not self.limiter.context.rate_limiting_complete
+                ):
+                    self.limiter._check_request_limit(False)
+                    self.limiter.context.rate_limiting_complete = True
+                return cast(
+                    R, flask.current_app.ensure_sync(cast(Callable[P, R], obj))(*a, **k)
+                )
 
-                @wraps(obj)
-                def __inner(*a, **k):
-                    if self._auto_check and not self.context.get(
-                        f"{self._key_prefix}_rate_limiting_complete"
-                    ):
-                        self.__check_request_limit(False)
-                        self.context[
-                            f"{self._key_prefix}_rate_limiting_complete"
-                        ] = True
-                    return current_app.ensure_sync(obj)(*a, **k)
-
-                return __inner
-
-        return _inner
+            return __inner

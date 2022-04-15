@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import itertools
 import logging
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple, Optional
 
-from flask import Request, current_app
+import flask
 
 from .constants import ExemptionScope
 from .wrappers import Limit, LimitGroup
@@ -19,7 +21,7 @@ class LimitManager:
         dynamic_blueprint_limits: Dict[str, List[LimitGroup]],
         route_exemptions: Dict[str, ExemptionScope],
         blueprint_exemptions: Dict[str, ExemptionScope],
-    ):
+    ) -> None:
         self._application_limits = application_limits
         self._default_limits = default_limits
         self._static_route_limits = static_route_limits
@@ -38,42 +40,43 @@ class LimitManager:
     def default_limits(self) -> List[Limit]:
         return list(itertools.chain(*self._default_limits))
 
-    def set_application_limits(self, limits: List[LimitGroup]):
+    def set_application_limits(self, limits: List[LimitGroup]) -> None:
         self._application_limits = limits
 
-    def set_default_limits(self, limits: List[LimitGroup]):
+    def set_default_limits(self, limits: List[LimitGroup]) -> None:
         self._default_limits = limits
 
-    def add_runtime_route_limits(self, route: str, limit: LimitGroup):
+    def add_runtime_route_limits(self, route: str, limit: LimitGroup) -> None:
         self._runtime_route_limits.setdefault(route, []).append(limit)
 
-    def add_runtime_blueprint_limits(self, blueprint: str, limit: LimitGroup):
+    def add_runtime_blueprint_limits(self, blueprint: str, limit: LimitGroup) -> None:
         self._runtime_blueprint_limits.setdefault(blueprint, []).append(limit)
 
-    def add_static_route_limits(self, route: str, *limits: Limit):
+    def add_static_route_limits(self, route: str, *limits: Limit) -> None:
         self._static_route_limits.setdefault(route, []).extend(limits)
 
-    def add_static_blueprint_limits(self, blueprint: str, *limits: Limit):
+    def add_static_blueprint_limits(self, blueprint: str, *limits: Limit) -> None:
         self._static_blueprint_limits.setdefault(blueprint, []).extend(limits)
 
-    def add_route_exemption(self, route: str, scope: ExemptionScope):
+    def add_route_exemption(self, route: str, scope: ExemptionScope) -> None:
         self._route_exemptions[route] = scope
 
-    def add_blueprint_exemption(self, blueprint: str, scope: ExemptionScope):
+    def add_blueprint_exemption(self, blueprint: str, scope: ExemptionScope) -> None:
         self._blueprint_exemptions[blueprint] = scope
 
-    def exemption_scope(self, request) -> ExemptionScope:
-        endpoint = request.endpoint or ""
-        view_func = current_app.view_functions.get(endpoint, None)
+    def exemption_scope(
+        self, endpoint: Optional[str], blueprint: Optional[str]
+    ) -> ExemptionScope:
+        view_func = flask.current_app.view_functions.get(endpoint or "", None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
         route_exemption_scope = self._route_exemptions[name]
-        if not request.blueprint:
+        if not blueprint:
             return route_exemption_scope
         else:
             (
                 blueprint_exemption_scope,
                 ancestor_exemption_scopes,
-            ) = self._blueprint_exemption_scope(request)
+            ) = self._blueprint_exemption_scope(blueprint)
             if (
                 blueprint_exemption_scope
                 & ~(ExemptionScope.DEFAULT | ExemptionScope.APPLICATION)
@@ -83,9 +86,8 @@ class LimitManager:
                     blueprint_exemption_scope |= exemption
             return route_exemption_scope | blueprint_exemption_scope
 
-    def route_limits(self, request: Request) -> List[Limit]:
-        endpoint = request.endpoint or ""
-        view_func = current_app.view_functions.get(endpoint, None)
+    def route_limits(self, endpoint: str) -> List[Limit]:
+        view_func = flask.current_app.view_functions.get(endpoint, None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
 
         limits = []
@@ -104,21 +106,17 @@ class LimitManager:
                         )
         return limits
 
-    def blueprint_limits(self, request) -> List[Limit]:
+    def blueprint_limits(self, blueprint: str) -> List[Limit]:
         limits: List[Limit] = []
 
         blueprint_name = (
-            current_app.blueprints[request.blueprint].name
-            if request.blueprint
-            else None
+            flask.current_app.blueprints[blueprint].name if blueprint else None
         )
         if blueprint_name:
-            blueprint_ancestory = set(
-                request.blueprint.split(".") if request.blueprint else []
-            )
+            blueprint_ancestory = set(blueprint.split(".") if blueprint else [])
 
             self_exemption, ancestor_exemptions = self._blueprint_exemption_scope(
-                request
+                blueprint
             )
 
             if not (
@@ -193,16 +191,15 @@ class LimitManager:
         return limits
 
     def _blueprint_exemption_scope(
-        self, request: Request
+        self, blueprint_name: str
     ) -> Tuple[ExemptionScope, Dict[str, ExemptionScope]]:
-        name = (
-            current_app.blueprints[request.blueprint].name
-            if request.blueprint
-            else None
-        )
+        if not blueprint_name:
+            raise AttributeError()
+
+        name = flask.current_app.blueprints[blueprint_name].name
         exemption = self._blueprint_exemptions[name] & ~(ExemptionScope.ANCESTORS)
 
-        ancestory = set(request.blueprint.split(".") if request.blueprint else [])
+        ancestory = set(blueprint_name.split("."))
         ancestor_exemption = {
             k
             for k, f in self._blueprint_exemptions.items()

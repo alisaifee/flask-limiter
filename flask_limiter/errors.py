@@ -2,11 +2,13 @@
 
 from werkzeug import exceptions
 
+from .wrappers import Limit
+
 
 class RateLimitExceeded(exceptions.TooManyRequests):
     """Exception raised when a rate limit is hit."""
 
-    def __init__(self, limit):
+    def __init__(self, limit: Limit) -> None:
         self.limit = limit
 
         if limit.error_message:
