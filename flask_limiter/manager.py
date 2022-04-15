@@ -193,9 +193,6 @@ class LimitManager:
     def _blueprint_exemption_scope(
         self, blueprint_name: str
     ) -> Tuple[ExemptionScope, Dict[str, ExemptionScope]]:
-        if not blueprint_name:
-            raise AttributeError()
-
         name = flask.current_app.blueprints[blueprint_name].name
         exemption = self._blueprint_exemptions[name] & ~(ExemptionScope.ANCESTORS)
 
