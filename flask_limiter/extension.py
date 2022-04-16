@@ -98,8 +98,6 @@ class Limiter:
      after the first breach. default ``True``
     :param on_breach: a function that will be called when any limit in this
      extension is breached.
-    :param on_breach: whether to stop processing remaining limits
-     after the first breach. default ``True``
     :param in_memory_fallback: a variable list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
