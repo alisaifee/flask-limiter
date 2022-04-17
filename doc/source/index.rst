@@ -187,8 +187,11 @@ instance to be used with the :class:`flask.Flask` application.
 
 .. _ratelimit-decorator-limit:
 
-limit()
-^^^^^^^
+Route specific limits
+^^^^^^^^^^^^^^^^^^^^^
+
+.. automethod:: Limiter.shared_limit
+   :noindex:
 
 There are a few ways of using the :meth:`~flask_limiter.Limiter.limit` decorator depending on your preference and use-case.
 
@@ -286,8 +289,11 @@ Exemption conditions
 
 .. _ratelimit-decorator-shared-limit:
 
-shared_limit()
-^^^^^^^^^^^^^^
+Reusable limits
+^^^^^^^^^^^^^^^
+
+.. automethod:: Limiter.shared_limit
+   :noindex:
 
 For scenarios where a rate limit should be shared by multiple routes
 (For example when you want to protect routes using the same resource
