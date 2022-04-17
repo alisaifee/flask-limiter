@@ -203,7 +203,9 @@ Single decorator
      def my_route()
        ...
 
+-------------------
 Multiple decorators
+-------------------
 
   The limit string can be a single limit or a delimiter separated string
   or a combination of both.
@@ -217,7 +219,9 @@ Multiple decorators
       def my_route():
         ...
 
+----------------------
 Custom keying function
+----------------------
 
   By default rate limits are applied based on the key function that the :class:`~flask_limiter.Limiter` instance
   was initialized with. You can implement your own function to retrieve the key to rate limit by
@@ -236,7 +240,9 @@ Custom keying function
   .. note:: The key function  is called from within a
       :doc:`flask request context <flask:reqcontext>`.
 
+----------------------------------
 Dynamically loaded limit string(s)
+----------------------------------
 
   There may be situations where the rate limits need to be retrieved from
   sources external to the code (database, remote api, etc...). This can be
@@ -263,7 +269,9 @@ Dynamically loaded limit string(s)
      `before_request` phase.
 
 
+--------------------
 Exemption conditions
+--------------------
 
   Each limit can be exempted when given conditions are fulfilled. These
   conditions can be specified by supplying a callable as an
@@ -285,7 +293,9 @@ For scenarios where a rate limit should be shared by multiple routes
 (For example when you want to protect routes using the same resource
 with an umbrella rate limit).
 
+------------------
 Named shared limit
+------------------
 
   .. code-block:: python
 
@@ -302,7 +312,9 @@ Named shared limit
         ...
 
 
+--------------------
 Dynamic shared limit
+--------------------
 
   When a callable is passed as scope, the return value
   of the function will be used as the scope. Note that the callable takes one argument: a string representing
