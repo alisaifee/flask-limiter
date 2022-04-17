@@ -12,6 +12,7 @@ import time
 import weakref
 from collections import defaultdict
 from functools import wraps, partial
+from typing import overload
 
 import flask
 import flask.wrappers
@@ -32,7 +33,6 @@ from .typing import (
     Dict,
     Callable,
     cast,
-    overload,
     Union,
     Sequence,
     Tuple,

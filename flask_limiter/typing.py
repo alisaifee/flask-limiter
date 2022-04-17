@@ -1,5 +1,5 @@
 from typing_extensions import ParamSpec
-from typing import cast, overload
+from typing import cast
 from typing import Callable, Dict, List, Optional, Union, Sequence, Set, Tuple, TypeVar
 
 R = TypeVar("R")
@@ -18,6 +18,5 @@ __all__ = [
     "Sequence",
     "Tuple",
     "TypeVar",
-    "overload",
     "Set",
 ]
