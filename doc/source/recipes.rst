@@ -63,6 +63,37 @@ json response instead::
                 , 429
         )
 
+Customizing the cost of a request
+---------------------------------
+By default whenever a request is served a **cost** of ``1`` is charged for
+each rate limit that applies within the context of that request.
+
+There may be situations where a different value should be used.
+
+The :meth:`~flask_limiter.Limiter.limit` and :meth:`~flask_limiter.Limiter.shared_limit`
+decorators both accept a ``cost`` parameter which accepts either a static :class:`int` or
+a callable that returns an :class:`int`.
+
+As an example, the following configuration will result in a double penalty whenever
+``Some reason`` is true ::
+
+    from flask import request, current_app
+
+    def my_cost_function() -> int:
+        if .....: # Some reason
+            return  2
+        return 1
+
+    @app.route("/")
+    @limiter.limit("100/second", cost=my_cost_function)
+    def root():
+        ...
+
+A similar approach can be used for both default and application level limits by
+providing either a cost function to the :class:`~flask_limiter.Limiter` constructor
+via the :paramref:`~flask_limiter.Limiter.default_limits_cost` or
+:paramref:`~flask_limiter.Limiter.application_limits_cost` parameters.
+
 Customizing rate limits based on response
 -----------------------------------------
 For scenarios where the decision to count the current request towards a rate limit
@@ -83,6 +114,11 @@ As an example, to only count non `200` responses towards the rate limit
    )
    def route():
        ...
+
+
+`deduct_when` can also be provided for default limits by providing the
+:paramref:`~flask_limiter.Limiter.default_limits_deduct_when` paramter
+to the :class:`~flask_limiter.Limiter` constructor.
 
 
 .. note:: All requests will be tested for the rate limit and rejected accordingly

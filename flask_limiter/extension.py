@@ -11,24 +11,10 @@ import logging
 import time
 import weakref
 from collections import defaultdict
-from functools import wraps
-from typing import (
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Union,
-    cast,
-    Sequence,
-    Tuple,
-    TypeVar,
-    overload,
-    Set,
-)
-from typing_extensions import ParamSpec
+from functools import wraps, partial
 
 import flask
-from werkzeug import Response
+import flask.wrappers
 
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
@@ -38,10 +24,21 @@ from werkzeug.http import http_date, parse_date
 from .constants import MAX_BACKEND_CHECKS, ConfigVars, ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded
 from .manager import LimitManager
+from .typing import (
+    P,
+    R,
+    Optional,
+    List,
+    Dict,
+    Callable,
+    cast,
+    overload,
+    Union,
+    Sequence,
+    Tuple,
+    Set,
+)
 from .wrappers import Limit, LimitGroup, RequestLimit
-
-R = TypeVar("R")
-P = ParamSpec("P")
 
 
 @dataclasses.dataclass
@@ -75,11 +72,17 @@ class Limiter:
     :param default_limits_exempt_when: a function that should return
      True/False to decide if the default limits should be skipped
     :param default_limits_deduct_when: a function that receives the
-     current :class:`werkzeug.Response` object and returns True/False to decide
+     current :class:`flask.Response` object and returns True/False to decide
      if a deduction should be made from the default rate limit(s)
+    :param default_limits_cost: The cost of a hit to the default limits as an
+     integer or a function that takes no parameters and returns an integer
+     (Default: ``1``).
     :param application_limits: a variable list of strings or callables
      returning strings for limits that are applied to the entire application
      (i.e a shared limit for all routes)
+    :param application_limits_cost: The cost of a hit to the global application
+     limits as an integer or a function that takes no parameters and returns an
+     integer (Default: ``1``).
     :param headers_enabled: whether ``X-RateLimit`` response headers are
      written.
     :param header_name_mapping: Mapping of header names to use if
@@ -117,8 +120,12 @@ class Limiter:
         default_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
         default_limits_per_method: Optional[bool] = None,
         default_limits_exempt_when: Optional[Callable[[], bool]] = None,
-        default_limits_deduct_when: Optional[Callable[[Response], bool]] = None,
+        default_limits_deduct_when: Optional[
+            Callable[[flask.wrappers.Response], bool]
+        ] = None,
+        default_limits_cost: Optional[Union[int, Callable[[], int]]] = None,
         application_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
+        application_limits_cost: Optional[Union[int, Callable[[], int]]] = None,
         headers_enabled: Optional[bool] = None,
         header_name_mapping: Optional[Dict[HeaderNames, str]] = None,
         strategy: Optional[str] = None,
@@ -142,6 +149,8 @@ class Limiter:
         self._default_limits_per_method = default_limits_per_method
         self._default_limits_exempt_when = default_limits_exempt_when
         self._default_limits_deduct_when = default_limits_deduct_when
+        self._default_limits_cost = default_limits_cost
+        self._application_limits_cost = application_limits_cost
         self._in_memory_fallback = []
         self._in_memory_fallback_enabled = in_memory_fallback_enabled or (
             in_memory_fallback and len(in_memory_fallback) > 0
@@ -278,6 +287,9 @@ class Limiter:
             self._default_limits_deduct_when
             or config.get(ConfigVars.DEFAULT_LIMITS_DEDUCT_WHEN)
         )
+        self._default_limits_cost = self._default_limits_cost or config.get(
+            ConfigVars.DEFAULT_LIMITS_COST, 1
+        )
 
         if self._swallow_errors is None:
             self._swallow_errors = bool(config.get(ConfigVars.SWALLOW_ERRORS, False))
@@ -335,6 +347,9 @@ class Limiter:
         self._key_prefix = self._key_prefix or config.get(ConfigVars.KEY_PREFIX, "")
 
         app_limits = config.get(ConfigVars.APPLICATION_LIMITS, None)
+        self._application_limits_cost = self._application_limits_cost or config.get(
+            ConfigVars.APPLICATION_LIMITS_COST, 1
+        )
 
         if not self.limit_manager.application_limits and app_limits:
             self.limit_manager.set_application_limits(
@@ -350,10 +365,16 @@ class Limiter:
                         None,
                         None,
                         None,
-                        1,
+                        self._application_limits_cost,
                     )
                 ]
             )
+        else:
+            app_limits = self.limit_manager._application_limits
+            for group in app_limits:
+                group.cost = self._application_limits_cost
+            self.limit_manager.set_application_limits(app_limits)
+
         conf_limits = config.get(ConfigVars.DEFAULT_LIMITS, None)
 
         if not self.limit_manager.default_limits and conf_limits:
@@ -370,19 +391,18 @@ class Limiter:
                         None,
                         self._default_limits_deduct_when,
                         None,
-                        1,
+                        self._default_limits_cost,
                     )
                 ]
             )
         else:
-            # This is dumb but just keeping it since it is existing behavior.
             default_limit_groups = self.limit_manager._default_limits
             for group in default_limit_groups:
                 group.per_method = self._default_limits_per_method
                 group.exempt_when = self._default_limits_exempt_when
                 group.deduct_when = self._default_limits_deduct_when
+                group.cost = self._default_limits_cost
             self.limit_manager.set_default_limits(default_limit_groups)
-
         self.__configure_fallbacks(app, strategy)
 
         # purely for backward compatibility as stated in flask documentation
@@ -392,7 +412,9 @@ class Limiter:
         if not app.extensions.get("limiter"):
             if self._auto_check:
                 app.before_request(self._check_request_limit)
-            app.after_request(self.__inject_headers)
+
+            # The use of partial is simply to satisfy mypy
+            app.after_request(partial(Limiter.__inject_headers, self))
             app.teardown_request(self.__release_context)
 
         app.extensions["limiter"] = self
@@ -417,7 +439,7 @@ class Limiter:
         error_message: Optional[str] = None,
         exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
-        deduct_when: Optional[Callable[[Response], bool]] = None,
+        deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
         on_breach: Optional[Callable[[RequestLimit], None]] = None,
         cost: Union[int, Callable[[], int]] = 1,
     ) -> LimitDecorator:
@@ -445,7 +467,7 @@ class Limiter:
             registered under. For more details see :ref:`recipes:nested blueprints`
 
         :param deduct_when: a function that receives the current
-         :class:`werkzeug.Response` object and returns True/False to decide if a
+         :class:`flask.Response` object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
@@ -475,7 +497,7 @@ class Limiter:
         error_message: Optional[str] = None,
         exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
-        deduct_when: Optional[Callable[[Response], bool]] = None,
+        deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
         on_breach: Optional[Callable[[RequestLimit], None]] = None,
         cost: Union[int, Callable[[], int]] = 1,
     ) -> LimitDecorator:
@@ -500,7 +522,7 @@ class Limiter:
             of the parameter extends to any parents the blueprint instance is
             registered under. For more details see :ref:`recipes:nested blueprints`
         :param deduct_when: a function that receives the current
-         :class:`werkzeug.Response`  object and returns True/False to decide if a
+         :class:`flask.Response`  object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
          is breached.
@@ -668,13 +690,15 @@ class Limiter:
 
         return self.context.view_rate_limits
 
-    def __check_conditional_deductions(self, response: Response) -> None:
+    def __check_conditional_deductions(self, response: flask.wrappers.Response) -> None:
 
         for lim, args in self.context.conditional_deductions.items():
             if lim.deduct_when and lim.deduct_when(response):
                 self.limiter.hit(lim.limit, *args, cost=lim.cost)
 
-    def __inject_headers(self, response: Response) -> Response:
+    def __inject_headers(
+        self, response: flask.wrappers.Response
+    ) -> flask.wrappers.Response:
         self.__check_conditional_deductions(response)
         header_limit = self.current_limit
 
@@ -925,7 +949,7 @@ class LimitDecorator:
         error_message: Optional[str] = None,
         exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
-        deduct_when: Optional[Callable[[Response], bool]] = None,
+        deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
         on_breach: Optional[Callable[[RequestLimit], None]] = None,
         cost: Union[Callable[[], int], int] = 1,
     ):

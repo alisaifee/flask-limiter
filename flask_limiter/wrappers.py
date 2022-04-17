@@ -5,7 +5,7 @@ import weakref
 from typing import Callable, Union, Sequence, List, Optional, Tuple, Iterator
 
 from flask import request
-from werkzeug import Response
+from flask.wrappers import Response
 
 from limits import parse_many, RateLimitItem
 from limits.strategies import RateLimiter
@@ -145,7 +145,7 @@ class LimitGroup:
         override_defaults: Optional[bool],
         deduct_when: Optional[Callable[[Response], bool]],
         on_breach: Optional[Callable[[RequestLimit], None]],
-        cost: Union[Callable[[], int], int],
+        cost: Optional[Union[Callable[[], int], int]],
     ) -> None:
         self.__limit_provider = limit_provider
         self.__scope = scope
@@ -157,7 +157,7 @@ class LimitGroup:
         self.override_defaults = override_defaults
         self.deduct_when = deduct_when
         self.on_breach = on_breach
-        self.cost = cost
+        self.cost = cost or 1
 
     def __iter__(self) -> Iterator[Limit]:
         limit_items = parse_many(

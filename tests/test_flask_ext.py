@@ -116,6 +116,46 @@ def test_default_limit_with_exemption(extension_factory):
             assert cli.get("/t1").status_code == 200
 
 
+def test_default_limit_with_variable_cost(extension_factory):
+    def cost_fn():
+        if request.headers.get("suspect"):
+            return 2
+        return 1
+
+    app, limiter = extension_factory(
+        {
+            ConfigVars.APPLICATION_LIMITS: "10 per day",
+            ConfigVars.DEFAULT_LIMITS: "2 per hour",
+            ConfigVars.DEFAULT_LIMITS_COST: cost_fn,
+            ConfigVars.APPLICATION_LIMITS_COST: cost_fn,
+        }
+    )
+
+    @app.route("/t1")
+    def t1():
+        return "test"
+
+    @app.route("/t2")
+    def t2():
+        return "test"
+
+    with hiro.Timeline() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            timeline.forward(3600)
+            assert cli.get("/t1", headers={"suspect": 1}).status_code == 200
+            assert cli.get("/t1", headers={"suspect": 1}).status_code == 429
+            assert cli.get("/t2", headers={"suspect": 1}).status_code == 200
+            timeline.forward(3600)
+            assert cli.get("/t2", headers={"suspect": 1}).status_code == 200
+            timeline.forward(3600)
+            assert cli.get("/t2", headers={"suspect": 1}).status_code == 200
+            timeline.forward(3600)
+            assert cli.get("/t2", headers={"suspect": 1}).status_code == 429
+
+
 def test_default_limit_with_conditional_deduction(extension_factory):
     def failed_request(response):
         return response.status_code != 200
