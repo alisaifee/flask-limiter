@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v2.3.2
+------
+Release Date: 2022-04-17
+
+* Feature
+
+  * Extend cost parameter to default & application limits
+
+* Chore
+
+  * Improve type strictness / checking
+  * Improve documentation on landing page
+
 v2.3.1
 ------
 Release Date: 2022-04-14
@@ -519,6 +532,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
