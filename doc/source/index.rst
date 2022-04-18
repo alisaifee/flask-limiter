@@ -190,164 +190,161 @@ instance to be used with the :class:`flask.Flask` application.
 Route specific limits
 ^^^^^^^^^^^^^^^^^^^^^
 
-.. automethod:: Limiter.shared_limit
+.. automethod:: Limiter.limit
    :noindex:
 
-There are a few ways of using the :meth:`~flask_limiter.Limiter.limit` decorator depending on your preference and use-case.
+There are a few ways of using the :meth:`~flask_limiter.Limiter.limit` decorator
+depending on your preference and use-case.
 
+----------------
 Single decorator
+----------------
 
-  The limit string can be a single limit or a delimiter separated string
+The limit string can be a single limit or a delimiter separated string
 
-  .. code-block:: python
+.. code-block:: python
 
-     @app.route("....")
-     @limiter.limit("100/day;10/hour;1/minute")
-     def my_route()
-       ...
+   @app.route("....")
+   @limiter.limit("100/day;10/hour;1/minute")
+   def my_route()
+     ...
 
 -------------------
 Multiple decorators
 -------------------
 
-  The limit string can be a single limit or a delimiter separated string
-  or a combination of both.
+The limit string can be a single limit or a delimiter separated string
+or a combination of both.
 
-  .. code-block:: python
+.. code-block:: python
 
-      @app.route("....")
-      @limiter.limit("100/day")
-      @limiter.limit("10/hour")
-      @limiter.limit("1/minute")
-      def my_route():
-        ...
+    @app.route("....")
+    @limiter.limit("100/day")
+    @limiter.limit("10/hour")
+    @limiter.limit("1/minute")
+    def my_route():
+      ...
 
 ----------------------
 Custom keying function
 ----------------------
 
-  By default rate limits are applied based on the key function that the :class:`~flask_limiter.Limiter` instance
-  was initialized with. You can implement your own function to retrieve the key to rate limit by
-  when decorating individual routes. Take a look at :ref:`keyfunc-customization` for some examples..
+By default rate limits are applied based on the key function that the :class:`~flask_limiter.Limiter` instance
+was initialized with. You can implement your own function to retrieve the key to rate limit by
+when decorating individual routes. Take a look at :ref:`keyfunc-customization` for some examples..
 
-  .. code-block:: python
+.. code-block:: python
 
-     def my_key_func():
-       ...
+   def my_key_func():
+     ...
 
-     @app.route("...")
-     @limiter.limit("100/day", my_key_func)
-     def my_route():
-       ...
+   @app.route("...")
+   @limiter.limit("100/day", my_key_func)
+   def my_route():
+     ...
 
-  .. note:: The key function  is called from within a
-      :doc:`flask request context <flask:reqcontext>`.
+.. note:: The key function  is called from within a
+    :doc:`flask request context <flask:reqcontext>`.
 
 ----------------------------------
 Dynamically loaded limit string(s)
 ----------------------------------
 
-  There may be situations where the rate limits need to be retrieved from
-  sources external to the code (database, remote api, etc...). This can be
-  achieved by providing a callable to the decorator.
+There may be situations where the rate limits need to be retrieved from
+sources external to the code (database, remote api, etc...). This can be
+achieved by providing a callable to the decorator.
 
 
-  .. code-block:: python
+.. code-block:: python
 
-     def rate_limit_from_config():
-         return current_app.config.get("CUSTOM_LIMIT", "10/s")
+   def rate_limit_from_config():
+       return current_app.config.get("CUSTOM_LIMIT", "10/s")
 
-     @app.route("...")
-     @limiter.limit(rate_limit_from_config)
-     def my_route():
-         ...
+   @app.route("...")
+   @limiter.limit(rate_limit_from_config)
+   def my_route():
+       ...
 
-  .. warning:: The provided callable will be called for every request
-      on the decorated route. For expensive retrievals, consider
-      caching the response.
+.. warning:: The provided callable will be called for every request
+    on the decorated route. For expensive retrievals, consider
+    caching the response.
 
 
-  .. note:: The callable is called from within a
-     :doc:`flask request context <flask:reqcontext>` during the
-     `before_request` phase.
+.. note:: The callable is called from within a
+   :doc:`flask request context <flask:reqcontext>` during the
+   `before_request` phase.
 
 
 --------------------
 Exemption conditions
 --------------------
 
-  Each limit can be exempted when given conditions are fulfilled. These
-  conditions can be specified by supplying a callable as an
-  :attr:`exempt_when` argument when defining the limit.
+Each limit can be exempted when given conditions are fulfilled. These
+conditions can be specified by supplying a callable as an
+:attr:`exempt_when` argument when defining the limit.
 
-  .. code-block:: python
+.. code-block:: python
 
-    @app.route("/expensive")
-    @limiter.limit("100/day", exempt_when=lambda: current_user.is_admin)
-    def expensive_route():
-      ...
+  @app.route("/expensive")
+  @limiter.limit("100/day", exempt_when=lambda: current_user.is_admin)
+  def expensive_route():
+    ...
 
 .. _ratelimit-decorator-shared-limit:
 
 Reusable limits
 ^^^^^^^^^^^^^^^
 
-.. automethod:: Limiter.shared_limit
-   :noindex:
-
 For scenarios where a rate limit should be shared by multiple routes
 (For example when you want to protect routes using the same resource
 with an umbrella rate limit).
+
+.. automethod:: Limiter.shared_limit
+   :noindex:
+
 
 ------------------
 Named shared limit
 ------------------
 
-  .. code-block:: python
+.. code-block:: python
 
-    mysql_limit = limiter.shared_limit("100/hour", scope="mysql")
+  mysql_limit = limiter.shared_limit("100/hour", scope="mysql")
 
-    @app.route("..")
-    @mysql_limit
-    def r1():
-        ...
+  @app.route("..")
+  @mysql_limit
+  def r1():
+      ...
 
-    @app.route("..")
-    @mysql_limit
-    def r2():
-        ...
+  @app.route("..")
+  @mysql_limit
+  def r2():
+      ...
 
 
 --------------------
 Dynamic shared limit
 --------------------
 
-  When a callable is passed as scope, the return value
-  of the function will be used as the scope. Note that the callable takes one argument: a string representing
-  the request endpoint.
+When a callable is passed as scope, the return value
+of the function will be used as the scope. Note that the callable takes one argument: a string representing
+the request endpoint.
 
-  .. code-block:: python
+.. code-block:: python
 
-     def host_scope(endpoint_name):
-         return request.host
-     host_limit = limiter.shared_limit("100/hour", scope=host_scope)
+   def host_scope(endpoint_name):
+       return request.host
+   host_limit = limiter.shared_limit("100/hour", scope=host_scope)
 
-     @app.route("..")
-     @host_limit
-     def r1():
-         ...
+   @app.route("..")
+   @host_limit
+   def r1():
+       ...
 
-     @app.route("..")
-     @host_limit
-     def r2():
-         ...
-
-     .. note:: Shared rate limits provide the same conveniences as individual rate limits
-
-         * Can be chained with other shared limits or individual limits
-         * Accept keying functions
-         * Accept callables to determine the rate limit value
-
+   @app.route("..")
+   @host_limit
+   def r2():
+       ...
 
 
 .. _ratelimit-decorator-exempt:
