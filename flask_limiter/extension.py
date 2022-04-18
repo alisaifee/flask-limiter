@@ -11,12 +11,11 @@ import logging
 import time
 import weakref
 from collections import defaultdict
-from functools import wraps, partial
+from functools import partial, wraps
 from typing import overload
 
 import flask
 import flask.wrappers
-
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
@@ -26,17 +25,17 @@ from .constants import MAX_BACKEND_CHECKS, ConfigVars, ExemptionScope, HeaderNam
 from .errors import RateLimitExceeded
 from .manager import LimitManager
 from .typing import (
+    Callable,
+    Dict,
+    List,
+    Optional,
     P,
     R,
-    Optional,
-    List,
-    Dict,
-    Callable,
-    cast,
-    Union,
     Sequence,
-    Tuple,
     Set,
+    Tuple,
+    Union,
+    cast,
 )
 from .wrappers import Limit, LimitGroup, RequestLimit
 
@@ -786,28 +785,9 @@ class Limiter:
         if self.__check_all_limits_exempt(endpoint):
             return []
 
-        route_limits: List[Limit] = []
+        marked_for_limiting = name in self._marked_for_limiting
+        fallback_limits = []
 
-        before_request_context = in_middleware and name in self._marked_for_limiting
-
-        if not in_middleware and endpoint:
-            route_limits.extend(
-                self.limit_manager.route_limits(flask.current_app, endpoint)
-            )
-
-        if blueprint:
-            if not before_request_context and (
-                not route_limits
-                or all(not limit.override_defaults for limit in route_limits)
-            ):
-                route_limits.extend(
-                    self.limit_manager.blueprint_limits(flask.current_app, blueprint)
-                )
-
-        exemption_scope = self.limit_manager.exemption_scope(
-            flask.current_app, endpoint, blueprint
-        )
-        all_limits = []
         if self._storage_dead and self._fallback_limiter:
             if in_middleware and name in self._marked_for_limiting:
                 pass
@@ -821,25 +801,16 @@ class Limiter:
                     self._storage_dead = False
                     self.__check_backend_count = 0
                 else:
-                    all_limits = list(itertools.chain(*self._in_memory_fallback))
+                    fallback_limits = list(itertools.chain(*self._in_memory_fallback))
 
-        if not all_limits:
-            all_limits = (
-                self.limit_manager.application_limits
-                if in_middleware and not (exemption_scope & ExemptionScope.APPLICATION)
-                else []
-            )
-            all_limits += route_limits
-            explicit_limits_exempt = all(limit.method_exempt for limit in route_limits)
-            combined_defaults = all(
-                not limit.override_defaults for limit in route_limits
-            )
-
-            if (explicit_limits_exempt or combined_defaults) and not (
-                before_request_context or exemption_scope & ExemptionScope.DEFAULT
-            ):
-                all_limits += self.limit_manager.default_limits
-        return all_limits
+        return self.limit_manager.resolve_limits(
+            flask.current_app,
+            endpoint,
+            blueprint,
+            in_middleware,
+            marked_for_limiting,
+            fallback_limits,
+        )
 
     def __evaluate_limits(self, endpoint: str, limits: List[Limit]) -> None:
         failed_limits: List[Tuple[Limit, List[str]]] = []

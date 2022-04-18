@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import Dict, Iterable, List, Tuple, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import flask
 
@@ -63,6 +63,49 @@ class LimitManager:
 
     def add_blueprint_exemption(self, blueprint: str, scope: ExemptionScope) -> None:
         self._blueprint_exemptions[blueprint] = scope
+
+    def resolve_limits(
+        self,
+        app: flask.Flask,
+        endpoint: Optional[str] = None,
+        blueprint: Optional[str] = None,
+        in_middleware: bool = False,
+        marked_for_limiting: bool = False,
+        fallback_limits: Optional[List[Limit]] = None,
+    ) -> List[Limit]:
+        before_request_context = in_middleware and marked_for_limiting
+        route_limits = []
+        if not in_middleware and endpoint:
+            route_limits.extend(self.route_limits(app, endpoint))
+        if blueprint:
+            if not before_request_context and (
+                not route_limits
+                or all(not limit.override_defaults for limit in route_limits)
+            ):
+                route_limits.extend(self.blueprint_limits(app, blueprint))
+        exemption_scope = self.exemption_scope(app, endpoint, blueprint)
+        all_limits = []
+
+        if fallback_limits:
+            all_limits.extend(fallback_limits)
+
+        if not all_limits:
+            all_limits = (
+                self.application_limits
+                if in_middleware and not (exemption_scope & ExemptionScope.APPLICATION)
+                else []
+            )
+            all_limits += route_limits
+            explicit_limits_exempt = all(limit.method_exempt for limit in route_limits)
+            combined_defaults = all(
+                not limit.override_defaults for limit in route_limits
+            )
+
+            if (explicit_limits_exempt or combined_defaults) and not (
+                before_request_context or exemption_scope & ExemptionScope.DEFAULT
+            ):
+                all_limits += self.default_limits
+        return all_limits
 
     def exemption_scope(
         self, app: flask.Flask, endpoint: Optional[str], blueprint: Optional[str]

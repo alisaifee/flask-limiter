@@ -1,6 +1,17 @@
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+)
+
 from typing_extensions import ParamSpec
-from typing import cast
-from typing import Callable, Dict, List, Optional, Union, Sequence, Set, Tuple, TypeVar
 
 R = TypeVar("R")
 P = ParamSpec("P")

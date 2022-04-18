@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import typing
 import weakref
-from typing import Callable, Union, Sequence, List, Optional, Tuple, Iterator
+from typing import Callable, Iterator, List, Optional, Sequence, Tuple, Union
 
 from flask import request
 from flask.wrappers import Response
-
-from limits import parse_many, RateLimitItem
+from limits import RateLimitItem, parse_many
 from limits.strategies import RateLimiter
 
 if typing.TYPE_CHECKING:
