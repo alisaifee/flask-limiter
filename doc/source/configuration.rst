@@ -37,6 +37,12 @@ take priority.
 
      - A comma (or some other delimiter) separated string that will be used to
        apply limits to the application as a whole (i.e. shared by all routes).
+   * - .. data:: RATELIMIT_APPLICATION_COST
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.application_limits_cost`
+
+     - The cost of a hit to the application wide shared limit as an integer or a function
+       that takes no parameters and returns the cost as an integer (Default: 1)
    * - .. data:: RATELIMIT_DEFAULT
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits`
@@ -52,20 +58,26 @@ take priority.
 
      - Whether default limits are applied per method, per route or as a combination
        of all method per route.
+   * - .. data:: RATELIMIT_DEFAULTS_COST
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits_cost`
+
+     - The cost of a hit to the default limits as an integer or a function
+       that takes no parameters and returns the cost as an integer (Default: 1)
    * - .. data:: RATELIMIT_DEFAULTS_EXEMPT_WHEN
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits_exempt_when`
 
      - A function that should return a truthy value if the default rate limit(s)
-       should be skipped for the current request. This callback is called in the
-       :doc:`flask request context <flask:reqcontext>` ``before_request`` phase.
+       should be skipped for the current request. This callback is called from the
+       :doc:`flask request context <flask:reqcontext>` :meth:`~flask.Flask.before_request` hook.
    * - .. data:: RATELIMIT_DEFAULTS_DEDUCT_WHEN
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits_deduct_when`
 
      - A function that should return a truthy value if a deduction should be made
        from the default rate limit(s) for the current request. This callback is called
-       in the :doc:`flask request context <flask:reqcontext>` ``after_request`` phase.
+       from the :doc:`flask request context <flask:reqcontext>` :meth:`~flask.Flask.after_request` hook.
    * - .. data:: RATELIMIT_STORAGE_URI
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.storage_uri`
