@@ -789,16 +789,22 @@ class Limiter:
         before_request_context = in_middleware and name in self._marked_for_limiting
 
         if not in_middleware and endpoint:
-            route_limits.extend(self.limit_manager.route_limits(endpoint))
+            route_limits.extend(
+                self.limit_manager.route_limits(flask.current_app, endpoint)
+            )
 
         if blueprint:
             if not before_request_context and (
                 not route_limits
                 or all(not limit.override_defaults for limit in route_limits)
             ):
-                route_limits.extend(self.limit_manager.blueprint_limits(blueprint))
+                route_limits.extend(
+                    self.limit_manager.blueprint_limits(flask.current_app, blueprint)
+                )
 
-        exemption_scope = self.limit_manager.exemption_scope(endpoint, blueprint)
+        exemption_scope = self.limit_manager.exemption_scope(
+            flask.current_app, endpoint, blueprint
+        )
         all_limits = []
         if self._storage_dead and self._fallback_limiter:
             if in_middleware and name in self._marked_for_limiting:
