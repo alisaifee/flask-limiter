@@ -312,13 +312,15 @@ class Limiter:
                 self._storage_uri or storage_uri_from_config, **self._storage_options
             ),
         )
-        strategy = self._strategy or config.setdefault(
+        self._strategy = self._strategy or config.setdefault(
             ConfigVars.STRATEGY, "fixed-window"
         )
 
-        if strategy not in STRATEGIES:
-            raise ConfigurationError("Invalid rate limiting strategy %s" % strategy)
-        self._limiter = STRATEGIES[strategy](self._storage)
+        if self._strategy not in STRATEGIES:
+            raise ConfigurationError(
+                "Invalid rate limiting strategy %s" % self._strategy
+            )
+        self._limiter = STRATEGIES[self._strategy](self._storage)
 
         self._header_mapping = {
             HeaderNames.RESET: self._header_mapping.get(
@@ -403,7 +405,7 @@ class Limiter:
                 group.deduct_when = self._default_limits_deduct_when
                 group.cost = self._default_limits_cost
             self.limit_manager.set_default_limits(default_limit_groups)
-        self.__configure_fallbacks(app, strategy)
+        self.__configure_fallbacks(app, self._strategy)
 
         # purely for backward compatibility as stated in flask documentation
         if not hasattr(app, "extensions"):
