@@ -353,7 +353,7 @@ class Limiter:
             ConfigVars.APPLICATION_LIMITS_COST, 1
         )
 
-        if not self.limit_manager.application_limits and app_limits:
+        if not self.limit_manager._application_limits and app_limits:
             self.limit_manager.set_application_limits(
                 [
                     LimitGroup(
@@ -379,7 +379,7 @@ class Limiter:
 
         conf_limits = config.get(ConfigVars.DEFAULT_LIMITS, None)
 
-        if not self.limit_manager.default_limits and conf_limits:
+        if not self.limit_manager._default_limits and conf_limits:
             self.limit_manager.set_default_limits(
                 [
                     LimitGroup(

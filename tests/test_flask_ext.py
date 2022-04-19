@@ -499,7 +499,11 @@ def test_application_shared_limit(extension_factory):
 
 
 def test_callable_default_limit(extension_factory):
-    app, limiter = extension_factory(default_limits=[lambda: "1/minute"])
+    app, limiter = extension_factory(
+        default_limits=[
+            lambda: request.headers.get("suspect", 0) and "1/minute" or "2/minute"
+        ]
+    )
 
     @app.route("/t1")
     def t1():
@@ -512,14 +516,19 @@ def test_callable_default_limit(extension_factory):
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
             assert cli.get("/t1").status_code == 200
-            assert cli.get("/t2").status_code == 200
+            assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 429
-            assert cli.get("/t2").status_code == 429
+            assert cli.get("/t2", headers={"suspect": "1"}).status_code == 200
+            assert cli.get("/t2", headers={"suspect": "1"}).status_code == 429
 
 
 def test_callable_application_limit(extension_factory):
 
-    app, limiter = extension_factory(application_limits=[lambda: "1/minute"])
+    app, limiter = extension_factory(
+        application_limits=[
+            lambda: request.headers.get("suspect", 0) and "1/minute" or "2/minute"
+        ]
+    )
 
     @app.route("/t1")
     def t1():
@@ -532,7 +541,10 @@ def test_callable_application_limit(extension_factory):
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
             assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
             assert cli.get("/t2").status_code == 429
+            assert cli.get("/t1", headers={"suspect": 1}).status_code == 200
+            assert cli.get("/t2", headers={"suspect": 1}).status_code == 429
 
 
 def test_no_auto_check(extension_factory):
