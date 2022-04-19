@@ -638,14 +638,25 @@ class Limiter:
         resets the storage if it supports being reset
         """
         try:
-            if self._storage:
-                self._storage.reset()
-                self.logger.info("Storage has been reset and all limits cleared")
+            self.storage.reset()
+            self.logger.info("Storage has been reset and all limits cleared")
         except NotImplementedError:
             self.logger.warning("This storage type does not support being reset")
 
     @property
+    def storage(self) -> Storage:
+        """
+        The backend storage configured for the rate limiter
+        """
+        assert self._storage
+        return self._storage
+
+    @property
     def limiter(self) -> RateLimiter:
+        """
+        Instance of the rate limiting strategy used for performing
+        rate limiting.
+        """
         if self._storage_dead and self._in_memory_fallback_enabled:
             limiter = self._fallback_limiter
         else:
