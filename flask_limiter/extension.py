@@ -697,7 +697,10 @@ class Limiter:
 
     def check(self) -> None:
         """
-        check the limits for the current request
+        Explicitly check the limits for the current request. This is only relevant
+        if the extension was initialized with :paramref:`~flask_limiter.Limiter.auto_check`
+        set to ``False``
+
 
         :raises: RateLimitExceeded
         """
