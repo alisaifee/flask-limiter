@@ -125,6 +125,14 @@ class Limit:
 
         return self.methods is not None and request.method.lower() not in self.methods
 
+    def args_for(self, endpoint: str, key: str, method: Optional[str]) -> List[str]:
+        scope = self.scope or endpoint
+        if self.per_method:
+            assert method
+            scope += f":{method.upper()}"
+        args = [key, scope]
+        return args
+
 
 class LimitGroup:
     """

@@ -44,4 +44,9 @@ setup(
     package_data={
         "flask_limiter": ["py.typed"],
     },
+    entry_points={
+        'flask.commands': [
+            'limiter=flask_limiter.commands:cli'
+        ],
+    },
 )

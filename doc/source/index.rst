@@ -22,6 +22,7 @@ Flask-Limiter
    strategies
    configuration
    recipes
+   cli
    api
    development
    changelog

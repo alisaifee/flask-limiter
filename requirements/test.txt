@@ -15,5 +15,6 @@ coverage
 hiro>0.1.6
 pytest
 pytest-cov
+pytest-mock
 lovely-pytest-docker
 pytest-testmon
