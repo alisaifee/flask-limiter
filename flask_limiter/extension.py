@@ -34,6 +34,7 @@ from .typing import (
     Sequence,
     Set,
     Tuple,
+    TypeVar,
     Union,
     cast,
 )
@@ -545,29 +546,98 @@ class Limiter:
             cost=cost,
         )
 
+    @overload
     def exempt(
         self,
-        obj: Union[Callable[P, R], flask.Blueprint],
+        obj: flask.Blueprint,
+        *,
         flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
-    ) -> Union[Callable[P, R], flask.Blueprint]:
+    ) -> flask.Blueprint:
+        ...
+
+    @overload
+    def exempt(
+        self,
+        obj: Callable[..., R],
+        *,
+        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
+    ) -> Callable[..., R]:
+        ...
+
+    @overload
+    def exempt(
+        self,
+        *,
+        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
+    ) -> Union[
+        Callable[[Callable[P, R]], Callable[P, R]],
+        Callable[[flask.Blueprint], flask.Blueprint],
+    ]:
+        ...
+
+    def exempt(
+        self,
+        obj: Optional[Union[Callable[..., R], flask.Blueprint]] = None,
+        *,
+        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
+    ) -> Union[
+        Callable[..., R],
+        flask.Blueprint,
+        Callable[[Callable[P, R]], Callable[P, R]],
+        Callable[[flask.Blueprint], flask.Blueprint],
+    ]:
         """
-        decorator to mark a view or all views in a blueprint as exempt from
+        Mark a view function or all views in a blueprint as exempt from
         rate limits.
 
-        :param obj: view or blueprint to mark as exempt.
+        :param obj: view function or blueprint to mark as exempt.
         :param flags: Controls the scope of the exemption. By default
          application wide limits and defaults configured on the extension
          are opted out of. Additional flags can be used to control the behavior
          when :paramref:`obj` is a Blueprint that is nested under another Blueprint
          or has other Blueprints nested under it (See :ref:`recipes:nested blueprints`)
+
+        The method can be used either as a decorator without any arguments (the default
+        flags will apply and the route will be exempt from default and application limits::
+
+            @app.route("...")
+            @limiter.exempt
+            def route(...):
+               ...
+
+        Specific exemption flags can be provided at decoration time::
+
+            @app.route("...")
+            @limiter.exempt(flags=ExemptionScope.APPLICATION)
+            def route(...):
+                ...
+
+        If an entire blueprint (i.e. all routes under it) are to be exempted the method
+        can be called with the blueprint as the first parameter and any additional flags::
+
+            bp = Blueprint(...)
+            limiter.exempt(bp)
+            limiter.exempt(
+                bp,
+                flags=ExemptionScope.DEFAULT|ExemptionScope.APPLICATION|ExemptionScope.ANCESTORS
+            )
+
         """
 
         if isinstance(obj, flask.Blueprint):
             self.limit_manager.add_blueprint_exemption(obj.name, flags)
-        else:
+        elif obj:
             self.limit_manager.add_route_exemption(
                 f"{obj.__module__}.{obj.__name__}", flags
             )
+        else:
+            _R = TypeVar("_R")
+            _WO = TypeVar("_WO", Callable[..., _R], flask.Blueprint)
+
+            def wrapper(obj: _WO) -> _WO:
+                return self.exempt(obj, flags=flags)
+
+            return wrapper
         return obj
 
     def request_filter(self, fn: Callable[[], bool]) -> Callable[[], bool]:

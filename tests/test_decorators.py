@@ -6,7 +6,7 @@ import hiro
 from flask import Blueprint, Flask, current_app, g, request
 from werkzeug.exceptions import BadRequest
 
-from flask_limiter import Limiter
+from flask_limiter import ExemptionScope, Limiter
 
 
 def get_ip_from_header():
@@ -38,7 +38,9 @@ def test_multiple_decorators(extension_factory):
 
 
 def test_exempt_routes(extension_factory):
-    app, limiter = extension_factory(default_limits=["1/minute"])
+    app, limiter = extension_factory(
+        default_limits=["1/minute"], application_limits=["2/minute"]
+    )
 
     @app.route("/t1")
     def t1():
@@ -49,11 +51,26 @@ def test_exempt_routes(extension_factory):
     def t2():
         return "test"
 
+    @app.route("/t3")
+    @limiter.exempt(flags=ExemptionScope.APPLICATION)
+    def t3():
+        return "test"
+
+    @app.route("/t4")
+    def t4():
+        return "test"
+
     with app.test_client() as cli:
         assert cli.get("/t1").status_code == 200
         assert cli.get("/t1").status_code == 429
+        # exempt from default + application
         assert cli.get("/t2").status_code == 200
         assert cli.get("/t2").status_code == 200
+        # exempt from application
+        assert cli.get("/t3").status_code == 200
+        assert cli.get("/t3").status_code == 429
+        # 2/minute for application is now taken up
+        assert cli.get("/t4").status_code == 429
 
 
 def test_decorated_limit_with_conditional_deduction(extension_factory):

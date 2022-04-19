@@ -229,7 +229,7 @@ def test_nested_blueprint_exemption_ridiculous(extension_factory):
     limiter.limit("2/minute")(n1_1)
     # n1_1_1 wants to not inherit n1_1's limits and is otherwise exempt from
     # application and defaults due to n1's exemptions.
-    limiter.exempt(n1_1_1, ExemptionScope.ANCESTORS)
+    limiter.exempt(n1_1_1, flags=ExemptionScope.ANCESTORS)
     # n1_1_2 will not get it's parent (n1_1) limit and sets it's own
     limiter.limit("3/minute")(n1_1_2)
 
@@ -240,7 +240,7 @@ def test_nested_blueprint_exemption_ridiculous(extension_factory):
     # but want its own limits
     limiter.limit("3/minute")(n2_1)
     # n2_1_1 want's out of it's parent's limits only but wants to keep application/default limits
-    limiter.exempt(n2_1_1, ExemptionScope.ANCESTORS)
+    limiter.exempt(n2_1_1, flags=ExemptionScope.ANCESTORS)
 
     n1.register_blueprint(n1_1)
     n1_1.register_blueprint(n1_1_1)
