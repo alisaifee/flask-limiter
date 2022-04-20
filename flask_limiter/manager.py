@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import Dict, Iterable, List, Tuple, Optional
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import flask
 
@@ -70,14 +70,15 @@ class LimitManager:
         view_func = app.view_functions.get(endpoint or "", None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
         route_exemption_scope = self._route_exemptions[name]
-        blueprint_instance = app.blueprints.get(blueprint)
+        blueprint_instance = app.blueprints.get(blueprint) if blueprint else None
+
         if not blueprint_instance:
             return route_exemption_scope
         else:
             (
                 blueprint_exemption_scope,
                 ancestor_exemption_scopes,
-            ) = self._blueprint_exemption_scope(app, blueprint)
+            ) = self._blueprint_exemption_scope(app, blueprint_instance.name)
             if (
                 blueprint_exemption_scope
                 & ~(ExemptionScope.DEFAULT | ExemptionScope.APPLICATION)

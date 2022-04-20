@@ -11,12 +11,11 @@ import logging
 import time
 import weakref
 from collections import defaultdict
-from functools import wraps, partial
+from functools import partial, wraps
 from typing import overload
 
 import flask
 import flask.wrappers
-
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
