@@ -75,10 +75,11 @@ class LimitManager:
         if not blueprint_instance:
             return route_exemption_scope
         else:
+            assert blueprint
             (
                 blueprint_exemption_scope,
                 ancestor_exemption_scopes,
-            ) = self._blueprint_exemption_scope(app, blueprint_instance.name)
+            ) = self._blueprint_exemption_scope(app, blueprint)
             if (
                 blueprint_exemption_scope
                 & ~(ExemptionScope.DEFAULT | ExemptionScope.APPLICATION)
