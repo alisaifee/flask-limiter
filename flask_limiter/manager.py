@@ -70,7 +70,8 @@ class LimitManager:
         view_func = app.view_functions.get(endpoint or "", None)
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
         route_exemption_scope = self._route_exemptions[name]
-        if not blueprint:
+        blueprint_instance = app.blueprints.get(blueprint)
+        if not blueprint_instance:
             return route_exemption_scope
         else:
             (
@@ -109,8 +110,9 @@ class LimitManager:
     def blueprint_limits(self, app: flask.Flask, blueprint: str) -> List[Limit]:
         limits: List[Limit] = []
 
-        blueprint_name = app.blueprints[blueprint].name if blueprint else None
-        if blueprint_name:
+        blueprint_instance = app.blueprints.get(blueprint) if blueprint else None
+        if blueprint_instance:
+            blueprint_name = blueprint_instance.name
             blueprint_ancestory = set(blueprint.split(".") if blueprint else [])
 
             self_exemption, ancestor_exemptions = self._blueprint_exemption_scope(
