@@ -4,6 +4,7 @@
 import time
 
 import hiro
+from flask import Blueprint
 
 from flask_limiter.constants import ConfigVars
 
@@ -182,3 +183,30 @@ def test_application_limits_from_config(extension_factory):
             assert cli.get("/test").status_code == 200
             assert cli.get("/root").status_code == 200
             assert cli.get("/test").status_code == 429
+
+
+def test_endpoint_with_dot_but_not_blueprint(extension_factory):
+    """
+    https://github.com/alisaifee/flask-limiter/issues/336
+    """
+    app, limiter = extension_factory(default_limits=["2/day"])
+
+    def route():
+        return "42"
+
+    app.add_url_rule("/teapot/iam", "_teapot.iam", route)
+    bp = Blueprint("teapot", __name__, url_prefix="/teapot")
+
+    @bp.route("/")
+    def bp_route():
+        return "43"
+
+    app.register_blueprint(bp)
+    limiter.limit("1/day")(bp)
+
+    with app.test_client() as cli:
+        assert cli.get("/teapot/iam").status_code == 200
+        assert cli.get("/teapot/iam").status_code == 200
+        assert cli.get("/teapot/iam").status_code == 429
+        assert cli.get("/teapot/").status_code == 200
+        assert cli.get("/teapot/").status_code == 429
