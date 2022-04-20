@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.3.3
+------
+Release Date: 2022-04-20
+
+* Bug Fix
+
+  * Ensure `request.blueprint` is actually registered on the current app before
+    using it for blueprint limits or exemptions. (`Issue 336 <https://github.com/alisaifee/flask-limiter/issues/336>`_)
+
 v2.3.2
 ------
 Release Date: 2022-04-17
@@ -532,6 +541,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
