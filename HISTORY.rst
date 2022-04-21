@@ -3,6 +3,22 @@
 Changelog
 =========
 
+v2.4.0
+------
+Release Date: 2022-04-20
+
+* Feature
+
+  * Add CLI for inspecting & clearing rate limits
+
+* Bug Fix
+
+  * Ensure exempt decorator can be used with flags for view functions
+
+* Chores
+
+  * Refactor rate limit resolution to limit manager
+
 v2.3.3
 ------
 Release Date: 2022-04-20
@@ -541,6 +557,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
