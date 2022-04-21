@@ -92,4 +92,4 @@ with it.
 
 
 
-`Read the docs <http://flask-limiter.readthedocs.org>`_
+For more details `read the docs <http://flask-limiter.readthedocs.org>`_
