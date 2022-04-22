@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v2.4.2
+------
+Release Date: 2022-04-21
+
+* Chore
+
+  * Test for automating github release notes
+
 v2.4.1
 ------
 Release Date: 2022-04-21
@@ -565,6 +573,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
