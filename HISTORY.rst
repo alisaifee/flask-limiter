@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v2.4.1
+------
+Release Date: 2022-04-21
+
+* Chore
+
+  * Automate github releases
+
 v2.4.0
 ------
 Release Date: 2022-04-20
@@ -557,6 +565,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
