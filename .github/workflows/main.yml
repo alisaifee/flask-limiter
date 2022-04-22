@@ -145,6 +145,8 @@ jobs:
       - name: Generate release notes
         id: release_notes
         run: echo "::set-output name=BODY::$(./scripts/github_release_notes.sh)"
+      - name: View release notes
+        run: echo "${{ steps.release_notes.outputs.BODY }}"
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
