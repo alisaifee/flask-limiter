@@ -14,10 +14,10 @@ cp HISTORY.rst.new HISTORY.rst
 vim -O HISTORY.rst <(echo \# vim:filetype=git;git log $last_tag..HEAD --format='* %s (%h)%n%b' | sed -E '/^\*/! s/(.*)/    \1/g')
 if rst2html.py HISTORY.rst > /dev/null
 then
-    echo "tagging $new_version"
+    echo "Tag $new_version"
     git add HISTORY.rst
-    git commit -m "updating changelog for  ${new_version}"
-    git tag -s ${new_version} -m "tagging version ${new_version}"
+    git commit -m "Update changelog for  ${new_version}"
+    git tag -s ${new_version} -m "Tag version ${new_version}"
     rm HISTORY.rst.new
 else
     echo changelog has errors. skipping tag.
