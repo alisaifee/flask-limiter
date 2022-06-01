@@ -8,7 +8,7 @@ Sphinx==4.5.0
 sphinx-autobuild==2021.3.14
 sphinx-issues==3.0.1
 sphinx-panels==0.6.0
-sphinx-paramlinks==0.5.2
+sphinx-paramlinks==0.5.4
 sphinxcontrib-programoutput==0.17
 
 
