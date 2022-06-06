@@ -45,13 +45,6 @@ html_theme_options = {
         "color-highlight-on-target": colors["fg2"],
     },
 }
-panels_css_variables = {
-    "tabs-color-label-active": colors["purple"],
-    "tabs-color-label-inactive": colors["purple2"],
-    "tabs-color-overline": colors["purple2"],
-    "tabs-color-underline": colors["purple2"],
-    "tabs-size-label": "1rem",
-}
 
 highlight_language = "python3"
 pygments_style = "gruvbox-light"

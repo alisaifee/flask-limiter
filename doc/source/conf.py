@@ -60,7 +60,7 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinxcontrib.programoutput",
     "sphinx_issues",
-    "sphinx_panels",
+    "sphinx_inline_tabs",
     "sphinx_paramlinks",
 ]
 

@@ -68,19 +68,19 @@ Installation
 To include extra dependencies for a specific storage backend you can add the
 specific backend name via the ``extras`` notation. For example:
 
-.. tabbed:: Redis
+.. tab:: Redis
 
    .. code:: console
 
       $ pip install Flask-Limiter[redis]
 
-.. tabbed:: Memcached
+.. tab:: Memcached
 
    .. code:: console
 
       $ pip install Flask-Limiter[memcached]
 
-.. tabbed:: MongoDB
+.. tab:: MongoDB
 
    .. code:: console
 
