@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.4.6
+------
+Release Date: 2022-06-06
+
+* Chore
+
+  * Add python 3.11 to CI matrix
+
+
 v2.4.5.1
 --------
 Release Date: 2022-04-22
@@ -605,6 +614,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
