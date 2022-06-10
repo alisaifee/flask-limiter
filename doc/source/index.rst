@@ -165,6 +165,62 @@ At this point it might be a good idea to look at the configuration options
 available in the extension in the :ref:`configuration:using flask config` section and the
 :class:`flask_limiter.Limiter` class documentation.
 
+-----------------------------
+Configuring a storage backend
+-----------------------------
+
+The extension can be configured to use any storage supported by :pypi:`limits`.
+Here are a few common examples:
+
+.. tab:: Memcached
+
+   .. code-block:: python
+
+      from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
+      ....
+
+      limiter = Limiter(app, key_func=get_remote_address, storage_uri="memcached://localhost:11211")
+
+.. tab:: Redis
+
+   .. code-block:: python
+
+      from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
+      ....
+
+      limiter = Limiter(app, key_func=get_remote_address, storage_uri="redis://localhost:6379")
+
+.. tab:: Redis with custom parameters
+
+    .. code-block:: python
+
+      from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
+      ....
+
+      limiter = Limiter(
+        app, key_func=get_remote_address,
+        storage_uri="redis://localhost:6379",
+        storage_options={"connect_timeout": 30}
+      )
+
+.. tab:: Redis with a reused connection pool
+
+   .. code-block:: python
+
+      import redis
+      from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
+      ....
+
+      pool = redis.connection.BlockingConnectionPool.from_url("redis://.....")
+      limiter = Limiter(
+        app, key_func=get_remote_address,
+        storage_uri="redis://",
+        storage_options={"connection_pool": pool}
+      )
 
 .. _ratelimit-domain:
 
