@@ -222,12 +222,17 @@ Here are a few common examples:
         storage_options={"connection_pool": pool}
       )
 
+The :paramref:`~Limiter.storage_uri` and :paramref:`~Limiter.storage_options` parameters
+can also be provided by :ref:`configuration:using flask config` variables. The different
+configuration options for each storage can be found in the :doc:`storage backend documentation for limits <limits:storage>`
+as that is delegated to the :pypi:`limits` library.
+
 .. _ratelimit-domain:
 
 Rate Limit Domain
 -----------------
 Each :class:`~flask_limiter.Limiter` instance should be initialized with a
-:paramref:`~.Limiter.key_func` that returns the bucket in which each request
+:paramref:`~Limiter.key_func` that returns the bucket in which each request
 is put into when evaluating whether it is within the rate limit or not.
 
 For simple setups a utility function is provided:
