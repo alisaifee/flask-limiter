@@ -1,6 +1,6 @@
 -r main.txt
 enum-tools[sphinx]==0.9.0.post1
-furo==2022.6.4.1
+furo==2022.6.21
 Sphinx>4,<6
 sphinx-autobuild==2021.3.14
 sphinx-copybutton==0.5.0
