@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v2.5.0
+------
+Release Date: 2022-07-07
+
+* Features
+
+  * Ensure multiple extension instances registered
+    on a single application exercise before/after request
+    hooks
+
+* Chores
+
+  * Improve documentation
+
 v2.4.6
 ------
 Release Date: 2022-06-06
@@ -614,6 +628,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
