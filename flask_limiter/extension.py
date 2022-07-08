@@ -411,15 +411,13 @@ class Limiter:
         if not hasattr(app, "extensions"):
             app.extensions = {}  # pragma: no cover
 
-        if not app.extensions.get("limiter"):
+        if self not in app.extensions.setdefault("limiter", set()):
             if self._auto_check:
                 app.before_request(self._check_request_limit)
 
-            # The use of partial is simply to satisfy mypy
             app.after_request(partial(Limiter.__inject_headers, self))
             app.teardown_request(self.__release_context)
-
-        app.extensions["limiter"] = self
+        app.extensions["limiter"].add(self)
         self.initialized = True
 
     @property

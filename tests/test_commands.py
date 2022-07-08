@@ -83,7 +83,7 @@ def test_limits_with_test(kitchensink_factory, mocker):
 
 def test_limits_with_test_storage_down(kitchensink_factory, mocker):
     app, limiter = kitchensink_factory()
-    ms = mocker.spy(app.extensions.get("limiter").storage, "check")
+    ms = mocker.spy(list(app.extensions.get("limiter"))[0].storage, "check")
     ms.side_effect = lambda: False
     runner = app.test_cli_runner()
     result = runner.invoke(cli, ["limits", "--key=127.0.0.1"])

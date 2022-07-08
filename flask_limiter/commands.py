@@ -1,6 +1,6 @@
 import time
 from functools import partial
-from typing import Any, Callable, Dict, Generator, List, Optional, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
 from urllib.parse import urlparse
 
 import click
@@ -196,7 +196,8 @@ def cli() -> None:
 def config() -> None:
     with current_app.test_request_context():
         console = Console(theme=limiter_theme)
-        limiter = current_app.extensions.get("limiter", None)
+        limiters = list(current_app.extensions.get("limiter", set()))
+        limiter = limiters and list(limiters)[0]
         if limiter:
             extension_details = Table(title="Flask-Limiter Config")
             extension_details.add_column("Notes")
@@ -340,7 +341,8 @@ def limits(
     watch: bool = False,
 ) -> None:
     with current_app.test_request_context():
-        limiter: Limiter = current_app.extensions.get("limiter", None)
+        limiters: Set[Limiter] = current_app.extensions.get("limiter", set())
+        limiter: Optional[Limiter] = list(limiters)[0] if limiters else None
         console = Console(theme=limiter_theme)
         if limiter:
             manager = limiter.limit_manager
@@ -395,7 +397,7 @@ def limits(
 
             @group()
             def console_renderable() -> Generator:  # type: ignore
-                if limiter.limit_manager.application_limits and not (endpoint or path):
+                if limiter and limiter.limit_manager.application_limits and not (endpoint or path):
                     yield render_limits(
                         current_app,
                         limiter,
@@ -446,7 +448,8 @@ def clear(
     y: bool = False,
 ) -> None:
     with current_app.test_request_context():
-        limiter: Limiter = current_app.extensions.get("limiter", None)
+        limiters = list(current_app.extensions.get("limiter", set()))
+        limiter: Optional[Limiter] = limiters[0] if limiters else None
         console = Console(theme=limiter_theme)
         if limiter:
             manager = limiter.limit_manager

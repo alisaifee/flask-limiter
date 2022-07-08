@@ -758,3 +758,32 @@ def test_independent_instances_by_key_prefix():
             timeline.forward(59)
             assert cli.get("/test1").status_code == 200
             assert cli.get("/test2").status_code == 200
+
+
+def test_multiple_limiters_default_limits():
+    app = Flask(__name__)
+    Limiter(
+        app, key_prefix="lmt1", default_limits=["1/second"], key_func=get_remote_address
+    )
+    Limiter(
+        app,
+        key_prefix="lmt2",
+        default_limits=["10/minute"],
+        key_func=get_remote_address,
+    )
+
+    @app.route("/test1")
+    def app_test1():
+        return "app test1"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/test1").status_code == 200
+            assert cli.get("/test1").status_code == 429
+            for _ in range(9):
+                timeline.forward(1)
+                assert cli.get("/test1").status_code == 200
+            timeline.forward(1)
+            assert cli.get("/test1").status_code == 429
+            timeline.forward(50)
+            assert cli.get("/test1").status_code == 200
