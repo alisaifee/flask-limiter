@@ -15,14 +15,15 @@ def test_error_message(extension_factory):
         return ""
 
     with app.test_client() as cli:
-        cli.get("/")
-        assert "1 per 1 day" in cli.get("/").data.decode()
 
         @app.errorhandler(429)
         def ratelimit_handler(e):
             return make_response(
                 '{"error" : "rate limit %s"}' % str(e.description), 429
             )
+
+        cli.get("/")
+        assert "1 per 1 day" in cli.get("/").data.decode()
 
         assert {"error": "rate limit 1 per 1 day"} == json.loads(
             cli.get("/").data.decode()

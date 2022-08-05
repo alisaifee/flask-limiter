@@ -560,7 +560,15 @@ def test_no_auto_check(extension_factory):
             assert 200 == cli.get("/").status_code
             assert 200 == cli.get("/").status_code
 
-    # attach before_request to perform check
+
+def test_no_auto_check_custom_before_request(extension_factory):
+    app, limiter = extension_factory(auto_check=False)
+
+    @app.route("/", methods=["GET", "POST"])
+    @limiter.limit("1/second", per_method=True)
+    def root():
+        return "root"
+
     @app.before_request
     def _():
         limiter.check()
