@@ -350,9 +350,6 @@ def test_headers_no_breach():
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 2))
 
             assert resp.headers.get("Retry-After") == str(1)
-            assert limiter.current_limit.remaining == 1
-            assert limiter.current_limit.reset_at == int(time.time() + 2)
-            assert not limiter.current_limit.breached
 
 
 def test_headers_breach():
@@ -372,10 +369,8 @@ def test_headers_breach():
     with hiro.Timeline().freeze() as timeline:
         with app.test_client() as cli:
             for i in range(10):
-                resp = cli.get("/t1")
+                cli.get("/t1")
                 timeline.forward(1)
-                assert len(limiter.current_limits) == 3
-                assert all(not limit.breached for limit in limiter.current_limits)
 
             resp = cli.get("/t1")
             timeline.forward(1)
@@ -384,9 +379,6 @@ def test_headers_breach():
             assert resp.headers.get("X-RateLimit-Remaining") == "0"
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 50))
             assert resp.headers.get("Retry-After") == str(int(50))
-            assert limiter.current_limit.remaining == 0
-            assert limiter.current_limit.reset_at == int(time.time() + 50)
-            assert limiter.current_limit.breached
 
 
 def test_retry_after():
@@ -592,13 +584,10 @@ def test_fail_on_first_breach(extension_factory):
         with app.test_client() as cli:
             assert 200 == cli.get("/").status_code
             assert 429 == cli.get("/").status_code
-            assert [True] == [k.breached for k in limiter.current_limits]
             timeline.forward(1)
             assert 200 == cli.get("/").status_code
-            assert [False, False] == [k.breached for k in limiter.current_limits]
             timeline.forward(1)
             assert 429 == cli.get("/").status_code
-            assert [False, True] == [k.breached for k in limiter.current_limits]
 
 
 def test_no_fail_on_first_breach(extension_factory):
@@ -614,10 +603,8 @@ def test_no_fail_on_first_breach(extension_factory):
         with app.test_client() as cli:
             assert 200 == cli.get("/").status_code
             assert 429 == cli.get("/").status_code
-            assert [True, False] == [k.breached for k in limiter.current_limits]
             timeline.forward(1)
             assert 429 == cli.get("/").status_code
-            assert [False, True] == [k.breached for k in limiter.current_limits]
 
 
 def test_default_on_breach_callback(extension_factory):
