@@ -397,7 +397,11 @@ def limits(
 
             @group()
             def console_renderable() -> Generator:  # type: ignore
-                if limiter and limiter.limit_manager.application_limits and not (endpoint or path):
+                if (
+                    limiter
+                    and limiter.limit_manager.application_limits
+                    and not (endpoint or path)
+                ):
                     yield render_limits(
                         current_app,
                         limiter,
@@ -418,7 +422,10 @@ def limits(
                 console.print(console_renderable())
             else:  # noqa
                 with Live(
-                    console_renderable(), console=console, refresh_per_second=0.4, screen=True
+                    console_renderable(),
+                    console=console,
+                    refresh_per_second=0.4,
+                    screen=True,
                 ) as live:
                     while True:
                         try:
