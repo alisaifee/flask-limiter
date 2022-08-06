@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v2.5.1
+------
+Release Date: 2022-08-05
+
+* Compatibility
+
+  * Migrate use of `flask._request_ctx_stack` to `flask.globals.request_ctx`
+    to support Flask 2.2+
+
+* Chores
+
+  * Expand CI matrix to test against Flask 2.0,2.1 & 2.2
+  * Make tests compatible with Flask 2.2.+
+
 v2.5.0
 ------
 Release Date: 2022-07-07
@@ -628,6 +642,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
