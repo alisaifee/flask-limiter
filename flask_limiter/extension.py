@@ -21,6 +21,7 @@ from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
 from werkzeug.http import http_date, parse_date
 
+from ._compat import request_context
 from .constants import MAX_BACKEND_CHECKS, ConfigVars, ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded
 from .manager import LimitManager
@@ -422,13 +423,13 @@ class Limiter:
 
     @property
     def context(self) -> LimiterContext:
-        ctx = flask._request_ctx_stack.top
-        assert ctx
+        ctx = request_context()
         if not hasattr(ctx, "_limiter_request_context"):
-            ctx._limiter_request_context = defaultdict(LimiterContext)
-        return cast(Dict[str, LimiterContext], ctx._limiter_request_context)[
-            self._key_prefix
-        ]
+            ctx._limiter_request_context = defaultdict(LimiterContext)  # type: ignore
+        return cast(
+            Dict[str, LimiterContext],
+            ctx._limiter_request_context,  # type: ignore
+        )[self._key_prefix]
 
     def limit(
         self,
@@ -784,7 +785,6 @@ class Limiter:
     ) -> flask.wrappers.Response:
         self.__check_conditional_deductions(response)
         header_limit = self.current_limit
-
         if (
             self.enabled
             and self._headers_enabled
