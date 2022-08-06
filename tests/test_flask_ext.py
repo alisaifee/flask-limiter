@@ -573,12 +573,18 @@ def test_no_auto_check_custom_before_request(extension_factory):
 
 def test_fail_on_first_breach(extension_factory):
     app, limiter = extension_factory(fail_on_first_breach=True)
+    current_limits = []
 
     @app.route("/", methods=["GET", "POST"])
     @limiter.limit("1/second", per_method=True)
     @limiter.limit("2/minute", per_method=True)
     def root():
         return "root"
+
+    @app.after_request
+    def collect_current_limits(r):
+        current_limits.extend(limiter.current_limits)
+        return r
 
     with hiro.Timeline().freeze() as timeline:
         with app.test_client() as cli:
@@ -588,6 +594,9 @@ def test_fail_on_first_breach(extension_factory):
             assert 200 == cli.get("/").status_code
             timeline.forward(1)
             assert 429 == cli.get("/").status_code
+    assert not current_limits[0].breached
+    assert not current_limits[1].breached
+    assert current_limits[2].breached
 
 
 def test_no_fail_on_first_breach(extension_factory):
