@@ -101,7 +101,9 @@ class Limiter:
     :param fail_on_first_breach: whether to stop processing remaining limits
      after the first breach. default ``True``
     :param on_breach: a function that will be called when any limit in this
-     extension is breached.
+     extension is breached. If the function returns an instance of :class:`flask.Response`
+     that will be the response embedded into the :exc:`RateLimitExceeded` exception
+     raised.
     :param in_memory_fallback: a variable list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
@@ -135,7 +137,9 @@ class Limiter:
         auto_check: bool = True,
         swallow_errors: Optional[bool] = None,
         fail_on_first_breach: Optional[bool] = None,
-        on_breach: Optional[Callable[[RequestLimit], None]] = None,
+        on_breach: Optional[
+            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
+        ] = None,
         in_memory_fallback: Optional[List[str]] = None,
         in_memory_fallback_enabled: Optional[bool] = None,
         retry_after: Optional[str] = None,
@@ -441,7 +445,9 @@ class Limiter:
         exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
         deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
-        on_breach: Optional[Callable[[RequestLimit], None]] = None,
+        on_breach: Optional[
+            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
+        ] = None,
         cost: Union[int, Callable[[], int]] = 1,
     ) -> LimitDecorator:
         """
@@ -471,7 +477,9 @@ class Limiter:
          :class:`flask.Response` object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
-         is breached.
+         is breached. If the function returns an instance of :class:`flask.Response`
+         that will be the response embedded into the :exc:`RateLimitExceeded` exception
+         raised.
         :param cost: The cost of a hit or a function that
          takes no parameters and returns the cost as an integer (Default: ``1``).
         """
@@ -499,7 +507,9 @@ class Limiter:
         exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
         deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
-        on_breach: Optional[Callable[[RequestLimit], None]] = None,
+        on_breach: Optional[
+            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
+        ] = None,
         cost: Union[int, Callable[[], int]] = 1,
     ) -> LimitDecorator:
         """
@@ -526,7 +536,9 @@ class Limiter:
          :class:`flask.Response`  object and returns True/False to decide if a
          deduction should be done from the rate limit
         :param on_breach: a function that will be called when this limit
-         is breached.
+         is breached. If the function returns an instance of :class:`flask.Response`
+         that will be the response embedded into the :exc:`RateLimitExceeded` exception
+         raised.
         :param cost: The cost of a hit or a function that
          takes no parameters and returns the cost as an integer (default: ``1``).
         """
@@ -948,18 +960,24 @@ class Limiter:
         self.context.view_rate_limit = limit_for_header or None
         self.context.view_rate_limits = view_limits
 
+        on_breach_response = None
         for limit in failed_limits:
             request_limit = RequestLimit(self, limit[0].limit, limit[1], True)
-            for cb in {self._on_breach, limit[0].on_breach}:
+            for cb in dict.fromkeys([self._on_breach, limit[0].on_breach]):
                 if cb:
                     try:
-                        cb(request_limit)
-                    except Exception:  # noqa
-                        self.logger.warning("on_breach callback failed")
+                        cb_response = cb(request_limit)
+                        if isinstance(cb_response, flask.wrappers.Response):
+                            on_breach_response = cb_response
+                    except Exception as err:  # noqa
+                        self.logger.warning(
+                            "on_breach callback failed with error %s", err
+                        )
 
         if failed_limits:
             raise RateLimitExceeded(
-                sorted(failed_limits, key=lambda x: x[0].limit)[0][0]
+                sorted(failed_limits, key=lambda x: x[0].limit)[0][0],
+                response=on_breach_response,
             )
 
     def _check_request_limit(self, in_middleware: bool = True) -> None:
@@ -1011,7 +1029,9 @@ class LimitDecorator:
         exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
         deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
-        on_breach: Optional[Callable[[RequestLimit], None]] = None,
+        on_breach: Optional[
+            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
+        ] = None,
         cost: Union[Callable[[], int], int] = 1,
     ):
         self.limiter: weakref.ProxyType[Limiter] = weakref.proxy(limiter)

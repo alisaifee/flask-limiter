@@ -81,7 +81,7 @@ class Limit:
         exempt_when: Optional[Callable[[], bool]],
         override_defaults: Optional[bool],
         deduct_when: Optional[Callable[[Response], bool]],
-        on_breach: Optional[Callable[[RequestLimit], None]],
+        on_breach: Optional[Callable[[RequestLimit], Optional[Response]]],
         cost: Union[Callable[[], int], int],
     ) -> None:
         self.limit = limit
@@ -151,7 +151,7 @@ class LimitGroup:
         exempt_when: Optional[Callable[[], bool]],
         override_defaults: Optional[bool],
         deduct_when: Optional[Callable[[Response], bool]],
-        on_breach: Optional[Callable[[RequestLimit], None]],
+        on_breach: Optional[Callable[[RequestLimit], Optional[Response]]],
         cost: Optional[Union[Callable[[], int], int]],
     ) -> None:
         self.__limit_provider = limit_provider

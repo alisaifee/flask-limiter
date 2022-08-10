@@ -51,7 +51,8 @@ The exceeded limit is added to the response and results in an response body that
    <h1>Too Many Requests</h1>
    <p>1 per 1 day</p>
 
-
+For all routes that are rate limited
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 If you want to configure the response you can register an error handler for the
 ``429`` error code in a manner similar to the following example, which returns a
 json response instead::
@@ -59,9 +60,82 @@ json response instead::
     @app.errorhandler(429)
     def ratelimit_handler(e):
         return make_response(
-                jsonify(error="ratelimit exceeded %s" % e.description)
+                jsonify(error=f"ratelimit exceeded {e.description}")
                 , 429
         )
+
+The same effect can be achieved by using the :paramref:`~Limiter.on_breach` parameter
+when initializing the :class:`Limiter`. If the callback passed to this parameter
+returns an instance of :class:`~flask.Response` that response will be the one embedded
+into the :exc:`RateLimitExceeded` exception that is raised.
+
+For example::
+
+    from flask import make_response, render_template
+    from flask_limiter import Limiter, RequestLimit
+
+    def default_error_responder(request_limit: RequestLimit):
+        return make_response(
+            render_template("my_ratelimit_template.tmpl", request_limit=request_limit)
+            429
+        )
+
+    app = Limiter(
+        key_func=...,
+        default_limits=["100/minute"],
+        on_breach=default_error_responder
+    )
+
+.. tip:: If you have specified both an :paramref:`~Limiter.on_breach` callback
+   and registered a callback using the :meth:`~flask.Flask.errorhandler` decorator, the one
+   registered for ``429`` errors will still be called and therefore end up ignoring
+   the response returned by the :paramref:`~Limiter.on_breach` callback.
+
+   There may be legitimate reasons to do this (for example if your application raises
+   ``429`` errors by itself or through another middleware).
+
+   This can be managed in the callback registered with :meth:`~flask.Flask.errorhandler`
+   by checking if the incoming error has a canned response and using that instead of building
+   a new one::
+
+      @app.errorhandler(429)
+      def careful_ratelimit_handler(error):
+          return error.get_response() or make_response(
+            jsonify(
+                error=f"ratelimit exceeded {e.description}"
+            ),
+            429
+          )
+
+For specific rate limit decorated routes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+If the objective is to only customize rate limited error responses for certain
+rate limited routes this can be achieved in a similar manner as above,
+through the :paramref:`~Limiter.limit.on_breach` parameter of the rate limit decorator.
+
+Following the example from above where the extension was initialized with an :paramref:`~Limiter.on_breach`
+callback, the ``index`` route below declares it's own :paramref:`~Limiter.limiter.on_breach` callback which
+instead of rendering a template returns a json response (with a ``200`` status code)::
+
+    app = Limiter(
+        key_func=...,
+        default_limits=["100/minute"],
+        on_breach=default_error_responder
+    )
+
+    def index_ratelimit_error_responder(request_limit: RequestLimit):
+        return jsonify({"error": "rate_limit_exceeded"})
+
+    @app.route("/")
+    @limiter.limit("10/minute", on_breach=index_ratelimit_error_responder)
+    def index():
+        ...
+
+The above example also demonstrates the subtle implementation detail that the
+response from :paramref:`Limiter.limiter.on_breach` callback (if provided) will
+take priority over the response from the :paramref:`Limiter.on_breach` callback if
+there is one.
+
 
 Customizing the cost of a request
 ---------------------------------

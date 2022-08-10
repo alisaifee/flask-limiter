@@ -3,7 +3,7 @@ from functools import wraps
 from unittest import mock
 
 import hiro
-from flask import Blueprint, Flask, current_app, g, request
+from flask import Blueprint, Flask, current_app, g, make_response, request
 from werkzeug.exceptions import BadRequest
 
 from flask_limiter import ExemptionScope, Limiter
@@ -650,7 +650,56 @@ def test_on_breach_callback(extension_factory, caplog):
         assert cli.get("/fail").status_code == 429
 
     assert len(callbacks) == 1
-    assert caplog.records[-1].message == "on_breach callback failed"
+    assert (
+        caplog.records[-1].message
+        == "on_breach callback failed with error division by zero"
+    )
+
+
+def test_on_breach_callback_custom_response(extension_factory):
+    def on_breach_no_response(request_limit):
+        pass
+
+    def on_breach_with_response(request_limit):
+        return make_response(
+            f"custom response {request_limit.limit} @ {request.path}", 429
+        )
+
+    def default_on_breach_with_response(request_limit):
+        return make_response(
+            f"default custom response {request_limit.limit} @ {request.path}", 429
+        )
+
+    app, limiter = extension_factory(on_breach=default_on_breach_with_response)
+
+    @app.route("/")
+    @limiter.limit("1/second", on_breach=on_breach_no_response)
+    def root():
+        return "root"
+
+    @app.route("/other")
+    @limiter.limit("1/second")
+    def other():
+        return "other"
+
+    @app.route("/fail")
+    @limiter.limit("1/second", on_breach=on_breach_with_response)
+    def fail():
+        return "fail"
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        resp = cli.get("/")
+        assert resp.status_code == 429
+        assert resp.text == "default custom response 1 per 1 second @ /"
+        assert cli.get("/other").status_code == 200
+        resp = cli.get("/other")
+        assert resp.status_code == 429
+        assert resp.text == "default custom response 1 per 1 second @ /other"
+        assert cli.get("/fail").status_code == 200
+        resp = cli.get("/fail")
+        assert resp.status_code == 429
+        assert resp.text == "custom response 1 per 1 second @ /fail"
 
 
 def test_limit_multiple_cost(extension_factory):
