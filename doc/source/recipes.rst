@@ -64,6 +64,8 @@ json response instead::
                 , 429
         )
 
+.. versionadded:: 2.6.0
+
 The same effect can be achieved by using the :paramref:`~Limiter.on_breach` parameter
 when initializing the :class:`Limiter`. If the callback passed to this parameter
 returns an instance of :class:`~flask.Response` that response will be the one embedded
@@ -109,6 +111,8 @@ For example::
 
 For specific rate limit decorated routes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. versionadded:: 2.6.0
+
 If the objective is to only customize rate limited error responses for certain
 rate limited routes this can be achieved in a similar manner as above,
 through the :paramref:`~Limiter.limit.on_breach` parameter of the rate limit decorator.
