@@ -231,7 +231,7 @@ as that is delegated to the :pypi:`limits` library.
 
 Rate Limit Domain
 -----------------
-Each :class:`~flask_limiter.Limiter` instance should be initialized with a
+Each :class:`~flask_limiter.Limiter` instance must be initialized with a
 :paramref:`~Limiter.key_func` that returns the bucket in which each request
 is put into when evaluating whether it is within the rate limit or not.
 
