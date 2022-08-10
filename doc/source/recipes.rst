@@ -377,22 +377,24 @@ Effectively this means:
 
 Logging
 -------
-Each :class:`~Limiter` instance has a ``logger`` instance variable that is by
-default **not** configured with a handler. You can add your own handler to obtain
-log messages emitted by :mod:`flask_limiter`.
+Each :class:`~Limiter` instance has a registered :class:`~logging.Logger` named ``flask-limiter``
+that is by default **not** configured with a handler.
 
-Simple stdout handler::
+This can be configured according to your needs::
 
-    limiter = Limiter(app, key_func=get_remote_address)
-    limiter.logger.addHandler(StreamHandler())
+    import logging
+    limiter_logger = logging.getLogger("flask-limiter")
 
-Reusing all the handlers of the ``logger`` instance of the :class:`flask.Flask` app::
+    # force DEBUG logging
+    limiter_logger.setLevel(logging.DEBUG)
 
-    app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
-    for handler in app.logger.handlers:
-        limiter.logger.addHandler(handler)
+    # restrict to only error level
+    limiter_logger.setLevel(logging.ERROR)
 
+    # Add a filter
+    limiter_logger.addFilter(SomeFilter)
+
+    # etc ..
 
 
 
