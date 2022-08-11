@@ -90,7 +90,7 @@ For example::
 
 .. tip:: If you have specified both an :paramref:`~Limiter.on_breach` callback
    and registered a callback using the :meth:`~flask.Flask.errorhandler` decorator, the one
-   registered for ``429`` errors will still be called and therefore end up ignoring
+   registered for ``429`` errors will still be called and could end up ignoring
    the response returned by the :paramref:`~Limiter.on_breach` callback.
 
    There may be legitimate reasons to do this (for example if your application raises
