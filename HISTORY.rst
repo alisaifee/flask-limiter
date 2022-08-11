@@ -3,6 +3,17 @@
 Changelog
 =========
 
+v2.6.0
+------
+Release Date: 2022-08-11
+
+* Feature
+
+  * Expand use of ``on_breach`` callback to return a ``Response``
+    object that will be used as the error response on rate limits
+    being exceeded
+
+
 v2.5.1
 ------
 Release Date: 2022-08-05
@@ -642,6 +653,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
