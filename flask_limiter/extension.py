@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import warnings
 
 """
 Flask-Limiter Extension
@@ -309,8 +310,17 @@ class Limiter:
 
         self._storage_options.update(config.get(ConfigVars.STORAGE_OPTIONS, {}))
         storage_uri_from_config = config.get(
-            ConfigVars.STORAGE_URI, config.get(ConfigVars.STORAGE_URL, "memory://")
+            ConfigVars.STORAGE_URI, config.get(ConfigVars.STORAGE_URL, None)
         )
+        if not storage_uri_from_config:
+            if not self._storage_uri:
+                warnings.warn(
+                    "Using the in-memory storage for tracking rate limits as no storage "
+                    "was explicitly specified. This is not recommended for production use. "
+                    "See: https://flask-limiter.readthedocs.io#configuring-a-storage-backend "
+                    "for documentation about configuring the storage backend."
+                )
+            storage_uri_from_config = "memory://"
         self._storage = cast(
             Storage,
             storage_from_string(
