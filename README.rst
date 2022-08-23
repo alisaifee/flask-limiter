@@ -24,8 +24,7 @@ provided by the `limits <https://github.com/alisaifee/limits>`_ library.
 Quickstart
 ===========
 
-Add the rate limiter to your flask app. The following example uses the default
-in memory implementation for storage.
+Add the rate limiter to your flask app.
 
 .. code-block:: python
 
@@ -38,6 +37,17 @@ in memory implementation for storage.
        app,
        key_func=get_remote_address,
        default_limits=["2 per minute", "1 per second"],
+       storage_uri="memory://",
+       # Redis
+       # storage_uri="redis://localhost:6379",
+       # Redis cluster
+       # storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:70002",
+       # Memcached
+       # storage_uri="memcached://localhost:11211",
+       # Memcached Cluster
+       # storage_uri="memcached://localhost:11211,localhost:11212,localhost:11213",
+       # MongoDB
+       # storage_uri="mongodb://localhost:27017",
    )
 
    @app.route("/slow")

@@ -192,6 +192,20 @@ Here are a few common examples:
 
       limiter = Limiter(app, key_func=get_remote_address, storage_uri="redis://localhost:6379")
 
+.. tab:: Redis Cluster
+
+   .. code-block:: python
+
+      from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
+      ....
+
+      limiter = Limiter(
+        app,
+        key_func=get_remote_address,
+        storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002"
+      )
+
 .. tab:: Redis with custom parameters
 
     .. code-block:: python
@@ -220,6 +234,19 @@ Here are a few common examples:
         app, key_func=get_remote_address,
         storage_uri="redis://",
         storage_options={"connection_pool": pool}
+      )
+
+.. tab:: MongoDB
+
+   .. code-block:: python
+
+      from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
+      ....
+
+      limiter = Limiter(
+        app, key_func=get_remote_address,
+        storage_uri="mongodb://localhost:27017",
       )
 
 The :paramref:`~Limiter.storage_uri` and :paramref:`~Limiter.storage_options` parameters
