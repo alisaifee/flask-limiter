@@ -138,7 +138,7 @@ The above Flask app will have the following rate limiting characteristics:
   of 1 request per second.
 * The ``ping`` route will be exempt from any default rate limits.
 
-.. note:: The built in flask static files routes are also exempt from rate limits.
+  .. tip:: The built in flask static files routes are also exempt from rate limits.
 
 Every time a request exceeds the rate limit, the view function will not get called and instead
 a `429 <http://tools.ietf.org/html/rfc6585#section-4>`_ http error will be raised.
