@@ -48,6 +48,7 @@ Add the rate limiter to your flask app.
        # storage_uri="memcached://localhost:11211,localhost:11212,localhost:11213",
        # MongoDB
        # storage_uri="mongodb://localhost:27017",
+       strategy="fixed-window", # or "moving-window"
    )
 
    @app.route("/slow")
