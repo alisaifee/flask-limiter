@@ -7,7 +7,7 @@
 .. |license| image:: https://img.shields.io/pypi/l/Flask-Limiter.svg?style=flat-square
    :target: https://pypi.python.org/pypi/Flask-Limiter
 .. |docs| image:: https://readthedocs.org/projects/flask-limiter/badge/?version=latest
-   :target: https://flask-limiter.readthedocs.org
+   :target: https://flask-limiter.readthedocs.org/en/latest
 
 *************
 Flask-Limiter
@@ -102,4 +102,4 @@ with it.
 
 
 
-For more details `read the docs <http://flask-limiter.readthedocs.org>`_
+For more details `read the docs <http://flask-limiter.readthedocs.org/en/latest>`_
