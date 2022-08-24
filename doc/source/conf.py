@@ -78,7 +78,7 @@ autosectionlabel_maxdepth = 3
 autosectionlabel_prefix_document = True
 issues_github_path = "alisaifee/flask-limiter"
 
-ogp_image = "_static/logo.png"
+ogp_image = "_static/logo-og.png"
 
 extlinks = {
     "pypi": ("https://pypi.org/project/%s", "%s"),
