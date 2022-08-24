@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.6.1
+------
+Release Date: 2022-08-23
+
+* Usability
+
+  * Emit warning when in memory storage is used as a default
+    when no storage uri is provided
+
 v2.6.0
 ------
 Release Date: 2022-08-11
@@ -653,6 +662,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
