@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v2.6.2
+------
+Release Date: 2022-08-24
+
+* Chores
+
+  * Improve quick start documentation
+
 v2.6.1
 ------
 Release Date: 2022-08-23
@@ -662,6 +670,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
