@@ -101,7 +101,8 @@ A very basic setup can be achieved as follows:
    limiter = Limiter(
        app,
        key_func=get_remote_address,
-       default_limits=["200 per day", "50 per hour"]
+       default_limits=["200 per day", "50 per hour"],
+       storage_uri="memory://",
    )
    @app.route("/slow")
    @limiter.limit("1 per day")
@@ -125,7 +126,11 @@ A very basic setup can be achieved as follows:
 
 The above Flask app will have the following rate limiting characteristics:
 
-* Rate limiting by `remote_address` of the request
+* Use an in-memory storage provided by :class:`limits.storage.MemoryStorage`.
+
+  .. note:: This is only meant for testing/development and should be replaced with
+     an appropriate storage of your choice before moving to production.
+* Rate limiting by the ``remote_address`` of the request
 * A default rate limit of 200 per day, and 50 per hour applied to all routes.
 * The ``slow`` route having an explicit rate limit decorator will bypass the default
   rate limit and only allow 1 request per day.
@@ -174,25 +179,10 @@ Here are a few common examples:
 
 .. tab:: Memcached
 
-   .. code-block:: python
-
-      from flask_limiter import Limiter
-      from flask_limiter.util import get_remote_address
-      ....
-
-      limiter = Limiter(app, key_func=get_remote_address, storage_uri="memcached://localhost:11211")
-
-.. tab:: Redis
-
-   .. code-block:: python
-
-      from flask_limiter import Limiter
-      from flask_limiter.util import get_remote_address
-      ....
-
-      limiter = Limiter(app, key_func=get_remote_address, storage_uri="redis://localhost:6379")
-
-.. tab:: Redis Cluster
+   Any additional parameters provided in :paramref:`~Limiter.storage_options`
+   will be passed to the constructor of the memcached client
+   (either :class:`~pymemcache.client.base.PooledClient` or :class:`~pymemcache.client.hash.HashClient`).
+   For more details see :class:`~limits.storage.MemcachedStorage`.
 
    .. code-block:: python
 
@@ -201,14 +191,19 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-        app,
-        key_func=get_remote_address,
-        storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002"
+          app,
+          key_func=get_remote_address,
+          storage_uri="memcached://localhost:11211",
+          storage_options={}
       )
 
-.. tab:: Redis with custom parameters
+.. tab:: Redis
 
-    .. code-block:: python
+   Any additional parameters provided in :paramref:`~Limiter.storage_options`
+   will be passed to :meth:`redis.Redis.from_url` as keyword arguments.
+   For more details see :class:`~limits.storage.RedisStorage`
+
+   .. code-block:: python
 
       from flask_limiter import Limiter
       from flask_limiter.util import get_remote_address
@@ -217,10 +212,14 @@ Here are a few common examples:
       limiter = Limiter(
         app, key_func=get_remote_address,
         storage_uri="redis://localhost:6379",
-        storage_options={"connect_timeout": 30}
+        storage_options={"connect_timeout": 30},
+        strategy="fixed-window", # or "moving-window"
       )
 
-.. tab:: Redis with a reused connection pool
+.. tab:: Redis (reused connection pool)
+
+   If you wish to reuse a :class:`redis.connection.ConnectionPool` instance
+   you can pass that in :paramref:`~Limiter.storage_option`
 
    .. code-block:: python
 
@@ -233,7 +232,28 @@ Here are a few common examples:
       limiter = Limiter(
         app, key_func=get_remote_address,
         storage_uri="redis://",
-        storage_options={"connection_pool": pool}
+        storage_options={"connection_pool": pool},
+        strategy="fixed-window", # or "moving-window"
+      )
+
+.. tab:: Redis Cluster
+
+   Any additional parameters provided in :paramref:`~Limiter.storage_options`
+   will be passed to :class:`~redis.cluster.RedisCluster` as keyword arguments.
+   For more details see :class:`~limits.storage.RedisClusterStorage`
+
+   .. code-block:: python
+
+      from flask_limiter import Limiter
+      from flask_limiter.util import get_remote_address
+      ....
+
+      limiter = Limiter(
+        app,
+        key_func=get_remote_address,
+        storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002",
+        storage_options={"connect_timeout": 30},
+        strategy="fixed-window", # or "moving-window"
       )
 
 .. tab:: MongoDB
@@ -247,6 +267,7 @@ Here are a few common examples:
       limiter = Limiter(
         app, key_func=get_remote_address,
         storage_uri="mongodb://localhost:27017",
+        strategy="fixed-window", # or "moving-window"
       )
 
 The :paramref:`~Limiter.storage_uri` and :paramref:`~Limiter.storage_options` parameters
