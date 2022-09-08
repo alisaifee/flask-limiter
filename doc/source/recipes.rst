@@ -250,7 +250,7 @@ Rate limiting all routes in a :class:`~flask.Blueprint`
 :meth:`~Limiter.limit`, :meth:`~Limiter.shared_limit` &
 :meth:`~Limiter.exempt` can all be tpplied to :class:`flask.Blueprint` instances as well.
 In the following example the **login** Blueprint has a special rate limit applied to all its routes, while
-the **help** Blueprint is exempt from all rate limits. The **regular** Blueprint follows the default rate limits.
+the **doc** Blueprint is exempt from all rate limits. The **regular** Blueprint follows the default rate limits.
 
 
 .. code-block:: python
