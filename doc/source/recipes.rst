@@ -177,7 +177,7 @@ Customizing rate limits based on response
 For scenarios where the decision to count the current request towards a rate limit
 can only be made after the request has completed, a callable that accepts the current
 :class:`flask.Response` object as its argument can be provided to the :meth:`~Limiter.limit` or
-:meth:`~Limiter.shared_limit` decorators through the ``deduct_when`` keyword arugment.
+:meth:`~Limiter.shared_limit` decorators through the ``deduct_when`` keyword argument.
 A truthy response from the callable will result in a deduction from the rate limit.
 
 As an example, to only count non `200` responses towards the rate limit
@@ -195,12 +195,12 @@ As an example, to only count non `200` responses towards the rate limit
 
 
 `deduct_when` can also be provided for default limits by providing the
-:paramref:`~flask_limiter.Limiter.default_limits_deduct_when` paramter
+:paramref:`~flask_limiter.Limiter.default_limits_deduct_when` parameter
 to the :class:`~flask_limiter.Limiter` constructor.
 
 
 .. note:: All requests will be tested for the rate limit and rejected accordingly
- if the rate limit is already hit. The providion of the `deduct_when`
+ if the rate limit is already hit. The provision of the `deduct_when`
  argument only changes whether the request will count towards depleting the rate limit.
 
 
@@ -243,7 +243,7 @@ Rate limiting all routes in a :class:`~flask.Blueprint`
 .. warning:: :class:`~flask.Blueprint` instances that are registered on another blueprint
    instead of on the main :class:`~flask.Flask` instance had not been considered
    upto :ref:`changelog:v2.3.0`. Effectively **they neither inherited** the rate limits
-   explicitely registered on the parent :class:`~flask.Blueprint` **nor were they
+   explicitly registered on the parent :class:`~flask.Blueprint` **nor were they
    exempt** from rate limits if the parent had been marked exempt.
    (See :issue:`326`, and the :ref:`recipes:nested blueprints` section below).
 
@@ -319,7 +319,7 @@ Explicitly setting limits / exemptions on nested Blueprints
 ===========================================================
 
 Using combinations of :paramref:`~Limiter.limit.override_defaults` parameter
-when explicitely declaring limits on Blueprints and the :paramref:`~Limiter.exempt.flags`
+when explicitly declaring limits on Blueprints and the :paramref:`~Limiter.exempt.flags`
 parameter when exempting Blueprints with :meth:`~Limiter.exempt`
 the resolution of inherited and descendent limits within the scope of a Blueprint
 can be controlled.
