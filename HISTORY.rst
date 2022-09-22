@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v2.6.3
+------
+Release Date: 2022-09-22
+
+* Compatibility
+
+  * Ensure typing_extensions dependency has a minimum version
+
+* Chores
+
+  * Documentation tweaks
+  * Update CI to use 3.11 rc2
+
 v2.6.2
 ------
 Release Date: 2022-08-24
@@ -670,6 +683,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
