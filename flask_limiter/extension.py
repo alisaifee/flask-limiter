@@ -797,10 +797,17 @@ class Limiter:
         return self.context.view_rate_limits
 
     def __check_conditional_deductions(self, response: flask.wrappers.Response) -> None:
-
         for lim, args in self.context.conditional_deductions.items():
             if lim.deduct_when and lim.deduct_when(response):
-                self.limiter.hit(lim.limit, *args, cost=lim.cost)
+                try:
+                    self.limiter.hit(lim.limit, *args, cost=lim.cost)
+                except Exception as err:
+                    if self._swallow_errors:
+                        self.logger.exception(
+                            "Failed to deduct rate limit. " "Swallowing error"
+                        )
+                    else:
+                        raise err
 
     def __inject_headers(
         self, response: flask.wrappers.Response
