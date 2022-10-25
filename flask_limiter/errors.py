@@ -10,7 +10,7 @@ from .wrappers import Limit
 class RateLimitExceeded(exceptions.TooManyRequests):
     """Exception raised when a rate limit is hit."""
 
-    def __init__(self, limit: Limit, response: Optional[Response]) -> None:
+    def __init__(self, limit: Limit, response: Optional[Response] = None) -> None:
         """
         :param limit: The actual rate limit that was hit.
          Used to construct the default response message
