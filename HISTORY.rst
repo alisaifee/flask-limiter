@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.7.0
+------
+Release Date: 2022-10-25
+
+* Bug Fix
+
+  * Add default value for RateLimitExceeded optional parameter
+  * Fix suppression of errors when using conditional deduction (`Issue 363 <https://github.com/alisaifee/flask-limiter/issues/363>`_)
+
 v2.6.3
 ------
 Release Date: 2022-09-22
@@ -683,6 +692,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
