@@ -108,6 +108,32 @@ def test_swallow_error(extension_factory):
             assert "ok" in cli.get("/").data.decode()
 
 
+def test_swallow_error_conditional_deduction(extension_factory):
+    def conditional_deduct(_):
+        return True
+
+    app, limiter = extension_factory(
+        {
+            ConfigVars.DEFAULT_LIMITS: "1 per day",
+            ConfigVars.SWALLOW_ERRORS: True,
+            ConfigVars.DEFAULT_LIMITS_DEDUCT_WHEN: conditional_deduct,
+        }
+    )
+
+    @app.route("/")
+    def null():
+        return "ok"
+
+    with app.test_client() as cli:
+        with patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
+
+            def raiser(*a, **k):
+                raise Exception
+
+            hit.side_effect = raiser
+            assert "ok" in cli.get("/").data.decode()
+
+
 def test_no_swallow_error(extension_factory):
     app, limiter = extension_factory(
         {ConfigVars.DEFAULT_LIMITS: "1 per day", ConfigVars.HEADERS_ENABLED: True}
@@ -137,6 +163,32 @@ def test_no_swallow_error(extension_factory):
             get_window_stats.side_effect = raiser
             assert 500 == cli.get("/").status_code
             assert "underlying" == cli.get("/").data.decode()
+
+
+def test_no_swallow_error_conditional_deduction(extension_factory):
+    def conditional_deduct(_):
+        return True
+
+    app, limiter = extension_factory(
+        {
+            ConfigVars.DEFAULT_LIMITS: "1 per day",
+            ConfigVars.SWALLOW_ERRORS: False,
+            ConfigVars.DEFAULT_LIMITS_DEDUCT_WHEN: conditional_deduct,
+        }
+    )
+
+    @app.route("/")
+    def null():
+        return "ok"
+
+    with app.test_client() as cli:
+        with patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
+
+            def raiser(*a, **k):
+                raise Exception
+
+            hit.side_effect = raiser
+            assert 500 == cli.get("/").status_code
 
 
 def test_fallback_to_memory_config(redis_connection, extension_factory):
