@@ -21,6 +21,13 @@ Flask-Limiter provides rate limiting features to flask applications.
 It allows configuring various backends to persist the rate limits, which is
 provided by the `limits <https://github.com/alisaifee/limits>`_ library.
 
+----
+
+Sponsored by Zuplo - fully-managed API Gateway with rate limiting, authentication, and more.
+Add rate limiting to your API in minutes, try it at `zuplo.com <https://zuplo.link/3NuX0co>`_
+
+----
+
 Quickstart
 ===========
 
