@@ -97,7 +97,7 @@ class Limiter:
      upon instantiation.
     :param auto_check: whether to automatically check the rate limit in
      the before_request chain of the application. default ``True``
-    :param swallow_errors: whether to swallow errors when hitting a rate
+    :param swallow_errors: whether to swallow any errors when hitting a rate
      limit. An exception will still be logged. default ``False``
     :param fail_on_first_breach: whether to stop processing remaining limits
      after the first breach. default ``True``
