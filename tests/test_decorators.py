@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from functools import wraps
 from unittest import mock
 
@@ -292,6 +293,7 @@ def test_decorated_dynamic_limits(extension_factory):
 
 
 def test_invalid_decorated_dynamic_limits(caplog):
+    caplog.set_level(logging.INFO)
     app = Flask(__name__)
     app.config.setdefault("X", "2 per sec")
     limiter = Limiter(app, default_limits=["1/second"], key_func=get_ip_from_header)
@@ -310,10 +312,11 @@ def test_invalid_decorated_dynamic_limits(caplog):
     assert "failed to load ratelimit" in caplog.records[0].msg
     assert "failed to load ratelimit" in caplog.records[1].msg
     assert "exceeded at endpoint" in caplog.records[2].msg
-    assert caplog.records[2].levelname == "WARNING"
+    assert caplog.records[2].levelname == "INFO"
 
 
 def test_invalid_decorated_static_limits(caplog):
+    caplog.set_level(logging.INFO)
     app = Flask(__name__)
     limiter = Limiter(app, default_limits=["1/second"], key_func=get_ip_from_header)
 

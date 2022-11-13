@@ -961,7 +961,7 @@ class Limiter:
             view_limits.append(RequestLimit(self, lim.limit, args, False))
 
             if not method(lim.limit, *args, **kwargs):
-                self.logger.warning(
+                self.logger.info(
                     "ratelimit %s (%s) exceeded at endpoint: %s",
                     lim.limit,
                     limit_key,

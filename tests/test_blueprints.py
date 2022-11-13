@@ -1,4 +1,5 @@
 import datetime
+import logging
 
 import hiro
 from flask import Blueprint, Flask, current_app
@@ -493,6 +494,7 @@ def test_register_blueprint(extension_factory):
 
 
 def test_invalid_decorated_static_limit_blueprint(caplog):
+    caplog.set_level(logging.INFO)
     app = Flask(__name__)
     limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)
     bp = Blueprint("bp1", __name__)
@@ -513,6 +515,7 @@ def test_invalid_decorated_static_limit_blueprint(caplog):
 
 
 def test_invalid_decorated_dynamic_limits_blueprint(caplog):
+    caplog.set_level(logging.INFO)
     app = Flask(__name__)
     app.config.setdefault("X", "2 per sec")
     limiter = Limiter(app, default_limits=["1/second"], key_func=get_remote_address)

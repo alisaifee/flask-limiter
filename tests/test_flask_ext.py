@@ -207,6 +207,7 @@ def test_key_func(extension_factory):
 
 
 def test_logging(caplog):
+    caplog.set_level(logging.INFO)
     app = Flask(__name__)
     limiter = Limiter(app, key_func=get_remote_address)
 
@@ -219,10 +220,11 @@ def test_logging(caplog):
         assert 200 == cli.get("/t1").status_code
         assert 429 == cli.get("/t1").status_code
     assert len(caplog.records) == 1
-    assert caplog.records[0].levelname == "WARNING"
+    assert caplog.records[0].levelname == "INFO"
 
 
-def test_reuse_logging():
+def test_reuse_logging(caplog):
+    caplog.set_level(logging.INFO)
     app = Flask(__name__)
     app_handler = mock.Mock()
     app_handler.level = logging.INFO
