@@ -3,6 +3,18 @@
 Changelog
 =========
 
+v2.8.0
+------
+Release Date: 2022-11-13
+
+* Breaking changes
+
+  * Any exception raised when calling an ``on_breach`` callback will
+    be re-raised instead of being absorbed unless ``swallow_errors`` is set.
+    In the case of ``swallow_errors`` the exception will now be logged
+    at ``ERROR`` level instead of ``WARN``
+  * Reduce log level of rate limit exceeded log messages to ``INFO``
+
 v2.7.0
 ------
 Release Date: 2022-10-25
@@ -692,6 +704,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
