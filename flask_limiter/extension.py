@@ -987,10 +987,10 @@ class Limiter:
                         if isinstance(cb_response, flask.wrappers.Response):
                             on_breach_response = cb_response
                     except Exception as err:  # noqa
-                        self.logger.warning(
-                            "on_breach callback failed with error %s", err
-                        )
-
+                        if self._swallow_errors:
+                            self.logger.exception("on_breach callback failed")
+                        else:
+                            raise err
         if failed_limits:
             raise RateLimitExceeded(
                 sorted(failed_limits, key=lambda x: x[0].limit)[0][0],
