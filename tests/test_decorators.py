@@ -615,8 +615,8 @@ def test_async_route(extension_factory):
         assert cli.get("/t2").status_code == 200
 
 
-def test_on_breach_callback(extension_factory, caplog):
-    app, limiter = extension_factory()
+def test_on_breach_callback_swallow_errors(extension_factory, caplog):
+    app, limiter = extension_factory(swallow_errors=True)
 
     callbacks = []
 
@@ -650,10 +650,10 @@ def test_on_breach_callback(extension_factory, caplog):
         assert cli.get("/fail").status_code == 429
 
     assert len(callbacks) == 1
-    assert (
-        caplog.records[-1].message
-        == "on_breach callback failed with error division by zero"
-    )
+
+    log = caplog.records[-1]
+    assert log.message == "on_breach callback failed with error division by zero"
+    assert log.levelname == "ERROR"
 
 
 def test_on_breach_callback_custom_response(extension_factory):
@@ -670,6 +670,12 @@ def test_on_breach_callback_custom_response(extension_factory):
             f"default custom response {request_limit.limit} @ {request.path}", 429
         )
 
+    def on_breach_invalid():
+        ...
+
+    def on_breach_fail(request_limit):
+        1 / 0
+
     app, limiter = extension_factory(on_breach=default_on_breach_with_response)
 
     @app.route("/")
@@ -677,29 +683,47 @@ def test_on_breach_callback_custom_response(extension_factory):
     def root():
         return "root"
 
-    @app.route("/other")
+    @app.route("/t1")
     @limiter.limit("1/second")
-    def other():
-        return "other"
+    def t1():
+        return "t1"
 
-    @app.route("/fail")
+    @app.route("/t2")
     @limiter.limit("1/second", on_breach=on_breach_with_response)
-    def fail():
-        return "fail"
+    def t2():
+        return "t2"
+
+    @app.route("/t3")
+    @limiter.limit("1/second", on_breach=on_breach_invalid)
+    def t3():
+        return "t3"
+
+    @app.route("/t4")
+    @limiter.limit("1/second", on_breach=on_breach_fail)
+    def t4():
+        return "t4"
 
     with app.test_client() as cli:
         assert cli.get("/").status_code == 200
         resp = cli.get("/")
         assert resp.status_code == 429
         assert resp.text == "default custom response 1 per 1 second @ /"
-        assert cli.get("/other").status_code == 200
-        resp = cli.get("/other")
+        assert cli.get("/t1").status_code == 200
+        resp = cli.get("/t1")
         assert resp.status_code == 429
-        assert resp.text == "default custom response 1 per 1 second @ /other"
-        assert cli.get("/fail").status_code == 200
-        resp = cli.get("/fail")
+        assert resp.text == "default custom response 1 per 1 second @ /t1"
+        assert cli.get("/t2").status_code == 200
+        resp = cli.get("/t2")
         assert resp.status_code == 429
-        assert resp.text == "custom response 1 per 1 second @ /fail"
+        assert resp.text == "custom response 1 per 1 second @ /t2"
+        resp = cli.get("/t3")
+        assert resp.status_code == 200
+        resp = cli.get("/t3")
+        assert resp.status_code == 500
+        resp = cli.get("/t4")
+        assert resp.status_code == 200
+        resp = cli.get("/t4")
+        assert resp.status_code == 500
 
 
 def test_limit_multiple_cost(extension_factory):

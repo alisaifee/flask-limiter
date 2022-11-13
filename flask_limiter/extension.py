@@ -97,7 +97,7 @@ class Limiter:
      upon instantiation.
     :param auto_check: whether to automatically check the rate limit in
      the before_request chain of the application. default ``True``
-    :param swallow_errors: whether to swallow errors when hitting a rate
+    :param swallow_errors: whether to swallow any errors when hitting a rate
      limit. An exception will still be logged. default ``False``
     :param fail_on_first_breach: whether to stop processing remaining limits
      after the first breach. default ``True``
@@ -179,7 +179,6 @@ class Limiter:
         self._swallow_errors = swallow_errors
         self._fail_on_first_breach = fail_on_first_breach
         self._on_breach = on_breach
-
         # No longer optional
         assert key_func
 
@@ -987,10 +986,12 @@ class Limiter:
                         if isinstance(cb_response, flask.wrappers.Response):
                             on_breach_response = cb_response
                     except Exception as err:  # noqa
-                        self.logger.warning(
-                            "on_breach callback failed with error %s", err
-                        )
-
+                        if self._swallow_errors:
+                            self.logger.exception(
+                                "on_breach callback failed with error %s", err
+                            )
+                        else:
+                            raise err
         if failed_limits:
             raise RateLimitExceeded(
                 sorted(failed_limits, key=lambda x: x[0].limit)[0][0],

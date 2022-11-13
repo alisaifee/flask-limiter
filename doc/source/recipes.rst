@@ -109,6 +109,11 @@ For example::
             429
           )
 
+.. note::
+   .. versionchanged:: 2.8.0
+      Any errors encountered when calling an :paramref:`~Limiter.on_breach` callback will
+      be re-raised unless :paramref:`~Limiter.swallow_errors` is set to ``True``
+
 For specific rate limit decorated routes
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. versionadded:: 2.6.0
