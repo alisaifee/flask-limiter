@@ -179,7 +179,6 @@ class Limiter:
         self._swallow_errors = swallow_errors
         self._fail_on_first_breach = fail_on_first_breach
         self._on_breach = on_breach
-
         # No longer optional
         assert key_func
 
@@ -988,7 +987,9 @@ class Limiter:
                             on_breach_response = cb_response
                     except Exception as err:  # noqa
                         if self._swallow_errors:
-                            self.logger.exception("on_breach callback failed")
+                            self.logger.exception(
+                                "on_breach callback failed with error %s", err
+                            )
                         else:
                             raise err
         if failed_limits:
