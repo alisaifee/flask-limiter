@@ -23,8 +23,9 @@ provided by the `limits <https://github.com/alisaifee/limits>`_ library.
 
 ----
 
-Sponsored by Zuplo - fully-managed API Gateway with rate limiting, authentication, and more.
-Add rate limiting to your API in minutes, try it at `zuplo.com <https://zuplo.link/3NuX0co>`_
+Sponsored by `Zuplo <https://zuplo.link/3NuX0co>`_ a fully-managed API Gateway for developers.
+Add `dynamic rate-limiting <https://zuplo.link/flask-dynamic-rate-limit>`_ authentication and more to any API in minutes.
+Learn more at `zuplo.com <https://zuplo.link/3NuX0co>`_
 
 ----
 
