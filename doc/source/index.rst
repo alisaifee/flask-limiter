@@ -9,6 +9,19 @@
     :align: center
     :class: logo
 
+.. container:: sponsorship
+
+   .. container:: left
+
+      | Sponsored by `Zuplo <https://zuplo.link/3hLbXv5>`_, a fully-managed API gateway for developers.
+      | Add `dynamic rate-limiting <https://zuplo.link/3hxWXAv>`_, authentication and more to any API in minutes.
+
+   .. container:: right
+
+      .. container:: sponsorship-button
+
+         `Try Zuplo <https://zuplo.link/3hLbXv5>`_
+
 =============
 Flask-Limiter
 =============

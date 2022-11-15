@@ -12,10 +12,73 @@ body[data-theme="dark"] img.logo, body[data-theme="dark"] img.sidebar-logo {
 }
 .badges {
   display: flex;
-  padding: 5px;
-  flex-direction: rootow;
+  padding: 10px;
+  flex-direction: row;
   justify-content: center;
 }
 .header-badge {
   padding: 2px;
+}
+
+.sponsorship {
+  display: flex;
+  padding: 5px;
+  flex-direction: row;
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  border-top: solid 1pt var(--bg3);
+  border-bottom: solid 1pt var(--bg3);
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-weight: 500;
+  font-size: smaller;
+}
+.sponsorship a {
+  color: rgb(255, 0, 189);
+  text-decoration: none;
+}
+
+.sponsorship .left {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.sponsorship .right {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 10px;
+}
+.sponsorship-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.sponsorship-button a {
+  background-color: rgb(255, 0, 189);
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  font-family: "Be Vietnam Pro", sans-serif;
+  padding: 10px 10px 9px;
+  border-radius: 10px;
+  border: 1pt solid rgb(255, 0, 189);
+  text-align: center;
+}
+.sponsorship-button a:hover {
+  background-color: white;
+  text-align: center;
+  border: solid 1pt black;
+  color: black;
+}
+
+@media only screen and (max-width: 768px) {
+  .sponsorship {
+    flex-direction: column;
+  }
+  .sponsorship .left {
+    text-align: center;
+  }
+  .sponsorship .right {
+    padding: 0;
+  }
 }
