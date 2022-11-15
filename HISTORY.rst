@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.8.1
+------
+Release Date: 2022-11-15
+
+* Chores
+
+  * Add sponsorship banner to rtd
+  * Update documentation dependencies
+
 v2.8.0
 ------
 Release Date: 2022-11-13
@@ -704,6 +713,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
