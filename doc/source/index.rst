@@ -225,7 +225,7 @@ Here are a few common examples:
       limiter = Limiter(
         app, key_func=get_remote_address,
         storage_uri="redis://localhost:6379",
-        storage_options={"connect_timeout": 30},
+        storage_options={"socket_connect_timeout": 30},
         strategy="fixed-window", # or "moving-window"
       )
 
@@ -265,7 +265,7 @@ Here are a few common examples:
         app,
         key_func=get_remote_address,
         storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002",
-        storage_options={"connect_timeout": 30},
+        storage_options={"socket_connect_timeout": 30},
         strategy="fixed-window", # or "moving-window"
       )
 
