@@ -137,18 +137,26 @@ class LimitManager:
         name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
 
         limits = []
-        if not self._route_exemptions[name]:
-            for limit in self._static_route_limits.get(name, []):
+        if not self._route_exemptions[name] and not self._route_exemptions[endpoint]:
+            for limit in self._static_route_limits.get(
+                name, self._static_route_limits.get(endpoint, [])
+            ):
                 limits.append(limit)
 
-            if name in self._runtime_route_limits:
-                for group in self._runtime_route_limits[name]:
+            if (
+                name in self._runtime_route_limits
+                or endpoint in self._runtime_route_limits
+            ):
+                for group in self._runtime_route_limits.get(
+                    name, self._runtime_route_limits.get(endpoint, [])
+                ):
                     try:
                         for limit in group:
                             limits.append(limit)
                     except ValueError as e:
                         self._logger.error(
-                            f"failed to load ratelimit for view function {name}: {e}",
+                            f"failed to load ratelimit for view function {name} "
+                            f"(endpoint {endpoint}): {e}",
                         )
         return limits
 

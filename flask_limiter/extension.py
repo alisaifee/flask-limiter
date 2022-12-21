@@ -895,11 +895,16 @@ class Limiter:
         if self.__check_all_limits_exempt(endpoint):
             return []
 
-        marked_for_limiting = name in self._marked_for_limiting
+        marked_for_limiting = (
+            name in self._marked_for_limiting or endpoint in self._marked_for_limiting
+        )
         fallback_limits = []
 
         if self._storage_dead and self._fallback_limiter:
-            if in_middleware and name in self._marked_for_limiting:
+            if in_middleware and (
+                name in self._marked_for_limiting
+                or endpoint in self._marked_for_limiting
+            ):
                 pass
             else:
                 if (
@@ -1077,8 +1082,16 @@ class LimitDecorator:
         self, obj: Union[Callable[P, R], flask.Blueprint]
     ) -> Optional[Callable[P, R]]:
         is_route = not isinstance(obj, flask.Blueprint)
+
         if isinstance(obj, flask.Blueprint):
             name = obj.name
+        elif flask.request:
+            # it is possible that the endpoint was not available at the time of decoration,
+            # but it is now. If that is the case the limit might be set already by func fully
+            # qualified name - see test_invalid_ratelimit_key for an example.
+            name = f"{obj.__module__}.{obj.__name__}"
+            if name not in self.limiter._marked_for_limiting:
+                name = flask.request.endpoint or name
         else:
             name = f"{obj.__module__}.{obj.__name__}"
 
