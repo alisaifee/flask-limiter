@@ -11,7 +11,7 @@ pymemcache
 pymongo
 
 # For the tests themselves
-coverage
+coverage<7
 hiro>0.1.6
 pytest
 pytest-cov
