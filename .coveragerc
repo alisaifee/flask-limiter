@@ -1,9 +1,9 @@
 [run]
 omit =
-    /*/flask_limiter/_compat.py
-    /*/flask_limiter/_version*
-    /*/tests/*.py
-    /*/flask_limiter/contrib/*.py
+    /**/flask_limiter/_compat.py
+    /**/flask_limiter/_version*
+    /**/tests/*.py
+    /**/flask_limiter/contrib/*.py
     versioneer.py
     setup.py
 [report]
