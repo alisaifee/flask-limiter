@@ -117,5 +117,10 @@ def kitchensink_factory(extension_factory):
 
 
 @pytest.fixture(scope="session")
+def docker_services_project_name():
+    return "flask-limiter"
+
+
+@pytest.fixture(scope="session")
 def docker_compose_files(pytestconfig):
     return ["docker-compose.yml"]
