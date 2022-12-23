@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import typing
 import weakref
 from typing import Callable, Iterator, List, Optional, Sequence, Tuple, Union
@@ -11,6 +12,13 @@ from limits.strategies import RateLimiter
 
 if typing.TYPE_CHECKING:
     from .extension import Limiter
+
+# Monkey patch RateLimitItem until the minimum
+# requirement for limits is increased to >= 2.8
+if not RateLimitItem.__hash__:  # type: ignore[truthy-function]
+    RateLimitItem.__hash__ = lambda s: hash(
+        (s.namespace, s.amount, s.multiples, s.GRANULARITY)
+    )
 
 
 class RequestLimit:
@@ -65,36 +73,27 @@ class RequestLimit:
         return self.window[1]
 
 
+@dataclasses.dataclass(eq=True, unsafe_hash=True)
 class Limit:
     """
     simple wrapper to encapsulate limits and their context
     """
 
-    def __init__(
-        self,
-        limit: RateLimitItem,
-        key_func: Callable[[], str],
-        scope: Optional[Union[str, Callable[[str], str]]],
-        per_method: bool,
-        methods: Optional[Sequence[str]],
-        error_message: Optional[str],
-        exempt_when: Optional[Callable[[], bool]],
-        override_defaults: Optional[bool],
-        deduct_when: Optional[Callable[[Response], bool]],
-        on_breach: Optional[Callable[[RequestLimit], Optional[Response]]],
-        cost: Union[Callable[[], int], int],
-    ) -> None:
-        self.limit = limit
-        self.key_func = key_func
-        self.__scope = scope
-        self.per_method = per_method
-        self.methods = methods
-        self.error_message = error_message
-        self.exempt_when = exempt_when
-        self.override_defaults = override_defaults
-        self.deduct_when = deduct_when
-        self.on_breach = on_breach
-        self._cost = cost
+    limit: RateLimitItem
+    key_func: Callable[[], str]
+    _scope: Optional[Union[str, Callable[[str], str]]]
+    per_method: bool = False
+    methods: Optional[Sequence[str]] = None
+    error_message: Optional[str] = None
+    exempt_when: Optional[Callable[[], bool]] = None
+    override_defaults: Optional[bool] = False
+    deduct_when: Optional[Callable[[Response], bool]] = None
+    on_breach: Optional[Callable[[RequestLimit], Optional[Response]]] = None
+    _cost: Union[Callable[[], int], int] = 1
+
+    def __post_init__(self) -> None:
+        if self.methods:
+            self.methods = [k.lower() for k in self.methods]
 
     @property
     def is_exempt(self) -> bool:
@@ -107,9 +106,9 @@ class Limit:
     @property
     def scope(self) -> Optional[str]:
         return (
-            self.__scope(request.endpoint or "")
-            if callable(self.__scope)
-            else self.__scope
+            self._scope(request.endpoint or "")
+            if callable(self._scope)
+            else self._scope
         )
 
     @property
@@ -134,50 +133,37 @@ class Limit:
         return args
 
 
+@dataclasses.dataclass(eq=True, unsafe_hash=True)
 class LimitGroup:
     """
     represents a group of related limits either from a string or a callable
     that returns one
     """
 
-    def __init__(
-        self,
-        limit_provider: Union[Callable[[], str], str],
-        key_function: Callable[[], str],
-        scope: Optional[Union[str, Callable[[str], str]]],
-        per_method: bool,
-        methods: Optional[Sequence[str]],
-        error_message: Optional[str],
-        exempt_when: Optional[Callable[[], bool]],
-        override_defaults: Optional[bool],
-        deduct_when: Optional[Callable[[Response], bool]],
-        on_breach: Optional[Callable[[RequestLimit], Optional[Response]]],
-        cost: Optional[Union[Callable[[], int], int]],
-    ) -> None:
-        self.__limit_provider = limit_provider
-        self.__scope = scope
-        self.key_function = key_function
-        self.per_method = per_method
-        self.methods = methods and [m.lower() for m in methods] or methods
-        self.error_message = error_message
-        self.exempt_when = exempt_when
-        self.override_defaults = override_defaults
-        self.deduct_when = deduct_when
-        self.on_breach = on_breach
-        self.cost = cost or 1
+    limit_provider: Union[Callable[[], str], str]
+    key_function: Callable[[], str]
+    scope: Optional[Union[str, Callable[[str], str]]] = None
+    methods: Optional[Sequence[str]] = None
+    error_message: Optional[str] = None
+    exempt_when: Optional[Callable[[], bool]] = None
+    override_defaults: Optional[bool] = False
+    deduct_when: Optional[Callable[[Response], bool]] = None
+    on_breach: Optional[Callable[[RequestLimit], Optional[Response]]] = None
+    per_method: bool = False
+    cost: Optional[Union[Callable[[], int], int]] = None
 
     def __iter__(self) -> Iterator[Limit]:
         limit_items = parse_many(
-            self.__limit_provider()
-            if callable(self.__limit_provider)
-            else self.__limit_provider
+            self.limit_provider()
+            if callable(self.limit_provider)
+            else self.limit_provider
         )
 
         for limit in limit_items:
             yield Limit(
                 limit,
                 self.key_function,
-                self.__scope,
+                self.scope,
                 self.per_method,
                 self.methods,
                 self.error_message,
@@ -185,5 +171,5 @@ class LimitGroup:
                 self.override_defaults,
                 self.deduct_when,
                 self.on_breach,
-                self.cost,
+                self.cost or 1,
             )

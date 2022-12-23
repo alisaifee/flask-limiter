@@ -188,17 +188,8 @@ class Limiter:
         _default_limits = (
             [
                 LimitGroup(
-                    limit,
-                    self._key_func,
-                    None,
-                    False,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    1,
+                    limit_provider=limit,
+                    key_function=self._key_func,
                 )
                 for limit in default_limits
             ]
@@ -209,17 +200,9 @@ class Limiter:
         _application_limits = (
             [
                 LimitGroup(
-                    limit,
-                    self._key_func,
-                    "global",
-                    False,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    1,
+                    limit_provider=limit,
+                    key_function=self._key_func,
+                    scope="global",
                 )
                 for limit in application_limits
             ]
@@ -231,17 +214,8 @@ class Limiter:
             for limit in in_memory_fallback:
                 self._in_memory_fallback.append(
                     LimitGroup(
-                        limit,
-                        self._key_func,
-                        None,
-                        False,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        1,
+                        limit_provider=limit,
+                        key_function=self._key_func,
                     )
                 )
 
@@ -371,17 +345,10 @@ class Limiter:
             self.limit_manager.set_application_limits(
                 [
                     LimitGroup(
-                        app_limits,
-                        self._key_func,
-                        "global",
-                        False,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        None,
-                        self._application_limits_cost,
+                        limit_provider=app_limits,
+                        key_function=self._key_func,
+                        scope="global",
+                        cost=self._application_limits_cost,
                     )
                 ]
             )
@@ -397,17 +364,12 @@ class Limiter:
             self.limit_manager.set_default_limits(
                 [
                     LimitGroup(
-                        conf_limits,
-                        self._key_func,
-                        None,
-                        self._default_limits_per_method,
-                        None,
-                        None,
-                        self._default_limits_exempt_when,
-                        None,
-                        self._default_limits_deduct_when,
-                        None,
-                        self._default_limits_cost,
+                        limit_provider=conf_limits,
+                        key_function=self._key_func,
+                        per_method=self._default_limits_per_method,
+                        exempt_when=self._default_limits_exempt_when,
+                        deduct_when=self._default_limits_deduct_when,
+                        cost=self._default_limits_cost,
                     )
                 ]
             )
@@ -680,17 +642,11 @@ class Limiter:
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
                 LimitGroup(
-                    fallback_limits,
-                    self._key_func,
-                    None,
-                    False,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    1,
+                    limit_provider=fallback_limits,
+                    key_function=self._key_func,
+                    scope=None,
+                    per_method=False,
+                    cost=1,
                 )
             ]
 
@@ -1086,33 +1042,33 @@ class LimitDecorator:
 
         if callable(self.limit_value):
             dynamic_limit = LimitGroup(
-                self.limit_value,
-                self.key_func,
-                self.scope,
-                self.per_method,
-                self.methods,
-                self.error_message,
-                self.exempt_when,
-                self.override_defaults,
-                self.deduct_when,
-                self.on_breach,
-                self.cost,
+                limit_provider=self.limit_value,
+                key_function=self.key_func,
+                scope=self.scope,
+                per_method=self.per_method,
+                methods=self.methods,
+                error_message=self.error_message,
+                exempt_when=self.exempt_when,
+                override_defaults=self.override_defaults,
+                deduct_when=self.deduct_when,
+                on_breach=self.on_breach,
+                cost=self.cost,
             )
         else:
             try:
                 static_limits = list(
                     LimitGroup(
-                        self.limit_value,
-                        self.key_func,
-                        self.scope,
-                        self.per_method,
-                        self.methods,
-                        self.error_message,
-                        self.exempt_when,
-                        self.override_defaults,
-                        self.deduct_when,
-                        self.on_breach,
-                        self.cost,
+                        limit_provider=self.limit_value,
+                        key_function=self.key_func,
+                        scope=self.scope,
+                        per_method=self.per_method,
+                        methods=self.methods,
+                        error_message=self.error_message,
+                        exempt_when=self.exempt_when,
+                        override_defaults=self.override_defaults,
+                        deduct_when=self.deduct_when,
+                        on_breach=self.on_breach,
+                        cost=self.cost,
                     )
                 )
             except ValueError as e:
