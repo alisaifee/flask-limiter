@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 # Monkey patch RateLimitItem until the minimum
 # requirement for limits is increased to >= 2.8
 if not RateLimitItem.__hash__:  # type: ignore[truthy-function]
-    RateLimitItem.__hash__ = lambda s: hash(
+    RateLimitItem.__hash__ = lambda s: hash(  # noqa
         (s.namespace, s.amount, s.multiples, s.GRANULARITY)
     )
 
