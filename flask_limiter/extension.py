@@ -233,8 +233,8 @@ class Limiter:
         self.limit_manager = LimitManager(
             application_limits=_application_limits,
             default_limits=_default_limits,
-            static_route_limits={},
-            dynamic_route_limits={},
+            static_decorated_limits={},
+            dynamic_decorated_limits={},
             static_blueprint_limits={},
             dynamic_blueprint_limits={},
             route_exemptions=self._route_exemptions,
@@ -1112,9 +1112,13 @@ class LimitDecorator:
             self.limiter._marked_for_limiting.add(name)
 
             if dynamic_limit:
-                self.limiter.limit_manager.add_runtime_route_limits(name, dynamic_limit)
+                self.limiter.limit_manager.add_decorated_runtime_limit(
+                    name, dynamic_limit
+                )
             else:
-                self.limiter.limit_manager.add_static_route_limits(name, *static_limits)
+                self.limiter.limit_manager.add_decorated_static_limit(
+                    name, *static_limits
+                )
 
             @wraps(obj)
             def __inner(*a: P.args, **k: P.kwargs) -> R:

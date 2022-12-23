@@ -15,8 +15,8 @@ class LimitManager:
         self,
         application_limits: List[LimitGroup],
         default_limits: List[LimitGroup],
-        static_route_limits: Dict[str, List[Limit]],
-        dynamic_route_limits: Dict[str, List[LimitGroup]],
+        static_decorated_limits: Dict[str, List[Limit]],
+        dynamic_decorated_limits: Dict[str, List[LimitGroup]],
         static_blueprint_limits: Dict[str, List[Limit]],
         dynamic_blueprint_limits: Dict[str, List[LimitGroup]],
         route_exemptions: Dict[str, ExemptionScope],
@@ -24,8 +24,8 @@ class LimitManager:
     ) -> None:
         self._application_limits = application_limits
         self._default_limits = default_limits
-        self._static_route_limits = static_route_limits
-        self._runtime_route_limits = dynamic_route_limits
+        self._static_decorated_limits = static_decorated_limits
+        self._runtime_decorated_limits = dynamic_decorated_limits
         self._static_blueprint_limits = static_blueprint_limits
         self._runtime_blueprint_limits = dynamic_blueprint_limits
         self._route_exemptions = route_exemptions
@@ -46,14 +46,14 @@ class LimitManager:
     def set_default_limits(self, limits: List[LimitGroup]) -> None:
         self._default_limits = limits
 
-    def add_runtime_route_limits(self, route: str, limit: LimitGroup) -> None:
-        self._runtime_route_limits.setdefault(route, []).append(limit)
+    def add_decorated_runtime_limit(self, route: str, limit: LimitGroup) -> None:
+        self._runtime_decorated_limits.setdefault(route, []).append(limit)
 
     def add_runtime_blueprint_limits(self, blueprint: str, limit: LimitGroup) -> None:
         self._runtime_blueprint_limits.setdefault(blueprint, []).append(limit)
 
-    def add_static_route_limits(self, route: str, *limits: Limit) -> None:
-        self._static_route_limits.setdefault(route, []).extend(limits)
+    def add_decorated_static_limit(self, route: str, *limits: Limit) -> None:
+        self._static_decorated_limits.setdefault(route, []).extend(limits)
 
     def add_static_blueprint_limits(self, blueprint: str, *limits: Limit) -> None:
         self._static_blueprint_limits.setdefault(blueprint, []).extend(limits)
@@ -143,11 +143,11 @@ class LimitManager:
     def route_limits(self, callable_name: str) -> List[Limit]:
         limits = []
         if not self._route_exemptions[callable_name]:
-            for limit in self._static_route_limits.get(callable_name, []):
+            for limit in self._static_decorated_limits.get(callable_name, []):
                 limits.append(limit)
 
-            if callable_name in self._runtime_route_limits:
-                for group in self._runtime_route_limits[callable_name]:
+            if callable_name in self._runtime_decorated_limits:
+                for group in self._runtime_decorated_limits[callable_name]:
                     try:
                         for limit in group:
                             limits.append(limit)
