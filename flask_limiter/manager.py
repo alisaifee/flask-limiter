@@ -77,7 +77,14 @@ class LimitManager:
         before_request_context = in_middleware and marked_for_limiting
         route_limits = []
         if not in_middleware and endpoint:
-            route_limits.extend(self.route_limits(app, endpoint, callable_name))
+            if not callable_name:
+                view_func = app.view_functions.get(endpoint, None)
+                name = (
+                    f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+                )
+            else:
+                name = callable_name
+            route_limits.extend(self.route_limits(name))
         if blueprint:
             if not before_request_context and (
                 not route_limits
@@ -133,28 +140,20 @@ class LimitManager:
                     blueprint_exemption_scope |= exemption
             return route_exemption_scope | blueprint_exemption_scope
 
-    def route_limits(
-        self, app: flask.Flask, endpoint: str, callable_name: Optional[str] = None
-    ) -> List[Limit]:
-        if callable_name:
-            name = callable_name
-        else:
-            view_func = app.view_functions.get(endpoint, None)
-            name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
-
+    def route_limits(self, callable_name: str) -> List[Limit]:
         limits = []
-        if not self._route_exemptions[name]:
-            for limit in self._static_route_limits.get(name, []):
+        if not self._route_exemptions[callable_name]:
+            for limit in self._static_route_limits.get(callable_name, []):
                 limits.append(limit)
 
-            if name in self._runtime_route_limits:
-                for group in self._runtime_route_limits[name]:
+            if callable_name in self._runtime_route_limits:
+                for group in self._runtime_route_limits[callable_name]:
                     try:
                         for limit in group:
                             limits.append(limit)
                     except ValueError as e:
                         self._logger.error(
-                            f"failed to load ratelimit for view function {name}: {e}",
+                            f"failed to load ratelimit for function {callable_name}: {e}",
                         )
         return limits
 
