@@ -1032,7 +1032,7 @@ class LimitDecorator:
         self.key_func = key_func or self.limiter._key_func
         self.scope = scope if shared else None
         self.per_method = per_method
-        self.methods = methods
+        self.methods = tuple(methods) if methods else None
         self.error_message = error_message
         self.exempt_when = exempt_when
         self.override_defaults = override_defaults
