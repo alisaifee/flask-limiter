@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import Dict, Iterable, List, Optional, Set, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 
 import flask
+from ordered_set import OrderedSet
 
 from .constants import ExemptionScope
 from .wrappers import Limit, LimitGroup
@@ -15,10 +16,10 @@ class LimitManager:
         self,
         application_limits: List[LimitGroup],
         default_limits: List[LimitGroup],
-        static_decorated_limits: Dict[str, Set[Limit]],
-        dynamic_decorated_limits: Dict[str, Set[LimitGroup]],
-        static_blueprint_limits: Dict[str, Set[Limit]],
-        dynamic_blueprint_limits: Dict[str, Set[LimitGroup]],
+        static_decorated_limits: Dict[str, OrderedSet[Limit]],
+        dynamic_decorated_limits: Dict[str, OrderedSet[LimitGroup]],
+        static_blueprint_limits: Dict[str, OrderedSet[Limit]],
+        dynamic_blueprint_limits: Dict[str, OrderedSet[LimitGroup]],
         route_exemptions: Dict[str, ExemptionScope],
         blueprint_exemptions: Dict[str, ExemptionScope],
     ) -> None:
@@ -47,16 +48,20 @@ class LimitManager:
         self._default_limits = limits
 
     def add_decorated_runtime_limit(self, route: str, limit: LimitGroup) -> None:
-        self._runtime_decorated_limits.setdefault(route, set()).add(limit)
+        self._runtime_decorated_limits.setdefault(route, OrderedSet()).add(limit)
 
     def add_runtime_blueprint_limits(self, blueprint: str, limit: LimitGroup) -> None:
-        self._runtime_blueprint_limits.setdefault(blueprint, set()).add(limit)
+        self._runtime_blueprint_limits.setdefault(blueprint, OrderedSet()).add(limit)
 
     def add_decorated_static_limit(self, route: str, *limits: Limit) -> None:
-        self._static_decorated_limits.setdefault(route, set()).update(set(limits))
+        self._static_decorated_limits.setdefault(route, OrderedSet()).update(
+            OrderedSet(limits)
+        )
 
     def add_static_blueprint_limits(self, blueprint: str, *limits: Limit) -> None:
-        self._static_blueprint_limits.setdefault(blueprint, set()).update(set(limits))
+        self._static_blueprint_limits.setdefault(blueprint, OrderedSet()).update(
+            OrderedSet(limits)
+        )
 
     def add_route_exemption(self, route: str, scope: ExemptionScope) -> None:
         self._route_exemptions[route] = scope
@@ -174,7 +179,7 @@ class LimitManager:
                 or ancestor_exemptions
             ):
                 blueprint_self_dynamic_limits = self._runtime_blueprint_limits.get(
-                    blueprint_name, set()
+                    blueprint_name, OrderedSet()
                 )
                 blueprint_dynamic_limits: Iterable[LimitGroup] = (
                     itertools.chain(
@@ -222,7 +227,7 @@ class LimitManager:
                                 f"failed to load ratelimit for blueprint {blueprint_name}: {e}",
                             )
             blueprint_self_limits = self._static_blueprint_limits.get(
-                blueprint_name, set()
+                blueprint_name, OrderedSet()
             )
             if (
                 not (
