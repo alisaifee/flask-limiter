@@ -857,3 +857,21 @@ def test_non_route_decoration_multiple_sequential_limits_per_request(extension_f
         with app.test_client() as cli:
             assert 200 == cli.get("/t1").status_code
             assert 429 == cli.get("/t1").status_code
+
+
+def test_inner_function_decoration(extension_factory):
+    app, limiter = extension_factory()
+
+    @app.route("/t1")
+    def route1():
+        @limiter.limit("5/second")
+        def l1():
+            return "l1"
+
+        return l1()
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            for _ in range(5):
+                assert 200 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t1").status_code
