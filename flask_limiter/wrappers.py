@@ -3,7 +3,7 @@ from __future__ import annotations
 import dataclasses
 import typing
 import weakref
-from typing import Callable, Iterator, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Iterator, List, Optional, Tuple, Union
 
 from flask import request
 from flask.wrappers import Response
@@ -83,7 +83,7 @@ class Limit:
     key_func: Callable[[], str]
     _scope: Optional[Union[str, Callable[[str], str]]]
     per_method: bool = False
-    methods: Optional[Sequence[str]] = None
+    methods: Optional[Tuple[str, ...]] = None
     error_message: Optional[str] = None
     exempt_when: Optional[Callable[[], bool]] = None
     override_defaults: Optional[bool] = False
@@ -93,7 +93,7 @@ class Limit:
 
     def __post_init__(self) -> None:
         if self.methods:
-            self.methods = [k.lower() for k in self.methods]
+            self.methods = tuple([k.lower() for k in self.methods])
 
     @property
     def is_exempt(self) -> bool:
@@ -143,7 +143,7 @@ class LimitGroup:
     limit_provider: Union[Callable[[], str], str]
     key_function: Callable[[], str]
     scope: Optional[Union[str, Callable[[str], str]]] = None
-    methods: Optional[Sequence[str]] = None
+    methods: Optional[Tuple[str, ...]] = None
     error_message: Optional[str] = None
     exempt_when: Optional[Callable[[], bool]] = None
     override_defaults: Optional[bool] = False

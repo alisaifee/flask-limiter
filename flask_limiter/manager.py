@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import flask
+from ordered_set import OrderedSet
 
 from .constants import ExemptionScope
 from .wrappers import Limit, LimitGroup
@@ -15,17 +16,17 @@ class LimitManager:
         self,
         application_limits: List[LimitGroup],
         default_limits: List[LimitGroup],
-        static_route_limits: Dict[str, List[Limit]],
-        dynamic_route_limits: Dict[str, List[LimitGroup]],
-        static_blueprint_limits: Dict[str, List[Limit]],
-        dynamic_blueprint_limits: Dict[str, List[LimitGroup]],
+        static_decorated_limits: Dict[str, OrderedSet[Limit]],
+        dynamic_decorated_limits: Dict[str, OrderedSet[LimitGroup]],
+        static_blueprint_limits: Dict[str, OrderedSet[Limit]],
+        dynamic_blueprint_limits: Dict[str, OrderedSet[LimitGroup]],
         route_exemptions: Dict[str, ExemptionScope],
         blueprint_exemptions: Dict[str, ExemptionScope],
     ) -> None:
         self._application_limits = application_limits
         self._default_limits = default_limits
-        self._static_route_limits = static_route_limits
-        self._runtime_route_limits = dynamic_route_limits
+        self._static_decorated_limits = static_decorated_limits
+        self._runtime_decorated_limits = dynamic_decorated_limits
         self._static_blueprint_limits = static_blueprint_limits
         self._runtime_blueprint_limits = dynamic_blueprint_limits
         self._route_exemptions = route_exemptions
@@ -46,17 +47,21 @@ class LimitManager:
     def set_default_limits(self, limits: List[LimitGroup]) -> None:
         self._default_limits = limits
 
-    def add_runtime_route_limits(self, route: str, limit: LimitGroup) -> None:
-        self._runtime_route_limits.setdefault(route, []).append(limit)
+    def add_decorated_runtime_limit(self, route: str, limit: LimitGroup) -> None:
+        self._runtime_decorated_limits.setdefault(route, OrderedSet()).add(limit)
 
     def add_runtime_blueprint_limits(self, blueprint: str, limit: LimitGroup) -> None:
-        self._runtime_blueprint_limits.setdefault(blueprint, []).append(limit)
+        self._runtime_blueprint_limits.setdefault(blueprint, OrderedSet()).add(limit)
 
-    def add_static_route_limits(self, route: str, *limits: Limit) -> None:
-        self._static_route_limits.setdefault(route, []).extend(limits)
+    def add_decorated_static_limit(self, route: str, *limits: Limit) -> None:
+        self._static_decorated_limits.setdefault(route, OrderedSet()).update(
+            OrderedSet(limits)
+        )
 
     def add_static_blueprint_limits(self, blueprint: str, *limits: Limit) -> None:
-        self._static_blueprint_limits.setdefault(blueprint, []).extend(limits)
+        self._static_blueprint_limits.setdefault(blueprint, OrderedSet()).update(
+            OrderedSet(limits)
+        )
 
     def add_route_exemption(self, route: str, scope: ExemptionScope) -> None:
         self._route_exemptions[route] = scope
@@ -69,6 +74,7 @@ class LimitManager:
         app: flask.Flask,
         endpoint: Optional[str] = None,
         blueprint: Optional[str] = None,
+        callable_name: Optional[str] = None,
         in_middleware: bool = False,
         marked_for_limiting: bool = False,
         fallback_limits: Optional[List[Limit]] = None,
@@ -76,7 +82,14 @@ class LimitManager:
         before_request_context = in_middleware and marked_for_limiting
         route_limits = []
         if not in_middleware and endpoint:
-            route_limits.extend(self.route_limits(app, endpoint))
+            if not callable_name:
+                view_func = app.view_functions.get(endpoint, None)
+                name = (
+                    f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+                )
+            else:
+                name = callable_name
+            route_limits.extend(self.route_limits(name))
         if blueprint:
             if not before_request_context and (
                 not route_limits
@@ -132,23 +145,20 @@ class LimitManager:
                     blueprint_exemption_scope |= exemption
             return route_exemption_scope | blueprint_exemption_scope
 
-    def route_limits(self, app: flask.Flask, endpoint: str) -> List[Limit]:
-        view_func = app.view_functions.get(endpoint, None)
-        name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
-
+    def route_limits(self, callable_name: str) -> List[Limit]:
         limits = []
-        if not self._route_exemptions[name]:
-            for limit in self._static_route_limits.get(name, []):
+        if not self._route_exemptions[callable_name]:
+            for limit in self._static_decorated_limits.get(callable_name, []):
                 limits.append(limit)
 
-            if name in self._runtime_route_limits:
-                for group in self._runtime_route_limits[name]:
+            if callable_name in self._runtime_decorated_limits:
+                for group in self._runtime_decorated_limits[callable_name]:
                     try:
                         for limit in group:
                             limits.append(limit)
                     except ValueError as e:
                         self._logger.error(
-                            f"failed to load ratelimit for view function {name}: {e}",
+                            f"failed to load ratelimit for function {callable_name}: {e}",
                         )
         return limits
 
@@ -169,7 +179,7 @@ class LimitManager:
                 or ancestor_exemptions
             ):
                 blueprint_self_dynamic_limits = self._runtime_blueprint_limits.get(
-                    blueprint_name, []
+                    blueprint_name, OrderedSet()
                 )
                 blueprint_dynamic_limits: Iterable[LimitGroup] = (
                     itertools.chain(
@@ -217,7 +227,7 @@ class LimitManager:
                                 f"failed to load ratelimit for blueprint {blueprint_name}: {e}",
                             )
             blueprint_self_limits = self._static_blueprint_limits.get(
-                blueprint_name, []
+                blueprint_name, OrderedSet()
             )
             if (
                 not (

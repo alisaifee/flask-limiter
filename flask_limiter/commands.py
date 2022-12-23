@@ -117,12 +117,16 @@ def render_limits(
 
     for limit in limits:
         if endpoint:
+            view_func = app.view_functions.get(endpoint, None)
             source = (
                 "blueprint"
                 if blueprint
                 and limit in limiter.limit_manager.blueprint_limits(app, blueprint)
                 else "route"
-                if limit in limiter.limit_manager.route_limits(app, endpoint)
+                if limit
+                in limiter.limit_manager.route_limits(
+                    f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+                )
                 else "default"
             )
         else:
