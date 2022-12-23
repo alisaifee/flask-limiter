@@ -69,6 +69,7 @@ class LimitManager:
         app: flask.Flask,
         endpoint: Optional[str] = None,
         blueprint: Optional[str] = None,
+        callable_name: Optional[str] = None,
         in_middleware: bool = False,
         marked_for_limiting: bool = False,
         fallback_limits: Optional[List[Limit]] = None,
@@ -76,7 +77,7 @@ class LimitManager:
         before_request_context = in_middleware and marked_for_limiting
         route_limits = []
         if not in_middleware and endpoint:
-            route_limits.extend(self.route_limits(app, endpoint))
+            route_limits.extend(self.route_limits(app, endpoint, callable_name))
         if blueprint:
             if not before_request_context and (
                 not route_limits
@@ -132,9 +133,14 @@ class LimitManager:
                     blueprint_exemption_scope |= exemption
             return route_exemption_scope | blueprint_exemption_scope
 
-    def route_limits(self, app: flask.Flask, endpoint: str) -> List[Limit]:
-        view_func = app.view_functions.get(endpoint, None)
-        name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+    def route_limits(
+        self, app: flask.Flask, endpoint: str, callable_name: Optional[str] = None
+    ) -> List[Limit]:
+        if callable_name:
+            name = callable_name
+        else:
+            view_func = app.view_functions.get(endpoint, None)
+            name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
 
         limits = []
         if not self._route_exemptions[name]:

@@ -799,3 +799,61 @@ def test_shared_limit_multiple_cost_callable(extension_factory):
             assert 200 == cli.get("/t1").status_code
             assert 200 == cli.get("/t2").status_code
             assert 429 == cli.get("/t2").status_code
+
+
+def test_non_route_decoration_static_limits(extension_factory):
+    app, limiter = extension_factory()
+
+    @limiter.limit("1/second")
+    def limited():
+        return "limited"
+
+    @app.route("/t1")
+    def route1():
+        return limited()
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t1").status_code
+
+
+def test_non_route_decoration_dynamic_limits(extension_factory):
+    app, limiter = extension_factory()
+
+    def dynamic_limit_provider():
+        return "1/second"
+
+    @limiter.limit(dynamic_limit_provider)
+    def limited():
+        return "limited"
+
+    @app.route("/t1")
+    def route1():
+        return limited()
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t1").status_code
+
+
+def test_non_route_decoration_multiple_sequential_limits_per_request(extension_factory):
+    app, limiter = extension_factory()
+
+    @limiter.limit("10/second")
+    def l1():
+        return "l1"
+
+    @limiter.limit("1/second")
+    def l2():
+        return "l2"
+
+    @app.route("/t1")
+    def route1():
+        return l1() + l2()
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t1").status_code

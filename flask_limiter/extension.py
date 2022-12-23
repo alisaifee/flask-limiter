@@ -45,7 +45,7 @@ from .wrappers import Limit, LimitGroup, RequestLimit
 
 @dataclasses.dataclass
 class LimiterContext:
-    rate_limiting_complete: bool = False
+    rate_limiting_complete: dict[str, bool] = dataclasses.field(default_factory=dict)
     view_rate_limit: Optional[RequestLimit] = None
     view_rate_limits: List[RequestLimit] = dataclasses.field(default_factory=list)
     conditional_deductions: Dict[Limit, List[str]] = dataclasses.field(
@@ -53,7 +53,7 @@ class LimiterContext:
     )
 
     def reset(self) -> None:
-        self.rate_limiting_complete = False
+        self.rate_limiting_complete.clear()
         self.view_rate_limit = None
         self.view_rate_limits.clear()
         self.conditional_deductions.clear()
@@ -680,7 +680,7 @@ class Limiter:
 
         :raises: RateLimitExceeded
         """
-        self._check_request_limit(False)
+        self._check_request_limit(in_middleware=False)
 
     def reset(self) -> None:
         """
@@ -830,25 +830,36 @@ class Limiter:
 
         return response
 
-    def __check_all_limits_exempt(self, endpoint: Optional[str]) -> bool:
+    def __check_all_limits_exempt(
+        self, endpoint: Optional[str], callable_name: Optional[str] = None
+    ) -> bool:
         return bool(
             not endpoint
             or not (self.enabled and self.initialized)
             or endpoint == "static"
             or any(fn() for fn in self._request_filters)
-            or self.context.rate_limiting_complete
+            or (
+                self.context.rate_limiting_complete.get(callable_name, False)
+                if callable_name
+                else any(self.context.rate_limiting_complete.values())
+            )
         )
 
     def __filter_limits(
         self,
         endpoint: Optional[str],
         blueprint: Optional[str],
+        callable_name: Optional[str],
         in_middleware: bool = False,
     ) -> List[Limit]:
-        view_func = flask.current_app.view_functions.get(endpoint or "", None)
-        name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
 
-        if self.__check_all_limits_exempt(endpoint):
+        if callable_name:
+            name = callable_name
+        else:
+            view_func = flask.current_app.view_functions.get(endpoint or "", None)
+            name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+
+        if self.__check_all_limits_exempt(endpoint, callable_name):
             return []
 
         marked_for_limiting = name in self._marked_for_limiting
@@ -873,6 +884,7 @@ class Limiter:
             flask.current_app,
             endpoint,
             blueprint,
+            name,
             in_middleware,
             marked_for_limiting,
             fallback_limits,
@@ -954,11 +966,16 @@ class Limiter:
                 response=on_breach_response,
             )
 
-    def _check_request_limit(self, in_middleware: bool = True) -> None:
+    def _check_request_limit(
+        self, callable_name: Optional[str] = None, in_middleware: bool = True
+    ) -> None:
         endpoint = flask.request.endpoint or ""
         try:
             all_limits = self.__filter_limits(
-                flask.request.endpoint, flask.request.blueprint, in_middleware
+                flask.request.endpoint,
+                flask.request.blueprint,
+                callable_name,
+                in_middleware,
             )
             self.__evaluate_limits(endpoint, all_limits)
         except Exception as e:
@@ -971,7 +988,9 @@ class Limiter:
                     " in-memory storage"
                 )
                 self._storage_dead = True
-                self._check_request_limit(in_middleware)
+                self._check_request_limit(
+                    callable_name=callable_name, in_middleware=in_middleware
+                )
             else:
                 if self._swallow_errors:
                     self.logger.exception("Failed to rate limit. Swallowing error")
@@ -1101,10 +1120,12 @@ class LimitDecorator:
             def __inner(*a: P.args, **k: P.kwargs) -> R:
                 if (
                     self.limiter._auto_check
-                    and not self.limiter.context.rate_limiting_complete
+                    and not self.limiter.context.rate_limiting_complete.get(name, False)
                 ):
-                    self.limiter._check_request_limit(False)
-                    self.limiter.context.rate_limiting_complete = True
+                    self.limiter._check_request_limit(
+                        in_middleware=False, callable_name=name
+                    )
+                    self.limiter.context.rate_limiting_complete[name] = True
                 return cast(
                     R, flask.current_app.ensure_sync(cast(Callable[P, R], obj))(*a, **k)
                 )
