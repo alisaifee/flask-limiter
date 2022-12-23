@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 import warnings
 
+from .util import get_qualified_name
+
 """
 Flask-Limiter Extension
 """
@@ -609,9 +611,7 @@ class Limiter:
         if isinstance(obj, flask.Blueprint):
             self.limit_manager.add_blueprint_exemption(obj.name, flags)
         elif obj:
-            self.limit_manager.add_route_exemption(
-                f"{obj.__module__}.{obj.__name__}", flags
-            )
+            self.limit_manager.add_route_exemption(get_qualified_name(obj), flags)
         else:
             _R = TypeVar("_R")
             _WO = TypeVar("_WO", Callable[..., _R], flask.Blueprint)
@@ -857,7 +857,7 @@ class Limiter:
             name = callable_name
         else:
             view_func = flask.current_app.view_functions.get(endpoint or "", None)
-            name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+            name = get_qualified_name(view_func) if view_func else ""
 
         if self.__check_all_limits_exempt(endpoint, callable_name):
             return []
@@ -1055,8 +1055,7 @@ class LimitDecorator:
         if isinstance(obj, flask.Blueprint):
             name = obj.name
         else:
-            name = f"{obj.__module__}.{obj.__name__}"
-
+            name = get_qualified_name(obj)
         dynamic_limit, static_limits = None, []
 
         if callable(self.limit_value):

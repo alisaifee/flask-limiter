@@ -870,8 +870,19 @@ def test_inner_function_decoration(extension_factory):
 
         return l1()
 
+    @app.route("/t2")
+    def route2():
+        @limiter.limit("1/second")
+        def l1():
+            return "l1"
+
+        return l1()
+
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
-            for _ in range(5):
+            assert 200 == cli.get("/t1").status_code
+            assert 200 == cli.get("/t2").status_code
+            for _ in range(4):
                 assert 200 == cli.get("/t1").status_code
             assert 429 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t2").status_code

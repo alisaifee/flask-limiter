@@ -20,6 +20,7 @@ from werkzeug.routing import Rule
 
 from flask_limiter import Limiter
 from flask_limiter.constants import ConfigVars, ExemptionScope, HeaderNames
+from flask_limiter.util import get_qualified_name
 from flask_limiter.wrappers import Limit
 
 limiter_theme = Theme(
@@ -125,7 +126,7 @@ def render_limits(
                 else "route"
                 if limit
                 in limiter.limit_manager.route_limits(
-                    f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+                    get_qualified_name(view_func) if view_func else ""
                 )
                 else "default"
             )

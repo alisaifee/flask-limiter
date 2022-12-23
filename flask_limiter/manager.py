@@ -8,6 +8,7 @@ import flask
 from ordered_set import OrderedSet
 
 from .constants import ExemptionScope
+from .util import get_qualified_name
 from .wrappers import Limit, LimitGroup
 
 
@@ -84,9 +85,7 @@ class LimitManager:
         if not in_middleware and endpoint:
             if not callable_name:
                 view_func = app.view_functions.get(endpoint, None)
-                name = (
-                    f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
-                )
+                name = get_qualified_name(view_func) if view_func else ""
             else:
                 name = callable_name
             route_limits.extend(self.route_limits(name))
@@ -124,7 +123,7 @@ class LimitManager:
         self, app: flask.Flask, endpoint: Optional[str], blueprint: Optional[str]
     ) -> ExemptionScope:
         view_func = app.view_functions.get(endpoint or "", None)
-        name = f"{view_func.__module__}.{view_func.__name__}" if view_func else ""
+        name = get_qualified_name(view_func) if view_func else ""
         route_exemption_scope = self._route_exemptions[name]
         blueprint_instance = app.blueprints.get(blueprint) if blueprint else None
 
