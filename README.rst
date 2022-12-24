@@ -16,10 +16,7 @@ Flask-Limiter
 
 |docs| |ci| |codecov| |pypi| |license|
 
-Flask-Limiter provides rate limiting features to flask applications.
-
-It allows configuring various backends to persist the rate limits, which is
-provided by the `limits <https://github.com/alisaifee/limits>`_ library.
+**Flask-Limiter** provides rate limiting features to `Flask <https://flask.palletsprojects.com>`_ applications.
 
 ----
 
@@ -29,8 +26,32 @@ Learn more at `zuplo.com <https://zuplo.link/3NuX0co>`_
 
 ----
 
+
+You can configure rate limits at different levels such as:
+
+- Application wide global limits per user
+- Default limits per route
+- By `Blueprints <https://flask-limiter.readthedocs.io/en/latest/recipes.html#rate-limiting-all-routes-in-a-blueprint>`_
+- By `Class-based views <https://flask-limiter.readthedocs.io/en/latest/recipes.html#using-flask-pluggable-views>`_
+- By `individual routes <https://flask-limiter.readthedocs.io/en/latest/index.html#decorators-to-declare-rate-limits>`_
+
+**Flask-Limiter** can be `configured <https://flask-limiter.readthedocs.io/en/latest/configuration.html>`_ to fit your application in many ways, including:
+
+- Persistance to various commonly used `storage backends <https://flask-limiter.readthedocs.io/en/latest/#configuring-a-storage-backend>`_
+  (such as Redis, Memcached & MongoDB)
+  via `limits <https://limits.readthedocs.io/en/stable/storage.html>`__
+- Any rate limiting strategy supported by `limits <https://limits.readthedocs.io/en/stable/strategies.html>`__
+
+Follow the quickstart below to get started or `read the documentation <http://flask-limiter.readthedocs.org/en/latest>`_ for more details.
+
+
 Quickstart
 ===========
+Install
+
+.. code-block:: bash
+
+    pip install Flask-Limiter
 
 Add the rate limiter to your flask app.
 
@@ -111,4 +132,3 @@ with it.
 
 
 
-For more details `read the docs <http://flask-limiter.readthedocs.org/en/latest>`_
