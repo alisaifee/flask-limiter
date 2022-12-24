@@ -1,4 +1,4 @@
-limits>=2.3
+limits>=2.8
 Flask>=2
 ordered-set>4,<5
 rich>=12,<13
