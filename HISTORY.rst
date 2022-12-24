@@ -3,6 +3,24 @@
 Changelog
 =========
 
+v2.9.0
+------
+Release Date: 2022-12-24
+
+* Features
+
+  * Allow using `limit` & `shared_limit` decorators on pure
+    functions that are not decorated as routes. The functions
+    when called from within a request context will get rate limited.
+  * Allow using `limit` as a context manager to rate limit a code block
+    explicitly within a request
+
+* Chores
+
+  * Updated development dependencies
+  * Fix error running tests depending on docker locally
+  * Update internals to use dataclasses
+
 v2.8.1
 ------
 Release Date: 2022-11-15
@@ -713,6 +731,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
