@@ -4,7 +4,6 @@ from functools import wraps
 from unittest import mock
 
 import hiro
-import pytest
 from flask import Blueprint, Flask, current_app, g, make_response, request
 from werkzeug.exceptions import BadRequest
 
@@ -802,14 +801,13 @@ def test_shared_limit_multiple_cost_callable(extension_factory):
             assert 429 == cli.get("/t2").status_code
 
 
-@pytest.mark.xfail
 def test_non_route_decoration_static_limits_override_defaults(extension_factory):
     """
     Should this be supported?
     """
     app, limiter = extension_factory(default_limits=["1/second"])
 
-    @limiter.limit("10/second")
+    @limiter.limit("2/second")
     def limited():
         return "limited"
 
@@ -818,7 +816,7 @@ def test_non_route_decoration_static_limits_override_defaults(extension_factory)
         return "t1"
 
     @app.route("/t2")
-    @limiter.limit("10/second")
+    @limiter.limit("2/second")
     def route2():
         return "t2"
 
@@ -826,16 +824,53 @@ def test_non_route_decoration_static_limits_override_defaults(extension_factory)
     def route3():
         return limited()
 
-    with hiro.Timeline().freeze():
+    @app.route("/t4")
+    def route4():
+        @limiter.limit("2/day", override_defaults=False)
+        def __inner():
+            return "inner"
+
+        return __inner()
+
+    @app.route("/t5/<int:param>")
+    def route5(param: int):
+        @limiter.limit("2/day", override_defaults=False)
+        def __inner1():
+            return "inner1"
+
+        @limiter.limit("3/day")
+        def __inner2():
+            return "inner2"
+
+        return __inner1() if param < 10 else __inner2()
+
+    with hiro.Timeline().freeze() as timeline:
         with app.test_client() as cli:
             assert 200 == cli.get("/t1").status_code
             assert 429 == cli.get("/t1").status_code
-            for i in range(10):
+            for i in range(2):
                 assert 200 == cli.get("/t2").status_code
             assert 429 == cli.get("/t2").status_code
-            for i in range(10):
-                assert 200 == cli.get("/t3").status_code
+            for i in range(2):
+                assert 200 == cli.get("/t3").status_code, i
             assert 429 == cli.get("/t3").status_code
+            assert 200 == cli.get("/t4").status_code
+            assert 429 == cli.get("/t4").status_code
+            timeline.forward(1)
+            assert 200 == cli.get("/t4").status_code
+            timeline.forward(1)
+            assert 429 == cli.get("/t4").status_code
+            assert 200 == cli.get("/t5/1").status_code
+            assert 429 == cli.get("/t5/1").status_code
+            timeline.forward(1)
+            assert 200 == cli.get("/t5/1").status_code
+            timeline.forward(1)
+            assert 429 == cli.get("/t5/1").status_code
+            timeline.forward(60 * 60 * 24)
+            assert 200 == cli.get("/t5/11").status_code
+            assert 200 == cli.get("/t5/11").status_code
+            assert 200 == cli.get("/t5/11").status_code
+            assert 429 == cli.get("/t5/11").status_code
 
 
 def test_non_route_decoration_static_limits(extension_factory):

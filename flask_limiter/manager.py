@@ -32,6 +32,7 @@ class LimitManager:
         self._runtime_blueprint_limits = dynamic_blueprint_limits
         self._route_exemptions = route_exemptions
         self._blueprint_exemptions = blueprint_exemptions
+        self._endpoint_hints: Dict[str, OrderedSet[str]] = {}
         self._logger = logging.getLogger("flask-limiter")
 
     @property
@@ -70,6 +71,12 @@ class LimitManager:
     def add_blueprint_exemption(self, blueprint: str, scope: ExemptionScope) -> None:
         self._blueprint_exemptions[blueprint] = scope
 
+    def add_endpoint_hint(self, endpoint: str, callable: str) -> None:
+        self._endpoint_hints.setdefault(endpoint, OrderedSet()).add(callable)
+
+    def has_hints(self, endpoint: str) -> bool:
+        return bool(self._endpoint_hints.get(endpoint))
+
     def resolve_limits(
         self,
         app: flask.Flask,
@@ -82,13 +89,19 @@ class LimitManager:
     ) -> List[Limit]:
         before_request_context = in_middleware and marked_for_limiting
         route_limits = []
-        if not in_middleware and endpoint:
-            if not callable_name:
-                view_func = app.view_functions.get(endpoint, None)
-                name = get_qualified_name(view_func) if view_func else ""
-            else:
-                name = callable_name
-            route_limits.extend(self.route_limits(name))
+        hinted_limits = []
+        if endpoint:
+            if not in_middleware:
+                if not callable_name:
+                    view_func = app.view_functions.get(endpoint, None)
+                    name = get_qualified_name(view_func) if view_func else ""
+                else:
+                    name = callable_name
+                route_limits.extend(self.route_limits(name))
+
+            for hint in self._endpoint_hints.get(endpoint, OrderedSet()):
+                hinted_limits.extend(self.route_limits(hint))
+
         if blueprint:
             if not before_request_context and (
                 not route_limits
@@ -112,10 +125,20 @@ class LimitManager:
             combined_defaults = all(
                 not limit.override_defaults for limit in route_limits
             )
-
-            if (explicit_limits_exempt or combined_defaults) and not (
-                before_request_context or exemption_scope & ExemptionScope.DEFAULT
-            ):
+            hinted_limits_request_defaults = (
+                all(not limit.override_defaults for limit in hinted_limits)
+                if hinted_limits
+                else False
+            )
+            if (
+                (explicit_limits_exempt or combined_defaults)
+                and (
+                    not (
+                        before_request_context
+                        or exemption_scope & ExemptionScope.DEFAULT
+                    )
+                )
+            ) or hinted_limits_request_defaults:
                 all_limits += self.default_limits
         return all_limits
 

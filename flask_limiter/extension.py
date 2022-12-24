@@ -3,6 +3,8 @@ from __future__ import annotations
 import dataclasses
 import warnings
 
+from ordered_set import OrderedSet
+
 from .util import get_qualified_name
 
 """
@@ -53,6 +55,7 @@ class LimiterContext:
     conditional_deductions: Dict[Limit, List[str]] = dataclasses.field(
         default_factory=dict
     )
+    seen_limits: OrderedSet[Limit] = dataclasses.field(default_factory=OrderedSet)
 
     def reset(self) -> None:
         self.rate_limiting_complete.clear()
@@ -862,7 +865,10 @@ class Limiter:
         if self.__check_all_limits_exempt(endpoint, callable_name):
             return []
 
-        marked_for_limiting = name in self._marked_for_limiting
+        marked_for_limiting = (
+            name in self._marked_for_limiting
+            or self.limit_manager.has_hints(endpoint or "")
+        )
         fallback_limits = []
 
         if self._storage_dead and self._fallback_limiter:
@@ -879,8 +885,7 @@ class Limiter:
                     self.__check_backend_count = 0
                 else:
                     fallback_limits = list(itertools.chain(*self._in_memory_fallback))
-
-        return self.limit_manager.resolve_limits(
+        resolved_limits = self.limit_manager.resolve_limits(
             flask.current_app,
             endpoint,
             blueprint,
@@ -889,6 +894,9 @@ class Limiter:
             marked_for_limiting,
             fallback_limits,
         )
+        limits = OrderedSet(resolved_limits) - self.context.seen_limits
+        self.context.seen_limits.update(limits)
+        return list(limits)
 
     def __evaluate_limits(self, endpoint: str, limits: List[Limit]) -> None:
         failed_limits: List[Tuple[Limit, List[str]]] = []
@@ -988,6 +996,7 @@ class Limiter:
                     " in-memory storage"
                 )
                 self._storage_dead = True
+                self.context.seen_limits.clear()
                 self._check_request_limit(
                     callable_name=callable_name, in_middleware=in_middleware
                 )
@@ -1109,7 +1118,6 @@ class LimitDecorator:
             return None
         else:
             self.limiter._marked_for_limiting.add(name)
-
             if dynamic_limit:
                 self.limiter.limit_manager.add_decorated_runtime_limit(
                     name, dynamic_limit
@@ -1125,9 +1133,19 @@ class LimitDecorator:
                     self.limiter._auto_check
                     and not self.limiter.context.rate_limiting_complete.get(name, False)
                 ):
+                    if flask.request.endpoint:
+                        view_func = flask.current_app.view_functions.get(
+                            flask.request.endpoint, None
+                        )
+                        if view_func and not get_qualified_name(view_func) == name:
+                            self.limiter.limit_manager.add_endpoint_hint(
+                                flask.request.endpoint, name
+                            )
+
                     self.limiter._check_request_limit(
                         in_middleware=False, callable_name=name
                     )
+
                     self.limiter.context.rate_limiting_complete[name] = True
                 return cast(
                     R, flask.current_app.ensure_sync(cast(Callable[P, R], obj))(*a, **k)
