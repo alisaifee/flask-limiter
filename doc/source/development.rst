@@ -20,10 +20,7 @@ you will need a working docker installation to run all the tests.
 
    $ pytest
 
-|version|
 
-|release|
-
-Running the tests will automatically invoke :program:`docker-compose` with the config at :githubsrc:`docker-compose.yml`
+Running the tests will automatically invoke :program:`docker-compose` with the following config (:githubsrc:`docker-compose.yml`)
 
 .. literalinclude:: ../../docker-compose.yml
