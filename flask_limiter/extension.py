@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import dataclasses
+import traceback
 import warnings
+from types import TracebackType
 
 from ordered_set import OrderedSet
 
@@ -17,7 +19,7 @@ import time
 import weakref
 from collections import defaultdict
 from functools import partial, wraps
-from typing import overload
+from typing import Type, overload
 
 import flask
 import flask.wrappers
@@ -427,7 +429,7 @@ class Limiter:
         cost: Union[int, Callable[[], int]] = 1,
     ) -> LimitDecorator:
         """
-        decorator to be used for rate limiting individual routes or blueprints.
+        Decorator to be used for rate limiting individual routes or blueprints.
 
         :param limit_value: rate limit string or a callable that returns a
          string. :ref:`ratelimit-string` for more details.
@@ -458,6 +460,17 @@ class Limiter:
          raised.
         :param cost: The cost of a hit or a function that
          takes no parameters and returns the cost as an integer (Default: ``1``).
+
+        Changes
+          - .. versionadded:: 2.9.0 The returned object can also be used as a context manager
+            for rate limiting a code block inside a view. For example::
+
+                @app.route("/")
+                def route():
+                   try:
+                       with limiter.limit("10/second"):
+                           # something expensive
+                   except RateLimitExceeded: pass
         """
 
         return LimitDecorator(
@@ -1048,6 +1061,73 @@ class LimitDecorator:
         self.deduct_when = deduct_when
         self.on_breach = on_breach
         self.cost = cost
+        self.is_static = not callable(self.limit_value)
+
+    @property
+    def dynamic_limit(self) -> Optional[LimitGroup]:
+        return LimitGroup(
+            limit_provider=self.limit_value,
+            key_function=self.key_func,
+            scope=self.scope,
+            per_method=self.per_method,
+            methods=self.methods,
+            error_message=self.error_message,
+            exempt_when=self.exempt_when,
+            override_defaults=self.override_defaults,
+            deduct_when=self.deduct_when,
+            on_breach=self.on_breach,
+            cost=self.cost,
+        )
+
+    @property
+    def static_limits(self) -> List[Limit]:
+        return list(
+            LimitGroup(
+                limit_provider=self.limit_value,
+                key_function=self.key_func,
+                scope=self.scope,
+                per_method=self.per_method,
+                methods=self.methods,
+                error_message=self.error_message,
+                exempt_when=self.exempt_when,
+                override_defaults=self.override_defaults,
+                deduct_when=self.deduct_when,
+                on_breach=self.on_breach,
+                cost=self.cost,
+            )
+        )
+
+    def __enter__(self) -> None:
+        tb = traceback.extract_stack(limit=2)
+        qualified_location = f"{tb[0].filename}:{tb[0].name}:{tb[0].lineno}"
+
+        # TODO: if use as a context manager becomes interesting/valuable
+        #  a less hacky approach than using the traceback and piggy backing
+        #  on the limit manager's knowledge of decorated limits might be worth it.
+        if not self.is_static:
+            self.limiter.limit_manager.add_decorated_runtime_limit(
+                qualified_location, self.dynamic_limit
+            )
+        else:
+            self.limiter.limit_manager.add_decorated_static_limit(
+                qualified_location, *self.static_limits
+            )
+
+        self.limiter.limit_manager.add_endpoint_hint(
+            flask.request.endpoint, qualified_location
+        )
+
+        self.limiter._check_request_limit(
+            in_middleware=False, callable_name=qualified_location
+        )
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        ...
 
     @overload
     def __call__(self, obj: Callable[P, R]) -> Callable[P, R]:
@@ -1065,39 +1145,11 @@ class LimitDecorator:
             name = obj.name
         else:
             name = get_qualified_name(obj)
-        dynamic_limit, static_limits = None, []
-
-        if callable(self.limit_value):
-            dynamic_limit = LimitGroup(
-                limit_provider=self.limit_value,
-                key_function=self.key_func,
-                scope=self.scope,
-                per_method=self.per_method,
-                methods=self.methods,
-                error_message=self.error_message,
-                exempt_when=self.exempt_when,
-                override_defaults=self.override_defaults,
-                deduct_when=self.deduct_when,
-                on_breach=self.on_breach,
-                cost=self.cost,
-            )
-        else:
+        dynamic_limit = self.dynamic_limit if not self.is_static else None
+        static_limits = []
+        if self.is_static:
             try:
-                static_limits = list(
-                    LimitGroup(
-                        limit_provider=self.limit_value,
-                        key_function=self.key_func,
-                        scope=self.scope,
-                        per_method=self.per_method,
-                        methods=self.methods,
-                        error_message=self.error_message,
-                        exempt_when=self.exempt_when,
-                        override_defaults=self.override_defaults,
-                        deduct_when=self.deduct_when,
-                        on_breach=self.on_breach,
-                        cost=self.cost,
-                    )
-                )
+                static_limits = self.static_limits
             except ValueError as e:
                 self.limiter.logger.error(
                     "failed to configure %s %s (%s)",
@@ -1107,7 +1159,7 @@ class LimitDecorator:
                 )
 
         if isinstance(obj, flask.Blueprint):
-            if dynamic_limit:
+            if not self.is_static:
                 self.limiter.limit_manager.add_runtime_blueprint_limits(
                     name, dynamic_limit
                 )
@@ -1118,7 +1170,7 @@ class LimitDecorator:
             return None
         else:
             self.limiter._marked_for_limiting.add(name)
-            if dynamic_limit:
+            if not self.is_static:
                 self.limiter.limit_manager.add_decorated_runtime_limit(
                     name, dynamic_limit
                 )
