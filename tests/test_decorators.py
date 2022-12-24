@@ -4,6 +4,7 @@ from functools import wraps
 from unittest import mock
 
 import hiro
+import pytest
 from flask import Blueprint, Flask, current_app, g, make_response, request
 from werkzeug.exceptions import BadRequest
 
@@ -799,6 +800,42 @@ def test_shared_limit_multiple_cost_callable(extension_factory):
             assert 200 == cli.get("/t1").status_code
             assert 200 == cli.get("/t2").status_code
             assert 429 == cli.get("/t2").status_code
+
+
+@pytest.mark.xfail
+def test_non_route_decoration_static_limits_override_defaults(extension_factory):
+    """
+    Should this be supported?
+    """
+    app, limiter = extension_factory(default_limits=["1/second"])
+
+    @limiter.limit("10/second")
+    def limited():
+        return "limited"
+
+    @app.route("/t1")
+    def route1():
+        return "t1"
+
+    @app.route("/t2")
+    @limiter.limit("10/second")
+    def route2():
+        return "t2"
+
+    @app.route("/t3")
+    def route3():
+        return limited()
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t1").status_code
+            for i in range(10):
+                assert 200 == cli.get("/t2").status_code
+            assert 429 == cli.get("/t2").status_code
+            for i in range(10):
+                assert 200 == cli.get("/t3").status_code
+            assert 429 == cli.get("/t3").status_code
 
 
 def test_non_route_decoration_static_limits(extension_factory):
