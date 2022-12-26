@@ -492,6 +492,8 @@ class Limiter:
         limit_value: Union[str, Callable[[], str]],
         scope: Union[str, Callable[[str], str]],
         key_func: Optional[Callable[[], str]] = None,
+        per_method: bool = False,
+        methods: Optional[List[str]] = None,
         error_message: Optional[str] = None,
         exempt_when: Optional[Callable[[], bool]] = None,
         override_defaults: bool = True,
@@ -511,6 +513,10 @@ class Limiter:
         :param key_func: function/lambda to extract the unique
          identifier for the rate limit. defaults to remote address of the
          request.
+        :param per_method: whether the limit is sub categorized into the
+         http method of the request.
+        :param methods: if specified, only the methods in this list will
+         be rate limited (default: ``None``).
         :param error_message: string (or callable that returns one) to override
          the error message used in the response.
         :param function exempt_when: function/lambda used to decide if the rate
@@ -538,6 +544,8 @@ class Limiter:
             key_func,
             True,
             scope,
+            per_method=per_method,
+            methods=methods,
             error_message=error_message,
             exempt_when=exempt_when,
             override_defaults=override_defaults,
