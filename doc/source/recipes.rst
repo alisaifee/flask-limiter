@@ -209,12 +209,15 @@ to the :class:`~flask_limiter.Limiter` constructor.
  argument only changes whether the request will count towards depleting the rate limit.
 
 
-Using Flask Pluggable Views
----------------------------
+.. _using-flask-pluggable-views:
 
-If you are using a class based approach to defining view function, the regular
-method of decorating a view function to apply a per route rate limit will not
-work. You can add rate limits to your view classes using the following approach.
+Rate limiting Class-based Views
+-------------------------------
+
+If you are taking a class based approach for defining views,
+the recommended method (:doc:`flask:views`) of adding decorators is
+to add the :meth:`~Limiter.limit` decorator to :attr:`~flask.views.View.decorators` in your view subclass as shown in the
+example below
 
 
 .. code-block:: python
@@ -224,6 +227,7 @@ work. You can add rate limits to your view classes using the following approach.
 
    class MyView(flask.views.MethodView):
        decorators = [limiter.limit("10/second")]
+
        def get(self):
            return "get"
 
@@ -238,9 +242,6 @@ work. You can add rate limits to your view classes using the following approach.
  can be restricted to only certain http methods by passing them as a list to the `methods`
  keyword argument.
 
-
-The above approach has been tested with sub-classes of  :class:`flask.views.View`,
-:class:`flask.views.MethodView` and :class:`flask_restful.Resource`.
 
 Rate limiting all routes in a :class:`~flask.Blueprint`
 -------------------------------------------------------
