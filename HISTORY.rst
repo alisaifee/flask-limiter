@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v2.9.2
+------
+Release Date: 2022-12-26
+
+* Feature
+
+  * Extend customization by http method to shared_limit decorator
+
 v2.9.1
 ------
 Release Date: 2022-12-26
@@ -740,6 +748,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
