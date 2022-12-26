@@ -19,7 +19,7 @@ def test_multiple_decorators(extension_factory):
 
     @app.route("/t1")
     @limiter.limit(
-        "100 per minute", lambda: "test"
+        "100 per minute", key_func=lambda: "test"
     )  # effectively becomes a limit for all users
     @limiter.limit("50/minute")  # per ip as per default key_func
     def t1():

@@ -190,7 +190,7 @@ def test_key_func(extension_factory):
     app, limiter = extension_factory()
 
     @app.route("/t1")
-    @limiter.limit("100 per minute", lambda: "test")
+    @limiter.limit("100 per minute", key_func=lambda: "test")
     def t1():
         return "test"
 
