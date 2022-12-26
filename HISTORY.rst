@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v2.9.1
+------
+Release Date: 2022-12-26
+
+* Chores
+
+  * Update documentation quick start
+  * Refresh documentation for class based views
+
 v2.9.0
 ------
 Release Date: 2022-12-24
@@ -731,6 +740,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
