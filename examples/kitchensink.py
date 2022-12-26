@@ -1,3 +1,4 @@
+import os
 import jinja2
 from flask import Blueprint, Flask, jsonify, request, render_template, make_response
 from flask.views import View
@@ -36,6 +37,7 @@ def app():
         default_limits_cost=default_cost,
         application_limits=["5000/hour"],
         headers_enabled=True,
+        storage_uri=os.environ.get("FLASK_RATELIMIT_STORAGE_URI", "memory://"),
     )
 
     app = Flask(__name__)
