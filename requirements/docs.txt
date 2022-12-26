@@ -8,4 +8,6 @@ sphinx-inline-tabs==2022.1.2b11
 sphinx-issues==3.0.1
 sphinxext-opengraph==0.7.4
 sphinx-paramlinks==0.5.4
-sphinxcontrib-programoutput2==2.0a1
+sphinxcontrib-programoutput==0.17
+
+
