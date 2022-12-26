@@ -104,38 +104,8 @@ Quick start
 ===========
 A very basic setup can be achieved as follows:
 
-.. code-block:: python
-
-   from flask import Flask
-   from flask_limiter import Limiter
-   from flask_limiter.util import get_remote_address
-
-   app = Flask(__name__)
-   limiter = Limiter(
-       app,
-       key_func=get_remote_address,
-       default_limits=["200 per day", "50 per hour"],
-       storage_uri="memory://",
-   )
-   @app.route("/slow")
-   @limiter.limit("1 per day")
-   def slow():
-       return ":("
-
-   @app.route("/medium")
-   @limiter.limit("1/second", override_defaults=False)
-   def medium():
-       return ":|"
-
-   @app.route("/fast")
-   def fast():
-       return ":)"
-
-   @app.route("/ping")
-   @limiter.exempt
-   def ping():
-       return "PONG"
-
+.. literalinclude:: ../../examples/sample.py
+   :language: py
 
 The above Flask app will have the following rate limiting characteristics:
 
@@ -156,6 +126,25 @@ The above Flask app will have the following rate limiting characteristics:
 Every time a request exceeds the rate limit, the view function will not get called and instead
 a `429 <http://tools.ietf.org/html/rfc6585#section-4>`_ http error will be raised.
 
+The extension adds a ``limiter`` subcommand to the :doc:`Flask CLI <flask:cli>` which can be used to inspect
+the effective configuration and applied rate limits (See :ref:`cli:Command Line Interface` for more details).
+
+Given the quick start example above:
+
+
+.. code-block:: shell
+
+   $ flask limiter config
+
+.. program-output:: FLASK_APP=../../examples/sample.py:app flask limiter config
+   :shell:
+
+.. code-block:: shell
+
+   $ flask limiter limits
+
+.. program-output:: FLASK_APP=../../examples/sample.py:app flask limiter limits
+   :shell:
 
 The Flask-Limiter extension
 ---------------------------

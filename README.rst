@@ -47,15 +47,18 @@ Follow the quickstart below to get started or `read the documentation <http://fl
 
 Quickstart
 ===========
-Install
 
+Install
+-------
 .. code-block:: bash
 
     pip install Flask-Limiter
 
-Add the rate limiter to your flask app.
-
+Add the rate limiter to your flask app
+---------------------------------------
 .. code-block:: python
+
+   # app.py
 
    from flask import Flask
    from flask_limiter import Limiter
@@ -94,40 +97,60 @@ Add the rate limiter to your flask app.
    def ping():
        return 'PONG'
 
-   app.run()
+Inspect the limits using the command line interface
+---------------------------------------------------
+.. code-block:: bash
+
+   $ FLASK_APP=app:app flask limiter list
+
+   app
+   ├── fast: /fast
+   │   ├── 2 per 1 minute
+   │   └── 1 per 1 second
+   ├── ping: /ping
+   │   └── Exempt
+   └── slow: /slow
+       └── 1 per 1 day
+
+Run the app
+-----------
+.. code-block:: bash
+
+   $ FLASK_APP=app:app flask run
 
 
-
-Test it out. The ``fast`` endpoint respects the default rate limit while the
+Test it out
+-----------
+The ``fast`` endpoint respects the default rate limit while the
 ``slow`` endpoint uses the decorated one. ``ping`` has no rate limit associated
 with it.
 
 .. code-block:: bash
 
-    $ curl localhost:5000/fast
-    42
-    $ curl localhost:5000/fast
-    42
-    $ curl localhost:5000/fast
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-    <title>429 Too Many Requests</title>
-    <h1>Too Many Requests</h1>
-    <p>2 per 1 minute</p>
-    $ curl localhost:5000/slow
-    24
-    $ curl localhost:5000/slow
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-    <title>429 Too Many Requests</title>
-    <h1>Too Many Requests</h1>
-    <p>1 per 1 day</p>
-    $ curl localhost:5000/ping
-    PONG
-    $ curl localhost:5000/ping
-    PONG
-    $ curl localhost:5000/ping
-    PONG
-    $ curl localhost:5000/ping
-    PONG
+   $ curl localhost:5000/fast
+   42
+   $ curl localhost:5000/fast
+   42
+   $ curl localhost:5000/fast
+   <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+   <title>429 Too Many Requests</title>
+   <h1>Too Many Requests</h1>
+   <p>2 per 1 minute</p>
+   $ curl localhost:5000/slow
+   24
+   $ curl localhost:5000/slow
+   <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+   <title>429 Too Many Requests</title>
+   <h1>Too Many Requests</h1>
+   <p>1 per 1 day</p>
+   $ curl localhost:5000/ping
+   PONG
+   $ curl localhost:5000/ping
+   PONG
+   $ curl localhost:5000/ping
+   PONG
+   $ curl localhost:5000/ping
+   PONG
 
 
 
