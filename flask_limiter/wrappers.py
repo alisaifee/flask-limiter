@@ -83,6 +83,7 @@ class Limit:
     deduct_when: Optional[Callable[[Response], bool]] = None
     on_breach: Optional[Callable[[RequestLimit], Optional[Response]]] = None
     _cost: Union[Callable[[], int], int] = 1
+    shared: bool = False
 
     def __post_init__(self) -> None:
         if self.methods:
@@ -144,6 +145,7 @@ class LimitGroup:
     on_breach: Optional[Callable[[RequestLimit], Optional[Response]]] = None
     per_method: bool = False
     cost: Optional[Union[Callable[[], int], int]] = None
+    shared: bool = False
 
     def __iter__(self) -> Iterator[Limit]:
         limit_items = parse_many(
@@ -165,4 +167,5 @@ class LimitGroup:
                 self.deduct_when,
                 self.on_breach,
                 self.cost or 1,
+                self.shared,
             )

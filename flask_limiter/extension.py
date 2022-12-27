@@ -209,6 +209,7 @@ class Limiter:
                     limit_provider=limit,
                     key_function=self._key_func,
                     scope="global",
+                    shared=True,
                 )
                 for limit in application_limits
             ]
@@ -352,6 +353,7 @@ class Limiter:
                         limit_provider=app_limits,
                         key_function=self._key_func,
                         scope="global",
+                        shared=True,
                         cost=self._application_limits_cost,
                     )
                 ]
@@ -924,7 +926,10 @@ class Limiter:
         limit_for_header: Optional[RequestLimit] = None
         view_limits: List[RequestLimit] = []
         for lim in sorted(limits, key=lambda x: x.limit):
-            limit_scope = lim.scope or endpoint
+            if not lim.shared and lim.scope:
+                limit_scope = f"{endpoint}:{lim.scope}"
+            else:
+                limit_scope = lim.scope or endpoint
 
             if lim.is_exempt or lim.method_exempt:
                 continue
@@ -1060,7 +1065,7 @@ class LimitDecorator:
         self.limiter: weakref.ProxyType[Limiter] = weakref.proxy(limiter)
         self.limit_value = limit_value
         self.key_func = key_func or self.limiter._key_func
-        self.scope = scope if shared else None
+        self.scope = scope
         self.per_method = per_method
         self.methods = tuple(methods) if methods else None
         self.error_message = error_message
@@ -1070,6 +1075,7 @@ class LimitDecorator:
         self.on_breach = on_breach
         self.cost = cost
         self.is_static = not callable(self.limit_value)
+        self.shared = shared
 
     @property
     def dynamic_limit(self) -> Optional[LimitGroup]:
@@ -1085,6 +1091,7 @@ class LimitDecorator:
             deduct_when=self.deduct_when,
             on_breach=self.on_breach,
             cost=self.cost,
+            shared=self.shared,
         )
 
     @property
@@ -1102,6 +1109,7 @@ class LimitDecorator:
                 deduct_when=self.deduct_when,
                 on_breach=self.on_breach,
                 cost=self.cost,
+                shared=self.shared,
             )
         )
 
