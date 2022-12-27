@@ -82,7 +82,7 @@ def test_decorated_limit_with_scope(extension_factory):
     def t(path):
         return "test"
 
-    with hiro.Timeline() as timeline:
+    with hiro.Timeline():
         with app.test_client() as cli:
             assert cli.get("/t/1").status_code == 200
             assert cli.get("/t/1").status_code == 429

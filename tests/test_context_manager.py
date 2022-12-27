@@ -52,7 +52,7 @@ def test_scoped_context_manager(extension_factory):
         with limiter.limit("1/second", scope=param):
             return "p1"
 
-    with hiro.Timeline().freeze() as timeline:
+    with hiro.Timeline().freeze():
         with app.test_client() as cli:
             assert 200 == cli.get("/t1/1").status_code
             assert 429 == cli.get("/t1/1").status_code
