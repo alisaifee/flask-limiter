@@ -288,9 +288,7 @@ class Limiter:
             self._headers_enabled = bool(config.get(ConfigVars.HEADERS_ENABLED, False))
 
         self._storage_options.update(config.get(ConfigVars.STORAGE_OPTIONS, {}))
-        storage_uri_from_config = config.get(
-            ConfigVars.STORAGE_URI, config.get(ConfigVars.STORAGE_URL, None)
-        )
+        storage_uri_from_config = config.get(ConfigVars.STORAGE_URI, None)
         if not storage_uri_from_config:
             if not self._storage_uri:
                 warnings.warn(
