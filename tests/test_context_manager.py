@@ -42,3 +42,19 @@ def test_dynamic_limits(extension_factory):
         with app.test_client() as cli:
             assert 200 == cli.get("/t1").status_code
             assert 429 == cli.get("/t1").status_code
+
+
+def test_scoped_context_manager(extension_factory):
+    app, limiter = extension_factory()
+
+    @app.route("/t1/<int:param>")
+    def t1(param: int):
+        with limiter.limit("1/second", scope=param):
+            return "p1"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1/1").status_code
+            assert 429 == cli.get("/t1/1").status_code
+            assert 200 == cli.get("/t1/2").status_code
+            assert 429 == cli.get("/t1/2").status_code

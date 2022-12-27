@@ -49,16 +49,26 @@ class LimitManager:
     def set_default_limits(self, limits: List[LimitGroup]) -> None:
         self._default_limits = limits
 
-    def add_decorated_runtime_limit(self, route: str, limit: LimitGroup) -> None:
-        self._runtime_decorated_limits.setdefault(route, OrderedSet()).add(limit)
+    def add_decorated_runtime_limit(
+        self, route: str, limit: LimitGroup, override: bool = False
+    ) -> None:
+        if not override:
+            self._runtime_decorated_limits.setdefault(route, OrderedSet()).add(limit)
+        else:
+            self._runtime_decorated_limits[route] = OrderedSet([limit])
 
     def add_runtime_blueprint_limits(self, blueprint: str, limit: LimitGroup) -> None:
         self._runtime_blueprint_limits.setdefault(blueprint, OrderedSet()).add(limit)
 
-    def add_decorated_static_limit(self, route: str, *limits: Limit) -> None:
-        self._static_decorated_limits.setdefault(route, OrderedSet()).update(
-            OrderedSet(limits)
-        )
+    def add_decorated_static_limit(
+        self, route: str, *limits: Limit, override: bool = False
+    ) -> None:
+        if not override:
+            self._static_decorated_limits.setdefault(route, OrderedSet()).update(
+                OrderedSet(limits)
+            )
+        else:
+            self._static_decorated_limits[route] = OrderedSet(limits)
 
     def add_static_blueprint_limits(self, blueprint: str, *limits: Limit) -> None:
         self._static_blueprint_limits.setdefault(blueprint, OrderedSet()).update(

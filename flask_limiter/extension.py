@@ -930,7 +930,6 @@ class Limiter:
                 limit_scope = f"{endpoint}:{lim.scope}"
             else:
                 limit_scope = lim.scope or endpoint
-
             if lim.is_exempt or lim.method_exempt:
                 continue
 
@@ -1122,11 +1121,11 @@ class LimitDecorator:
         #  on the limit manager's knowledge of decorated limits might be worth it.
         if not self.is_static:
             self.limiter.limit_manager.add_decorated_runtime_limit(
-                qualified_location, self.dynamic_limit
+                qualified_location, self.dynamic_limit, override=True
             )
         else:
             self.limiter.limit_manager.add_decorated_static_limit(
-                qualified_location, *self.static_limits
+                qualified_location, *self.static_limits, override=True
             )
 
         self.limiter.limit_manager.add_endpoint_hint(
