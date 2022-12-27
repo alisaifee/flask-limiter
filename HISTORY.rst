@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v3.0.0b1
+--------
+Release Date: 2022-12-26
+
+* Breaking changes
+
+  * Change order of extension constructor arguments to only require
+    ``key_func`` as the first positional argument and all other arguments
+    as keyword arguments.
+  * Separate positional/keyword arguments in limit/shared_limit decorators
+
+* Features
+
+  * Allow scoping regular limit decorators / context managers
+
 v2.9.2
 ------
 Release Date: 2022-12-26
@@ -748,6 +763,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
