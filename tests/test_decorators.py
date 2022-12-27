@@ -74,6 +74,22 @@ def test_exempt_routes(extension_factory):
         assert cli.get("/t4").status_code == 429
 
 
+def test_decorated_limit_with_scope(extension_factory):
+    app, limiter = extension_factory()
+
+    @app.route("/t/<path:path>")
+    @limiter.limit("1/second", scope=lambda _: request.view_args["path"])
+    def t(path):
+        return "test"
+
+    with hiro.Timeline() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/t/1").status_code == 200
+            assert cli.get("/t/1").status_code == 429
+            assert cli.get("/t/2").status_code == 200
+            assert cli.get("/t/2").status_code == 429
+
+
 def test_decorated_limit_with_conditional_deduction(extension_factory):
     app, limiter = extension_factory()
 
