@@ -125,9 +125,16 @@ class LimitManager:
                 limit.method_exempt for limit in decorated_limits
             )
 
+            # all  the decorated limits explicitly declared
+            # that they don't override the defaults - so, they should
+            # be included.
             combined_defaults = all(
                 not limit.override_defaults for limit in decorated_limits
             )
+            # previous requests to this endpoint have exercised decorated
+            # rate limits on callables that are not view functions. check
+            # if all of them declared that they don't override defaults
+            # and if so include the default limits.
             hinted_limits_request_defaults = (
                 all(not limit.override_defaults for limit in hinted_limits)
                 if hinted_limits
