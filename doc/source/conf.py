@@ -32,7 +32,7 @@ try:
         html_theme_options[
             "announcement"
         ] = f"""
-        This is a development version. The documentation for the latest version: <b>{release}</b> can be found <a href="/en/stable">here</a>
+        This is a development version. The documentation for the latest stable version can be found <a href="/en/stable">here</a>
         """
         html_title = f"{project} <small><b style='color: var(--color-brand-primary)'>{{dev}}</b></small>"
 except:
