@@ -88,7 +88,7 @@ class LimitManager:
         fallback_limits: Optional[List[Limit]] = None,
     ) -> List[Limit]:
         before_request_context = in_middleware and marked_for_limiting
-        route_limits = []
+        decorated_limits = []
         hinted_limits = []
         if endpoint:
             if not in_middleware:
@@ -97,17 +97,17 @@ class LimitManager:
                     name = get_qualified_name(view_func) if view_func else ""
                 else:
                     name = callable_name
-                route_limits.extend(self.route_limits(name))
+                decorated_limits.extend(self.decorated_limits(name))
 
             for hint in self._endpoint_hints.get(endpoint, OrderedSet()):
-                hinted_limits.extend(self.route_limits(hint))
+                hinted_limits.extend(self.decorated_limits(hint))
 
         if blueprint:
             if not before_request_context and (
-                not route_limits
-                or all(not limit.override_defaults for limit in route_limits)
+                not decorated_limits
+                or all(not limit.override_defaults for limit in decorated_limits)
             ):
-                route_limits.extend(self.blueprint_limits(app, blueprint))
+                decorated_limits.extend(self.blueprint_limits(app, blueprint))
         exemption_scope = self.exemption_scope(app, endpoint, blueprint)
         all_limits = []
 
@@ -120,10 +120,13 @@ class LimitManager:
                 if in_middleware and not (exemption_scope & ExemptionScope.APPLICATION)
                 else []
             )
-            all_limits += route_limits
-            explicit_limits_exempt = all(limit.method_exempt for limit in route_limits)
+            all_limits += decorated_limits
+            explicit_limits_exempt = all(
+                limit.method_exempt for limit in decorated_limits
+            )
+
             combined_defaults = all(
-                not limit.override_defaults for limit in route_limits
+                not limit.override_defaults for limit in decorated_limits
             )
             hinted_limits_request_defaults = (
                 all(not limit.override_defaults for limit in hinted_limits)
@@ -167,7 +170,7 @@ class LimitManager:
                     blueprint_exemption_scope |= exemption
             return route_exemption_scope | blueprint_exemption_scope
 
-    def route_limits(self, callable_name: str) -> List[Limit]:
+    def decorated_limits(self, callable_name: str) -> List[Limit]:
         limits = []
         if not self._route_exemptions[callable_name]:
             for limit in self._static_decorated_limits.get(callable_name, []):

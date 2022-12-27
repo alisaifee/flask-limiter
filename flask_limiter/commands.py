@@ -125,7 +125,7 @@ def render_limits(
                 and limit in limiter.limit_manager.blueprint_limits(app, blueprint)
                 else "route"
                 if limit
-                in limiter.limit_manager.route_limits(
+                in limiter.limit_manager.decorated_limits(
                     get_qualified_name(view_func) if view_func else ""
                 )
                 else "default"
