@@ -159,13 +159,13 @@ Using the constructor
       from flask_limiter.util import get_remote_address
       ....
 
-      limiter = Limiter(app, key_func=get_remote_address)
+      limiter = Limiter(get_remote_address, app=app)
 
 Deferred app initialization using :meth:`~flask_limiter.Limiter.init_app`
 
    .. code-block:: python
 
-      limiter = Limiter(key_func=get_remote_address)
+      limiter = Limiter(get_remote_address)
       limiter.init_app(app)
 
 At this point it might be a good idea to look at the configuration options
@@ -193,8 +193,8 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-          app,
-          key_func=get_remote_address,
+          get_remote_address,
+          app=app,
           storage_uri="memcached://localhost:11211",
           storage_options={}
       )
@@ -212,7 +212,8 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-        app, key_func=get_remote_address,
+        get_remote_address,
+        app=app,
         storage_uri="redis://localhost:6379",
         storage_options={"socket_connect_timeout": 30},
         strategy="fixed-window", # or "moving-window"
@@ -232,7 +233,8 @@ Here are a few common examples:
 
       pool = redis.connection.BlockingConnectionPool.from_url("redis://.....")
       limiter = Limiter(
-        app, key_func=get_remote_address,
+        get_remote_address,
+        app=app,
         storage_uri="redis://",
         storage_options={"connection_pool": pool},
         strategy="fixed-window", # or "moving-window"
@@ -251,8 +253,8 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-        app,
-        key_func=get_remote_address,
+        get_remote_address,
+        app=app,
         storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002",
         storage_options={"socket_connect_timeout": 30},
         strategy="fixed-window", # or "moving-window"
@@ -267,7 +269,8 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-        app, key_func=get_remote_address,
+        get_remote_address,
+        app=app,
         storage_uri="mongodb://localhost:27017",
         strategy="fixed-window", # or "moving-window"
       )

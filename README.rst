@@ -66,8 +66,8 @@ Add the rate limiter to your flask app
 
    app = Flask(__name__)
    limiter = Limiter(
-       app,
-       key_func=get_remote_address,
+       get_remote_address,
+       app=app,
        default_limits=["2 per minute", "1 per second"],
        storage_uri="memory://",
        # Redis

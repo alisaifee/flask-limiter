@@ -209,7 +209,7 @@ def test_key_func(extension_factory):
 def test_logging(caplog):
     caplog.set_level(logging.INFO)
     app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
+    limiter = Limiter(get_remote_address, app=app)
 
     @app.route("/t1")
     @limiter.limit("1/minute")
@@ -229,7 +229,7 @@ def test_reuse_logging(caplog):
     app_handler = mock.Mock()
     app_handler.level = logging.INFO
     app.logger.addHandler(app_handler)
-    limiter = Limiter(app, key_func=get_remote_address)
+    limiter = Limiter(get_remote_address, app=app)
 
     for handler in app.logger.handlers:
         limiter.logger.addHandler(handler)
@@ -273,7 +273,7 @@ def test_multiple_apps():
     app1 = Flask(__name__)
     app2 = Flask(__name__)
 
-    limiter = Limiter(default_limits=["1/second"], key_func=get_remote_address)
+    limiter = Limiter(get_remote_address, default_limits=["1/second"])
     limiter.init_app(app1)
     limiter.init_app(app2)
 
@@ -324,10 +324,10 @@ def test_multiple_apps():
 def test_headers_no_breach():
     app = Flask(__name__)
     limiter = Limiter(
-        app,
+        get_remote_address,
+        app=app,
         default_limits=["10/minute"],
         headers_enabled=True,
-        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -357,10 +357,10 @@ def test_headers_no_breach():
 def test_headers_breach():
     app = Flask(__name__)
     limiter = Limiter(
-        app,
+        get_remote_address,
+        app=app,
         default_limits=["10/minute"],
         headers_enabled=True,
-        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -386,10 +386,10 @@ def test_headers_breach():
 def test_retry_after():
     app = Flask(__name__)
     _ = Limiter(
-        app,
+        get_remote_address,
+        app=app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -409,10 +409,10 @@ def test_retry_after():
 def test_retry_after_exists_seconds():
     app = Flask(__name__)
     _ = Limiter(
-        app,
+        get_remote_address,
+        app=app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -429,10 +429,10 @@ def test_retry_after_exists_seconds():
 def test_retry_after_exists_rfc1123():
     app = Flask(__name__)
     _ = Limiter(
-        app,
+        get_remote_address,
+        app=app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -452,10 +452,10 @@ def test_custom_headers_from_config():
     app.config.setdefault(ConfigVars.HEADER_REMAINING, "X-Remaining")
     app.config.setdefault(ConfigVars.HEADER_RESET, "X-Reset")
     limiter = Limiter(
-        app,
+        get_remote_address,
+        app=app,
         default_limits=["10/minute"],
         headers_enabled=True,
-        key_func=get_remote_address,
     )
 
     @app.route("/t1")
@@ -690,9 +690,9 @@ def test_custom_key_prefix(redis_connection, extension_factory):
 
 def test_second_instance_bypassed_by_shared_g():
     app = Flask(__name__)
-    limiter1 = Limiter(app, key_func=get_remote_address)
+    limiter1 = Limiter(get_remote_address, app=app)
 
-    limiter2 = Limiter(app, key_func=get_remote_address)
+    limiter2 = Limiter(get_remote_address, app=app)
 
     @app.route("/test1")
     @limiter2.limit("1/second")
@@ -726,9 +726,9 @@ def test_second_instance_bypassed_by_shared_g():
 
 def test_independent_instances_by_key_prefix():
     app = Flask(__name__)
-    limiter1 = Limiter(app, key_prefix="lmt1", key_func=get_remote_address)
+    limiter1 = Limiter(get_remote_address, key_prefix="lmt1", app=app)
 
-    limiter2 = Limiter(app, key_prefix="lmt2", key_func=get_remote_address)
+    limiter2 = Limiter(get_remote_address, key_prefix="lmt2", app=app)
 
     @app.route("/test1")
     @limiter2.limit("1/second")
@@ -768,14 +768,12 @@ def test_independent_instances_by_key_prefix():
 
 def test_multiple_limiters_default_limits():
     app = Flask(__name__)
+    Limiter(get_remote_address, key_prefix="lmt1", app=app, default_limits=["1/second"])
     Limiter(
-        app, key_prefix="lmt1", default_limits=["1/second"], key_func=get_remote_address
-    )
-    Limiter(
-        app,
+        get_remote_address,
         key_prefix="lmt2",
         default_limits=["10/minute"],
-        key_func=get_remote_address,
+        app=app,
     )
 
     @app.route("/test1")

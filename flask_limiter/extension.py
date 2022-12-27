@@ -70,9 +70,9 @@ class Limiter:
     """
     The :class:`Limiter` class initializes the Flask-Limiter extension.
 
-    :param app: :class:`flask.Flask` instance to initialize the extension with.
     :param key_func: a callable that returns the domain to rate limit
       by.
+    :param app: :class:`flask.Flask` instance to initialize the extension with.
     :param default_limits: a variable list of strings or callables
      returning strings denoting default limits to apply to all routes.
      :ref:`ratelimit-string` for  more details.
@@ -126,8 +126,9 @@ class Limiter:
 
     def __init__(
         self,
+        key_func: Optional[Callable[[], str]],
+        *,
         app: Optional[flask.Flask] = None,
-        key_func: Optional[Callable[[], str]] = None,
         default_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
         default_limits_per_method: Optional[bool] = None,
         default_limits_exempt_when: Optional[Callable[[], bool]] = None,

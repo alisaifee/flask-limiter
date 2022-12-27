@@ -223,7 +223,7 @@ example below
 .. code-block:: python
 
    app = Flask(__name__)
-   limiter = Limiter(app, key_func=get_remote_address)
+   limiter = Limiter(get_remote_address, app=app)
 
    class MyView(flask.views.MethodView):
        decorators = [limiter.limit("10/second")]
@@ -280,7 +280,7 @@ the ``doc`` Blueprint is exempt from all rate limits. The ``regular`` Blueprint 
        return "login"
 
 
-   limiter = Limiter(app, default_limits = ["1/second"], key_func=get_remote_address)
+   limiter = Limiter(get_remote_address, app=app, default_limits = ["1/second"])
    limiter.limit("60/hour")(login)
    limiter.exempt(doc)
 
@@ -414,7 +414,7 @@ The `error_message` argument can either be a simple string or a callable that re
 
 
     app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_remote_address)
+    limiter = Limiter(get_remote_address, app=app)
 
     def error_handler():
         return app.config.get("DEFAULT_ERROR_MESSAGE")
@@ -443,7 +443,7 @@ and add your own with an :meth:`~flask.Flask.after_request` hook::
 
 
       app = Flask(__name__)
-      limiter = Limiter(app, key_func=get_remote_address)
+      limiter = Limiter(get_remote_address, app=app)
 
 
       @app.route("/")
@@ -489,4 +489,4 @@ fixer to reliably get the remote address of the user, while protecting your appl
     # for example if the request goes through one proxy
     # before hitting your application server
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
-    limiter = Limiter(app, key_func=get_remote_address)
+    limiter = Limiter(get_remote_address, app=app)

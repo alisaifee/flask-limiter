@@ -30,7 +30,7 @@ def app():
         return 1
 
     limiter = Limiter(
-        key_func=get_remote_address,
+        get_remote_address,
         default_limits=["20/hour", "1000/hour", default_limit_extra],
         default_limits_exempt_when=lambda: request.headers.get("X-Internal"),
         default_limits_deduct_when=lambda response: response.status_code == 200,

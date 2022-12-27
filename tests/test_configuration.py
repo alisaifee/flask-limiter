@@ -17,27 +17,25 @@ def test_invalid_strategy():
     app = Flask(__name__)
     app.config.setdefault(ConfigVars.STRATEGY, "fubar")
     with pytest.raises(ConfigurationError):
-        Limiter(app, key_func=get_remote_address)
+        Limiter(get_remote_address, app=app)
 
 
 def test_invalid_storage_string():
     app = Flask(__name__)
     app.config.setdefault(ConfigVars.STORAGE_URI, "fubar://localhost:1234")
     with pytest.raises(ConfigurationError):
-        Limiter(app, key_func=get_remote_address)
+        Limiter(get_remote_address, app=app)
 
 
 def test_constructor_arguments_over_config(redis_connection):
     app = Flask(__name__)
     app.config.setdefault(ConfigVars.STRATEGY, "fixed-window-elastic-expiry")
-    limiter = Limiter(strategy="moving-window", key_func=get_remote_address)
+    limiter = Limiter(get_remote_address, strategy="moving-window")
     limiter.init_app(app)
     app.config.setdefault(ConfigVars.STORAGE_URI, "redis://localhost:46379")
     app.config.setdefault(ConfigVars.APPLICATION_LIMITS, "1/minute")
     assert type(limiter._limiter) == MovingWindowRateLimiter
-    limiter = Limiter(
-        storage_uri="memcached://localhost:31211", key_func=get_remote_address
-    )
+    limiter = Limiter(get_remote_address, storage_uri="memcached://localhost:31211")
     limiter.init_app(app)
     assert type(limiter._storage) == MemcachedStorage
 
@@ -48,7 +46,7 @@ def test_header_names_config():
     app.config.setdefault(ConfigVars.HEADER_REMAINING, "XX-Remaining")
     app.config.setdefault(ConfigVars.HEADER_RESET, "XX-Reset")
     limiter = Limiter(
-        key_func=get_remote_address, headers_enabled=True, default_limits=["1/second"]
+        get_remote_address, headers_enabled=True, default_limits=["1/second"]
     )
     limiter.init_app(app)
 
@@ -66,7 +64,7 @@ def test_header_names_config():
 def test_header_names_constructor():
     app = Flask(__name__)
     limiter = Limiter(
-        key_func=get_remote_address,
+        get_remote_address,
         headers_enabled=True,
         default_limits=["1/second"],
         header_name_mapping={
@@ -93,7 +91,7 @@ def test_invalid_config_with_disabled():
     app.config.setdefault(ConfigVars.ENABLED, False)
     app.config.setdefault(ConfigVars.STORAGE_URI, "fubar://")
 
-    limiter = Limiter(app, key_func=get_remote_address, default_limits=["1/hour"])
+    limiter = Limiter(get_remote_address, app=app, default_limits=["1/hour"])
 
     @app.route("/")
     def root():
@@ -114,7 +112,7 @@ def test_invalid_config_with_disabled():
 
 def test_uninitialized_limiter():
     app = Flask(__name__)
-    limiter = Limiter(key_func=get_remote_address, default_limits=["1/hour"])
+    limiter = Limiter(get_remote_address, default_limits=["1/hour"])
 
     @app.route("/")
     @limiter.limit("2/hour")

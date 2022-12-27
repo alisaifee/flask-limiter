@@ -296,7 +296,7 @@ def test_invalid_decorated_dynamic_limits(caplog):
     caplog.set_level(logging.INFO)
     app = Flask(__name__)
     app.config.setdefault("X", "2 per sec")
-    limiter = Limiter(app, default_limits=["1/second"], key_func=get_ip_from_header)
+    limiter = Limiter(get_ip_from_header, app=app, default_limits=["1/second"])
 
     @app.route("/t1")
     @limiter.limit(lambda: current_app.config.get("X"))
@@ -318,7 +318,7 @@ def test_invalid_decorated_dynamic_limits(caplog):
 def test_invalid_decorated_static_limits(caplog):
     caplog.set_level(logging.INFO)
     app = Flask(__name__)
-    limiter = Limiter(app, default_limits=["1/second"], key_func=get_ip_from_header)
+    limiter = Limiter(get_ip_from_header, app=app, default_limits=["1/second"])
 
     @app.route("/t1")
     @limiter.limit("2/sec")
@@ -400,7 +400,7 @@ def test_dynamic_shared_limit(extension_factory):
 def test_conditional_limits():
     """Test that the conditional activation of the limits work."""
     app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_ip_from_header)
+    limiter = Limiter(get_ip_from_header, app=app)
 
     @app.route("/limited")
     @limiter.limit("1 per day")
@@ -437,7 +437,7 @@ def test_conditional_limits():
 def test_conditional_shared_limits():
     """Test that conditional shared limits work."""
     app = Flask(__name__)
-    limiter = Limiter(app, key_func=get_ip_from_header)
+    limiter = Limiter(get_ip_from_header, app=app)
 
     @app.route("/limited")
     @limiter.shared_limit("1 per day", "test_scope")
@@ -474,10 +474,10 @@ def test_whitelisting():
 
     app = Flask(__name__)
     limiter = Limiter(
-        app,
+        get_ip_from_header,
+        app=app,
         default_limits=["1/minute"],
         headers_enabled=True,
-        key_func=get_ip_from_header,
     )
 
     @app.route("/")
@@ -802,9 +802,6 @@ def test_shared_limit_multiple_cost_callable(extension_factory):
 
 
 def test_non_route_decoration_static_limits_override_defaults(extension_factory):
-    """
-    Should this be supported?
-    """
     app, limiter = extension_factory(default_limits=["1/second"])
 
     @limiter.limit("2/second")
