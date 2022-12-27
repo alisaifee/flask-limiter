@@ -126,7 +126,7 @@ class Limiter:
 
     def __init__(
         self,
-        key_func: Optional[Callable[[], str]],
+        key_func: Callable[[], str],
         *,
         app: Optional[flask.Flask] = None,
         default_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
@@ -187,8 +187,6 @@ class Limiter:
         self._swallow_errors = swallow_errors
         self._fail_on_first_breach = fail_on_first_breach
         self._on_breach = on_breach
-        # No longer optional
-        assert key_func
 
         self._key_func = key_func
         self._key_prefix = key_prefix
