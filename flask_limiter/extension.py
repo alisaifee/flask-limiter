@@ -387,10 +387,6 @@ class Limiter:
             self.limit_manager.set_default_limits(default_limit_groups)
         self.__configure_fallbacks(app, self._strategy)
 
-        # purely for backward compatibility as stated in flask documentation
-        if not hasattr(app, "extensions"):
-            app.extensions = {}  # pragma: no cover
-
         if self not in app.extensions.setdefault("limiter", set()):
             if self._auto_check:
                 app.before_request(self._check_request_limit)
