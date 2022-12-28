@@ -3,6 +3,23 @@
 Changelog
 =========
 
+v3.0.0
+------
+Release Date: 2022-12-28
+
+* Breaking changes
+
+  * Change order of extension constructor arguments to only require
+    ``key_func`` as the first positional argument and all other arguments
+    as keyword arguments.
+  * Separate positional/keyword arguments in limit/shared_limit decorators
+  * Remove deprecated config variable RATELIMIT_STORAGE_URL
+  * Remove legacy backward compatibility path for flask < 2
+
+* Features
+
+  * Allow scoping regular limit decorators / context managers
+
 v3.0.0b2
 --------
 Release Date: 2022-12-28
@@ -778,6 +795,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
