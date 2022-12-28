@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v3.0.0b2
+--------
+Release Date: 2022-12-28
+
+* Breaking changes
+
+  * Remove deprecated config variable RATELIMIT_STORAGE_URL
+  * Remove legacy backward compatibility path for flask < 2
+  * Enforce key_func as a required argument
+
+* Chores
+
+  * Simplify registration of decorated function & blueprint limits
+
+
 v3.0.0b1
 --------
 Release Date: 2022-12-26
@@ -763,6 +778,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
