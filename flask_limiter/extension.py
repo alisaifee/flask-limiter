@@ -240,9 +240,8 @@ class Limiter:
         self.limit_manager = LimitManager(
             application_limits=_application_limits,
             default_limits=_default_limits,
-            dynamic_decorated_limits={},
-            static_blueprint_limits={},
-            dynamic_blueprint_limits={},
+            decorated_limits={},
+            blueprint_limits={},
             route_exemptions=self._route_exemptions,
             blueprint_exemptions=self._blueprint_exemptions,
         )
@@ -1074,7 +1073,10 @@ class LimitDecorator:
         self.cost = cost
         self.is_static = not callable(self.limit_value)
         self.shared = shared
-        self.limit_group: Optional[LimitGroup] = LimitGroup(
+
+    @property
+    def limit_group(self) -> LimitGroup:
+        return LimitGroup(
             limit_provider=self.limit_value,
             key_function=self.key_func,
             scope=self.scope,
@@ -1127,32 +1129,13 @@ class LimitDecorator:
     def __call__(
         self, obj: Union[Callable[P, R], flask.Blueprint]
     ) -> Optional[Callable[P, R]]:
-        is_route = not isinstance(obj, flask.Blueprint)
         if isinstance(obj, flask.Blueprint):
             name = obj.name
         else:
             name = get_qualified_name(obj)
-        if self.is_static and self.limit_group:
-            try:
-                list(self.limit_group)
-            except ValueError as e:
-                self.limit_group = None
-                self.limiter.logger.error(
-                    "failed to configure %s %s (%s)",
-                    "view function" if is_route else "blueprint",
-                    name,
-                    e,
-                )
 
         if isinstance(obj, flask.Blueprint):
-            if not self.is_static:
-                self.limiter.limit_manager.add_runtime_blueprint_limit(
-                    name, self.limit_group
-                )
-            elif self.limit_group:
-                self.limiter.limit_manager.add_static_blueprint_limits(
-                    name, *list(self.limit_group)
-                )
+            self.limiter.limit_manager.add_blueprint_limit(name, self.limit_group)
             return None
         else:
             self.limiter._marked_for_limiting.add(name)

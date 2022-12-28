@@ -17,17 +17,15 @@ class LimitManager:
         self,
         application_limits: List[LimitGroup],
         default_limits: List[LimitGroup],
-        dynamic_decorated_limits: Dict[str, OrderedSet[LimitGroup]],
-        static_blueprint_limits: Dict[str, OrderedSet[Limit]],
-        dynamic_blueprint_limits: Dict[str, OrderedSet[LimitGroup]],
+        decorated_limits: Dict[str, OrderedSet[LimitGroup]],
+        blueprint_limits: Dict[str, OrderedSet[LimitGroup]],
         route_exemptions: Dict[str, ExemptionScope],
         blueprint_exemptions: Dict[str, ExemptionScope],
     ) -> None:
         self._application_limits = application_limits
         self._default_limits = default_limits
-        self._decorated_limits = dynamic_decorated_limits
-        self._static_blueprint_limits = static_blueprint_limits
-        self._runtime_blueprint_limits = dynamic_blueprint_limits
+        self._decorated_limits = decorated_limits
+        self._blueprint_limits = blueprint_limits
         self._route_exemptions = route_exemptions
         self._blueprint_exemptions = blueprint_exemptions
         self._endpoint_hints: Dict[str, OrderedSet[str]] = {}
@@ -56,18 +54,9 @@ class LimitManager:
             else:
                 self._decorated_limits[route] = OrderedSet([limit])
 
-    def add_runtime_blueprint_limit(
-        self, blueprint: str, limit: Optional[LimitGroup]
-    ) -> None:
+    def add_blueprint_limit(self, blueprint: str, limit: Optional[LimitGroup]) -> None:
         if limit:
-            self._runtime_blueprint_limits.setdefault(blueprint, OrderedSet()).add(
-                limit
-            )
-
-    def add_static_blueprint_limits(self, blueprint: str, *limits: Limit) -> None:
-        self._static_blueprint_limits.setdefault(blueprint, OrderedSet()).update(
-            OrderedSet(limits)
-        )
+            self._blueprint_limits.setdefault(blueprint, OrderedSet()).add(limit)
 
     def add_route_exemption(self, route: str, scope: ExemptionScope) -> None:
         self._route_exemptions[route] = scope
@@ -209,33 +198,31 @@ class LimitManager:
 
             if not (
                 self_exemption & ~(ExemptionScope.DEFAULT | ExemptionScope.APPLICATION)
-                or ancestor_exemptions
             ):
-                blueprint_self_dynamic_limits = self._runtime_blueprint_limits.get(
+                blueprint_self_limits = self._blueprint_limits.get(
                     blueprint_name, OrderedSet()
                 )
-                blueprint_dynamic_limits: Iterable[LimitGroup] = (
+                blueprint_limits: Iterable[LimitGroup] = (
                     itertools.chain(
                         *(
-                            self._runtime_blueprint_limits.get(member, [])
+                            self._blueprint_limits.get(member, [])
                             for member in blueprint_ancestory.intersection(
-                                self._runtime_blueprint_limits
-                            )
+                                self._blueprint_limits
+                            ).difference(ancestor_exemptions)
                         )
                     )
                     if not (
-                        blueprint_self_dynamic_limits
-                        or all(
-                            limit.override_defaults
-                            for limit in blueprint_self_dynamic_limits
+                        blueprint_self_limits
+                        and all(
+                            limit.override_defaults for limit in blueprint_self_limits
                         )
                     )
                     and not self._blueprint_exemptions[blueprint_name]
                     & ExemptionScope.ANCESTORS
-                    else blueprint_self_dynamic_limits
+                    else blueprint_self_limits
                 )
-                if blueprint_dynamic_limits:
-                    for limit_group in blueprint_dynamic_limits:
+                if blueprint_limits:
+                    for limit_group in blueprint_limits:
                         try:
                             limits.extend(
                                 [
@@ -251,6 +238,7 @@ class LimitManager:
                                         limit.deduct_when,
                                         limit.on_breach,
                                         limit.cost,
+                                        limit.shared,
                                     )
                                     for limit in limit_group
                                 ]
@@ -259,23 +247,6 @@ class LimitManager:
                             self._logger.error(
                                 f"failed to load ratelimit for blueprint {blueprint_name}: {e}",
                             )
-            blueprint_self_limits = self._static_blueprint_limits.get(
-                blueprint_name, OrderedSet()
-            )
-            if (
-                not (
-                    blueprint_self_limits
-                    and all(limit.override_defaults for limit in blueprint_self_limits)
-                )
-                and not self._blueprint_exemptions[blueprint_name]
-                & ExemptionScope.ANCESTORS
-            ):
-                for member in blueprint_ancestory.intersection(
-                    self._static_blueprint_limits
-                ).difference(ancestor_exemptions):
-                    limits.extend(self._static_blueprint_limits[member])
-            else:
-                limits.extend(blueprint_self_limits)
         return limits
 
     def _blueprint_exemption_scope(

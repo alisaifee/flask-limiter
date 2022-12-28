@@ -510,8 +510,8 @@ def test_invalid_decorated_static_limit_blueprint(caplog):
         with hiro.Timeline().freeze():
             assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 429
-    assert "failed to configure" in caplog.records[0].msg
-    assert "exceeded at endpoint" in caplog.records[1].msg
+    assert "failed to load" in caplog.records[0].msg
+    assert "exceeded at endpoint" in caplog.records[-1].msg
 
 
 def test_invalid_decorated_dynamic_limits_blueprint(caplog):
