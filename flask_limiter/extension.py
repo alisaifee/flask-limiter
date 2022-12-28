@@ -240,7 +240,6 @@ class Limiter:
         self.limit_manager = LimitManager(
             application_limits=_application_limits,
             default_limits=_default_limits,
-            static_decorated_limits={},
             dynamic_decorated_limits={},
             static_blueprint_limits={},
             dynamic_blueprint_limits={},
@@ -1075,10 +1074,7 @@ class LimitDecorator:
         self.cost = cost
         self.is_static = not callable(self.limit_value)
         self.shared = shared
-
-    @property
-    def dynamic_limit(self) -> Optional[LimitGroup]:
-        return LimitGroup(
+        self.limit_group: Optional[LimitGroup] = LimitGroup(
             limit_provider=self.limit_value,
             key_function=self.key_func,
             scope=self.scope,
@@ -1093,25 +1089,6 @@ class LimitDecorator:
             shared=self.shared,
         )
 
-    @property
-    def static_limits(self) -> List[Limit]:
-        return list(
-            LimitGroup(
-                limit_provider=self.limit_value,
-                key_function=self.key_func,
-                scope=self.scope,
-                per_method=self.per_method,
-                methods=self.methods,
-                error_message=self.error_message,
-                exempt_when=self.exempt_when,
-                override_defaults=self.override_defaults,
-                deduct_when=self.deduct_when,
-                on_breach=self.on_breach,
-                cost=self.cost,
-                shared=self.shared,
-            )
-        )
-
     def __enter__(self) -> None:
         tb = traceback.extract_stack(limit=2)
         qualified_location = f"{tb[0].filename}:{tb[0].name}:{tb[0].lineno}"
@@ -1119,14 +1096,9 @@ class LimitDecorator:
         # TODO: if use as a context manager becomes interesting/valuable
         #  a less hacky approach than using the traceback and piggy backing
         #  on the limit manager's knowledge of decorated limits might be worth it.
-        if not self.is_static:
-            self.limiter.limit_manager.add_decorated_runtime_limit(
-                qualified_location, self.dynamic_limit, override=True
-            )
-        else:
-            self.limiter.limit_manager.add_decorated_static_limit(
-                qualified_location, *self.static_limits, override=True
-            )
+        self.limiter.limit_manager.add_decorated_limit(
+            qualified_location, self.limit_group, override=True
+        )
 
         self.limiter.limit_manager.add_endpoint_hint(
             flask.request.endpoint, qualified_location
@@ -1160,12 +1132,11 @@ class LimitDecorator:
             name = obj.name
         else:
             name = get_qualified_name(obj)
-        dynamic_limit = self.dynamic_limit if not self.is_static else None
-        static_limits = []
-        if self.is_static:
+        if self.is_static and self.limit_group:
             try:
-                static_limits = self.static_limits
+                list(self.limit_group)
             except ValueError as e:
+                self.limit_group = None
                 self.limiter.logger.error(
                     "failed to configure %s %s (%s)",
                     "view function" if is_route else "blueprint",
@@ -1175,24 +1146,17 @@ class LimitDecorator:
 
         if isinstance(obj, flask.Blueprint):
             if not self.is_static:
-                self.limiter.limit_manager.add_runtime_blueprint_limits(
-                    name, dynamic_limit
+                self.limiter.limit_manager.add_runtime_blueprint_limit(
+                    name, self.limit_group
                 )
-            else:
+            elif self.limit_group:
                 self.limiter.limit_manager.add_static_blueprint_limits(
-                    name, *static_limits
+                    name, *list(self.limit_group)
                 )
             return None
         else:
             self.limiter._marked_for_limiting.add(name)
-            if not self.is_static:
-                self.limiter.limit_manager.add_decorated_runtime_limit(
-                    name, dynamic_limit
-                )
-            else:
-                self.limiter.limit_manager.add_decorated_static_limit(
-                    name, *static_limits
-                )
+            self.limiter.limit_manager.add_decorated_limit(name, self.limit_group)
 
             @wraps(obj)
             def __inner(*a: P.args, **k: P.kwargs) -> R:
