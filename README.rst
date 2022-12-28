@@ -16,7 +16,7 @@ Flask-Limiter
 
 |docs| |ci| |codecov| |pypi| |license|
 
-**Flask-Limiter** provides rate limiting features to `Flask <https://flask.palletsprojects.com>`_ applications.
+**Flask-Limiter** adds rate limiting to `Flask <https://flask.palletsprojects.com>`_ applications.
 
 ----
 

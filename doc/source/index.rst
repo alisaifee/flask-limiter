@@ -57,7 +57,7 @@ Flask-Limiter
       :target: https://pypi.org/project/flask-limiter
       :class: header-badge
 
-**Flask-Limiter** provides rate limiting features to :class:`~flask.Flask` applications.
+**Flask-Limiter** adds rate limiting to :class:`~flask.Flask` applications.
 
 By adding the extension to your flask application, you can configure various
 rate limits at different levels (e.g. application wide, per :class:`~flask.Blueprint`,
