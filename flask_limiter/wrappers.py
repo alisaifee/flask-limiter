@@ -155,11 +155,12 @@ class LimitGroup:
     shared: bool = False
 
     def __iter__(self) -> Iterator[Limit]:
-        limit_items = parse_many(
+        limit_str = (
             self.limit_provider()
             if callable(self.limit_provider)
             else self.limit_provider
         )
+        limit_items = parse_many(limit_str) if limit_str else []
 
         for limit in limit_items:
             yield Limit(

@@ -8,6 +8,7 @@ from flask import Blueprint, Flask, current_app, g, make_response, request
 from werkzeug.exceptions import BadRequest
 
 from flask_limiter import ExemptionScope, Limiter
+from flask_limiter.util import get_remote_address
 
 
 def get_ip_from_header():
@@ -329,6 +330,23 @@ def test_invalid_decorated_dynamic_limits(caplog):
     assert "failed to load ratelimit" in caplog.records[1].msg
     assert "exceeded at endpoint" in caplog.records[2].msg
     assert caplog.records[2].levelname == "INFO"
+
+
+def test_decorated_limit_empty_exempt(caplog):
+    app = Flask(__name__)
+    limiter = Limiter(get_remote_address, app=app)
+
+    @app.route("/t1")
+    @limiter.limit(lambda: "")
+    def t1():
+        return "42"
+
+    with app.test_client() as cli:
+        with hiro.Timeline().freeze():
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 200
+
+    assert not caplog.records
 
 
 def test_invalid_decorated_static_limits(caplog):
