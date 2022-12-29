@@ -3,6 +3,17 @@
 Changelog
 =========
 
+v3.1.0
+------
+Release Date: 2022-12-29
+
+* Feature
+
+  * Skip logging an error if a decorated limit uses a callable
+    to return the "current" rate limit and returns an empty string.
+    Treat this is a signal that the rate limit should be skipped for
+    this request.
+
 v3.0.0
 ------
 Release Date: 2022-12-28
@@ -20,6 +31,10 @@ Release Date: 2022-12-28
 
   * Allow scoping regular limit decorators / context managers
 
+v3.1.0
+------
+Release Date: 2022-12-29
+
 v3.0.0b2
 --------
 Release Date: 2022-12-28
@@ -34,6 +49,10 @@ Release Date: 2022-12-28
 
   * Simplify registration of decorated function & blueprint limits
 
+
+v3.1.0
+------
+Release Date: 2022-12-29
 
 v3.0.0b1
 --------
@@ -795,6 +814,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
