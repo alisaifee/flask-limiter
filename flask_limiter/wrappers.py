@@ -118,20 +118,25 @@ class Limit:
 
         return self.methods is not None and request.method.lower() not in self.methods
 
-    def args_for(self, endpoint: str, key: str, method: Optional[str]) -> List[str]:
-        if self.scope:
-            if not self.shared:
-                scope = self.scope
+    def scope_for(self, endpoint: str, method: Optional[str]) -> str:
+        """
+        Derive final bucket (scope) for this limit given the endpoint
+        and request method. If the limit is shared between multiple
+        routes, the scope does not include the endpoint.
+        """
+        limit_scope = self.scope
+        if limit_scope:
+            if self.shared:
+                scope = limit_scope
             else:
-                scope = f"{endpoint}:{self.scope}"
+                scope = f"{endpoint}:{limit_scope}"
         else:
-            scope = self.scope or endpoint
+            scope = endpoint
 
         if self.per_method:
             assert method
             scope += f":{method.upper()}"
-        args = [key, scope]
-        return args
+        return scope
 
 
 @dataclasses.dataclass(eq=True, unsafe_hash=True)

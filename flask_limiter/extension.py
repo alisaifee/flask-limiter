@@ -926,15 +926,10 @@ class Limiter:
         limit_for_header: Optional[RequestLimit] = None
         view_limits: List[RequestLimit] = []
         for lim in sorted(limits, key=lambda x: x.limit):
-            if not lim.shared and lim.scope:
-                limit_scope = f"{endpoint}:{lim.scope}"
-            else:
-                limit_scope = lim.scope or endpoint
             if lim.is_exempt or lim.method_exempt:
                 continue
 
-            if lim.per_method:
-                limit_scope += f":{flask.request.method}"
+            limit_scope = lim.scope_for(endpoint, flask.request.method)
             limit_key = lim.key_func()
             args = [limit_key, limit_scope]
             kwargs = {}

@@ -69,7 +69,7 @@ def render_strategy(strategy: RateLimiter) -> str:
 def render_limit_state(
     limiter: Limiter, endpoint: str, limit: Limit, key: str, method: str
 ) -> str:
-    args = limit.args_for(endpoint, key, method)
+    args = [key, limit.scope_for(endpoint, method)]
     if not limiter.storage or (limiter.storage and not limiter.storage.check()):
         return ": [error]Storage not available[/error]"
     test = limiter.limiter.test(limit.limit, *args)
@@ -530,7 +530,8 @@ def clear(
                     for limit in application_limits:
                         limiter.limiter.clear(
                             limit.limit,
-                            *limit.args_for("", key, method),
+                            key,
+                            limit.scope_for("", method),
                         )
                         node.add(f"{render_limit(limit)}: [success]Cleared[/success]")
                     console.print(node)
@@ -547,12 +548,14 @@ def clear(
                                 for rule_method in details["rule"].methods:
                                     limiter.limiter.clear(
                                         limit.limit,
-                                        *limit.args_for(endpoint, key, rule_method),
+                                        key,
+                                        limit.scope_for(endpoint, rule_method),
                                     )
                             else:
                                 limiter.limiter.clear(
                                     limit.limit,
-                                    *limit.args_for(endpoint, key, method),
+                                    key,
+                                    limit.scope_for(endpoint, method),
                                 )
                             node.add(
                                 f"{render_limit(limit)}: [success]Cleared[/success]"
