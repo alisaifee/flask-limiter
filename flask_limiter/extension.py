@@ -428,8 +428,6 @@ class Limiter:
 
         :param limit_value: rate limit string or a callable that returns a
          string. :ref:`ratelimit-string` for more details.
-        :param scope: a string or callable that returns a string
-         for defining the rate limiting scope.
         :param key_func: function/lambda to extract the unique
          identifier for the rate limit. defaults to remote address of the
          request.
@@ -457,6 +455,10 @@ class Limiter:
          raised.
         :param cost: The cost of a hit or a function that
          takes no parameters and returns the cost as an integer (Default: ``1``).
+        :param scope: a string or callable that returns a string
+         for further categorizing the rate limiting scope. This scope is combined
+         with the current endpoint of the request.
+
 
         Changes
           - .. versionadded:: 2.9.0 The returned object can also be used as a context manager
