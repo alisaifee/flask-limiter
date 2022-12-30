@@ -1,5 +1,5 @@
 limits>=2.8
 Flask>=2
 ordered-set>4,<5
-rich>=12,<13
+rich>=12,<14
 typing_extensions>=4
