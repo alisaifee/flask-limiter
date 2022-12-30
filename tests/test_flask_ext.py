@@ -688,7 +688,7 @@ def test_custom_key_prefix(redis_connection, extension_factory):
         assert 429 == resp.status_code
 
 
-def test_second_instance_bypassed_by_shared_g():
+def test_multiple_instances_no_key_prefix():
     app = Flask(__name__)
     limiter1 = Limiter(get_remote_address, app=app)
 
@@ -708,19 +708,18 @@ def test_second_instance_bypassed_by_shared_g():
     with hiro.Timeline().freeze() as timeline:
         with app.test_client() as cli:
             assert cli.get("/test1").status_code == 200
-            assert cli.get("/test2").status_code == 200
             assert cli.get("/test1").status_code == 429
             assert cli.get("/test2").status_code == 200
+            assert cli.get("/test2").status_code == 429
 
             for i in range(8):
-                assert cli.get("/test1").status_code == 429
+                timeline.forward(1)
+                assert cli.get("/test1").status_code == 200
                 assert cli.get("/test2").status_code == 200
-            assert cli.get("/test2").status_code == 429
             timeline.forward(1)
             assert cli.get("/test1").status_code == 200
             assert cli.get("/test2").status_code == 429
             timeline.forward(59)
-            assert cli.get("/test1").status_code == 200
             assert cli.get("/test2").status_code == 200
 
 

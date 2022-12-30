@@ -402,9 +402,9 @@ class Limiter:
         if not hasattr(ctx, "_limiter_request_context"):
             ctx._limiter_request_context = defaultdict(LimiterContext)  # type: ignore
         return cast(
-            Dict[str, LimiterContext],
+            Dict[Limiter, LimiterContext],
             ctx._limiter_request_context,  # type: ignore
-        )[self._key_prefix]
+        )[self]
 
     def limit(
         self,
