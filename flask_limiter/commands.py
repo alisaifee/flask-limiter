@@ -1,6 +1,6 @@
 import time
 from functools import partial
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union
 from urllib.parse import urlparse
 
 import click
@@ -99,7 +99,7 @@ def render_limit(limit: Limit, simple: bool = True) -> str:
 def render_limits(
     app: Flask,
     limiter: Limiter,
-    limits: List[Limit],
+    limits: Tuple[List[Limit], ...],
     endpoint: Optional[str] = None,
     blueprint: Optional[str] = None,
     rule: Optional[Rule] = None,
@@ -116,7 +116,7 @@ def render_limits(
     renderable = Tree(label)
     entries = []
 
-    for limit in limits:
+    for limit in limits[0] + limits[1]:
         if endpoint:
             view_func = app.view_functions.get(endpoint, None)
             source = (
@@ -410,7 +410,7 @@ def limits(
                     yield render_limits(
                         current_app,
                         limiter,
-                        limiter.limit_manager.application_limits,
+                        (limiter.limit_manager.application_limits, []),
                         test=key,
                         method=method,
                         label="[gold3]Application Limits[/gold3]",
@@ -472,7 +472,7 @@ def clear(
                 "Details",
                 {
                     "rule": Rule,
-                    "limits": List[Limit],
+                    "limits": Tuple[List[Limit], ...],
                 },
             )
             rule_limits: Dict[str, Details] = {}
@@ -505,7 +505,7 @@ def clear(
                         render_limits(
                             current_app,
                             limiter,
-                            application_limits,
+                            (application_limits, []),
                             label="Application Limits",
                             test=key,
                         )
@@ -538,7 +538,8 @@ def clear(
                 for endpoint, details in rule_limits.items():
                     if details["limits"]:
                         node = Tree(endpoint)
-                        for limit in details["limits"]:
+                        default, decorated = details["limits"]
+                        for limit in default + decorated:
                             if (
                                 limit.per_method
                                 and details["rule"]

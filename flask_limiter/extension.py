@@ -908,18 +908,20 @@ class Limiter:
                     self.__check_backend_count = 0
                 else:
                     fallback_limits = list(itertools.chain(*self._in_memory_fallback))
-        resolved_limits = self.limit_manager.resolve_limits(
+        if fallback_limits:
+            return fallback_limits
+
+        defaults, decorated = self.limit_manager.resolve_limits(
             flask.current_app,
             endpoint,
             blueprint,
             name,
             in_middleware,
             marked_for_limiting,
-            fallback_limits,
         )
-        limits = OrderedSet(resolved_limits) - self.context.seen_limits
-        self.context.seen_limits.update(limits)
-        return list(limits)
+        limits = OrderedSet(defaults) - self.context.seen_limits
+        self.context.seen_limits.update(defaults)
+        return list(limits) + list(decorated)
 
     def __evaluate_limits(self, endpoint: str, limits: List[Limit]) -> None:
         failed_limits: List[Tuple[Limit, List[str]]] = []

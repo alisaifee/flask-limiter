@@ -78,8 +78,7 @@ class LimitManager:
         callable_name: Optional[str] = None,
         in_middleware: bool = False,
         marked_for_limiting: bool = False,
-        fallback_limits: Optional[List[Limit]] = None,
-    ) -> List[Limit]:
+    ) -> Tuple[List[Limit], ...]:
         before_request_context = in_middleware and marked_for_limiting
         decorated_limits = []
         hinted_limits = []
@@ -102,48 +101,38 @@ class LimitManager:
             ):
                 decorated_limits.extend(self.blueprint_limits(app, blueprint))
         exemption_scope = self.exemption_scope(app, endpoint, blueprint)
-        all_limits = []
 
-        if fallback_limits:
-            all_limits.extend(fallback_limits)
+        all_limits = (
+            self.application_limits
+            if in_middleware and not (exemption_scope & ExemptionScope.APPLICATION)
+            else []
+        )
+        # all_limits += decorated_limits
+        explicit_limits_exempt = all(limit.method_exempt for limit in decorated_limits)
 
-        if not all_limits:
-            all_limits = (
-                self.application_limits
-                if in_middleware and not (exemption_scope & ExemptionScope.APPLICATION)
-                else []
+        # all  the decorated limits explicitly declared
+        # that they don't override the defaults - so, they should
+        # be included.
+        combined_defaults = all(
+            not limit.override_defaults for limit in decorated_limits
+        )
+        # previous requests to this endpoint have exercised decorated
+        # rate limits on callables that are not view functions. check
+        # if all of them declared that they don't override defaults
+        # and if so include the default limits.
+        hinted_limits_request_defaults = (
+            all(not limit.override_defaults for limit in hinted_limits)
+            if hinted_limits
+            else False
+        )
+        if (
+            (explicit_limits_exempt or combined_defaults)
+            and (
+                not (before_request_context or exemption_scope & ExemptionScope.DEFAULT)
             )
-            all_limits += decorated_limits
-            explicit_limits_exempt = all(
-                limit.method_exempt for limit in decorated_limits
-            )
-
-            # all  the decorated limits explicitly declared
-            # that they don't override the defaults - so, they should
-            # be included.
-            combined_defaults = all(
-                not limit.override_defaults for limit in decorated_limits
-            )
-            # previous requests to this endpoint have exercised decorated
-            # rate limits on callables that are not view functions. check
-            # if all of them declared that they don't override defaults
-            # and if so include the default limits.
-            hinted_limits_request_defaults = (
-                all(not limit.override_defaults for limit in hinted_limits)
-                if hinted_limits
-                else False
-            )
-            if (
-                (explicit_limits_exempt or combined_defaults)
-                and (
-                    not (
-                        before_request_context
-                        or exemption_scope & ExemptionScope.DEFAULT
-                    )
-                )
-            ) or hinted_limits_request_defaults:
-                all_limits += self.default_limits
-        return all_limits
+        ) or hinted_limits_request_defaults:
+            all_limits += self.default_limits
+        return all_limits, decorated_limits
 
     def exemption_scope(
         self, app: flask.Flask, endpoint: Optional[str], blueprint: Optional[str]
