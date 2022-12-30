@@ -296,14 +296,14 @@ Please refer to :ref:`deploy-behind-proxy` for an example.
 
 
 Decorators to declare rate limits
----------------------------------
+=================================
 Decorators made available as instance methods of the :class:`~flask_limiter.Limiter`
 instance to be used with the :class:`flask.Flask` application.
 
 .. _ratelimit-decorator-limit:
 
 Route specific limits
-^^^^^^^^^^^^^^^^^^^^^
+---------------------
 
 .. automethod:: Limiter.limit
    :noindex:
@@ -408,7 +408,7 @@ conditions can be specified by supplying a callable as an
 .. _ratelimit-decorator-shared-limit:
 
 Reusable limits
-^^^^^^^^^^^^^^^
+---------------
 
 For scenarios where a rate limit should be shared by multiple routes
 (For example when you want to protect routes using the same resource
