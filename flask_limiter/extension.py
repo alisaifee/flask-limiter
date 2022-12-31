@@ -64,6 +64,7 @@ class LimiterContext:
         self.view_rate_limit = None
         self.view_rate_limits.clear()
         self.conditional_deductions.clear()
+        self.seen_limits.clear()
 
 
 class Limiter:
