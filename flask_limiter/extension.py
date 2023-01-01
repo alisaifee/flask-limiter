@@ -51,7 +51,6 @@ from .wrappers import Limit, LimitGroup, RequestLimit
 
 @dataclasses.dataclass
 class LimiterContext:
-    rate_limiting_complete: dict[str, bool] = dataclasses.field(default_factory=dict)
     view_rate_limit: Optional[RequestLimit] = None
     view_rate_limits: List[RequestLimit] = dataclasses.field(default_factory=list)
     conditional_deductions: Dict[Limit, List[str]] = dataclasses.field(
@@ -60,7 +59,6 @@ class LimiterContext:
     seen_limits: OrderedSet[Limit] = dataclasses.field(default_factory=OrderedSet)
 
     def reset(self) -> None:
-        self.rate_limiting_complete.clear()
         self.view_rate_limit = None
         self.view_rate_limits.clear()
         self.conditional_deductions.clear()
@@ -399,6 +397,15 @@ class Limiter:
 
     @property
     def context(self) -> LimiterContext:
+        """
+        The context is meant to exist for the lifetime
+        of a request/response cycle per instance of the extension
+        so as to keep track of any state used at different steps
+        in the lifecycle (for example to pass information
+        from the before request hook to the after_request hook)
+
+        :meta private:
+        """
         ctx = request_context()
         if not hasattr(ctx, "_limiter_request_context"):
             ctx._limiter_request_context = defaultdict(LimiterContext)  # type: ignore
@@ -858,18 +865,14 @@ class Limiter:
         return response
 
     def __check_all_limits_exempt(
-        self, endpoint: Optional[str], callable_name: Optional[str] = None
+        self,
+        endpoint: Optional[str],
     ) -> bool:
         return bool(
             not endpoint
             or not (self.enabled and self.initialized)
             or endpoint == "static"
             or any(fn() for fn in self._request_filters)
-            or (
-                self.context.rate_limiting_complete.get(callable_name, False)
-                if callable_name
-                else any(self.context.rate_limiting_complete.values())
-            )
         )
 
     def __filter_limits(
@@ -886,7 +889,7 @@ class Limiter:
             view_func = flask.current_app.view_functions.get(endpoint or "", None)
             name = get_qualified_name(view_func) if view_func else ""
 
-        if self.__check_all_limits_exempt(endpoint, callable_name):
+        if self.__check_all_limits_exempt(endpoint):
             return []
 
         marked_for_limiting = (
@@ -1144,7 +1147,8 @@ class LimitDecorator:
             def __inner(*a: P.args, **k: P.kwargs) -> R:
                 if (
                     self.limiter._auto_check
-                    and not self.limiter.context.rate_limiting_complete.get(name, False)
+                    and not getattr(obj, "__wrapper-limiter-instance", None)
+                    == self.limiter
                 ):
                     if flask.request.endpoint:
                         view_func = flask.current_app.view_functions.get(
@@ -1159,9 +1163,15 @@ class LimitDecorator:
                         in_middleware=False, callable_name=name
                     )
 
-                    self.limiter.context.rate_limiting_complete[name] = True
                 return cast(
                     R, flask.current_app.ensure_sync(cast(Callable[P, R], obj))(*a, **k)
                 )
 
+            # mark this wrapper as wrapped by a decorator from the limiter
+            # from which the decorator was created. This ensures that stacked
+            # decorations only trigger rate limiting from the inner most
+            # decorator from each limiter instance (the weird need for
+            # keeping track of the instance is to handle cases where multiple
+            # limiter extensions are registered on the same application).
+            setattr(__inner, "__wrapper-limiter-instance", self.limiter)
             return __inner
