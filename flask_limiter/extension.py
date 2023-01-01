@@ -1030,8 +1030,7 @@ class Limiter:
                     raise e
 
     def __release_context(self, _: Optional[BaseException] = None) -> None:
-        if self.context:
-            self.context.reset()
+        self.context.reset()
 
 
 class LimitDecorator:
