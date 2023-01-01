@@ -12,7 +12,7 @@ import flask_limiter
 from theme_config import *
 
 description = "Flask-Limiter adds rate limiting to flask applications."
-copyright = "2022, Ali-Akber Saifee"
+copyright = "2023, Ali-Akber Saifee"
 project = "Flask-Limiter"
 
 ahead = 0
