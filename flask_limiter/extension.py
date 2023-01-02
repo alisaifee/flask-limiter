@@ -792,6 +792,13 @@ class Limiter:
         return self.context.view_rate_limits
 
     def identify_request(self) -> str:
+        """
+        Returns the identity of the request (by default this is the
+        :attr:`flask.Request.endpoint` associated by the view function
+        that is handling the request). The behavior can be customized
+        by initializing the extension with a callable argument for
+        :paramref:`~flask_limiter.Limiter.request_identifier`.
+        """
         if self.initialized and self.enabled:
             assert self._request_identifier
             return self._request_identifier()
