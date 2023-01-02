@@ -103,6 +103,11 @@ take priority.
 
      - A dictionary to set extra options to be passed to the  storage implementation
        upon initialization.
+   * - .. data:: RATELIMIT_REQUEST_IDENTIFIER
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.request_identifier`
+
+     - A callable that returns the unique identity of the current request. Defaults to :attr:`flask.Request.endpoint`
    * - .. data:: RATELIMIT_STRATEGY
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.strategy`

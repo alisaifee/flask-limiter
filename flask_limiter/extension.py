@@ -120,6 +120,8 @@ class Limiter:
     :param retry_after: Allows configuration of how the value of the
      `Retry-After` header is rendered. One of `http-date` or `delta-seconds`.
     :param key_prefix: prefix prepended to rate limiter keys and app context global names.
+    :param request_identifier: a callable that returns the unique identity the current request.
+     Defaults to :attr:`flask.Request.endpoint`
     :param enabled: Whether the extension is enabled or not
     """
 
@@ -152,6 +154,7 @@ class Limiter:
         in_memory_fallback_enabled: Optional[bool] = None,
         retry_after: Optional[str] = None,
         key_prefix: str = "",
+        request_identifier: Optional[Callable[..., str]] = None,
         enabled: bool = True,
     ) -> None:
         self.app = app
@@ -189,6 +192,7 @@ class Limiter:
 
         self._key_func = key_func
         self._key_prefix = key_prefix
+        self._request_identifier = request_identifier
 
         _default_limits = (
             [
@@ -337,7 +341,9 @@ class Limiter:
         )
 
         self._key_prefix = self._key_prefix or config.get(ConfigVars.KEY_PREFIX, "")
-
+        self._request_identifier = self._request_identifier or config.get(
+            ConfigVars.REQUEST_IDENTIFIER, lambda: flask.request.endpoint or ""
+        )
         app_limits = config.get(ConfigVars.APPLICATION_LIMITS, None)
         self._application_limits_cost = self._application_limits_cost or config.get(
             ConfigVars.APPLICATION_LIMITS_COST, 1
@@ -785,6 +791,12 @@ class Limiter:
 
         return self.context.view_rate_limits
 
+    def identify_request(self) -> str:
+        if self.initialized and self.enabled:
+            assert self._request_identifier
+            return self._request_identifier()
+        return ""
+
     def __check_conditional_deductions(self, response: flask.wrappers.Response) -> None:
         for lim, args in self.context.conditional_deductions.items():
             if lim.deduct_when and lim.deduct_when(response):
@@ -1003,10 +1015,10 @@ class Limiter:
     def _check_request_limit(
         self, callable_name: Optional[str] = None, in_middleware: bool = True
     ) -> None:
-        endpoint = flask.request.endpoint or ""
+        endpoint = self.identify_request()
         try:
             all_limits = self.__filter_limits(
-                flask.request.endpoint,
+                endpoint,
                 flask.request.blueprint,
                 callable_name,
                 in_middleware,
@@ -1105,7 +1117,7 @@ class LimitDecorator:
         )
 
         self.limiter.limit_manager.add_endpoint_hint(
-            flask.request.endpoint, qualified_location
+            self.limiter.identify_request(), qualified_location
         )
 
         self.limiter._check_request_limit(
@@ -1150,14 +1162,11 @@ class LimitDecorator:
                     and not getattr(obj, "__wrapper-limiter-instance", None)
                     == self.limiter
                 ):
-                    if flask.request.endpoint:
-                        view_func = flask.current_app.view_functions.get(
-                            flask.request.endpoint, None
-                        )
+                    identity = self.limiter.identify_request()
+                    if identity:
+                        view_func = flask.current_app.view_functions.get(identity, None)
                         if view_func and not get_qualified_name(view_func) == name:
-                            self.limiter.limit_manager.add_endpoint_hint(
-                                flask.request.endpoint, name
-                            )
+                            self.limiter.limit_manager.add_endpoint_hint(identity, name)
 
                     self.limiter._check_request_limit(
                         in_middleware=False, callable_name=name
