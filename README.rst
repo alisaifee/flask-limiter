@@ -101,7 +101,7 @@ Inspect the limits using the command line interface
 ---------------------------------------------------
 .. code-block:: bash
 
-   $ FLASK_APP=app:app flask limiter list
+   $ FLASK_APP=app:app flask limiter limits
 
    app
    ├── fast: /fast
