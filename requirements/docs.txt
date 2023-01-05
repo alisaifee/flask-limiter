@@ -6,7 +6,7 @@ sphinx-autobuild==2021.3.14
 sphinx-copybutton==0.5.1
 sphinx-inline-tabs==2022.1.2b11
 sphinx-issues==3.0.1
-sphinxext-opengraph==0.7.4
+sphinxext-opengraph==0.7.5
 sphinx-paramlinks==0.5.4
 sphinxcontrib-programoutput==0.17
 
