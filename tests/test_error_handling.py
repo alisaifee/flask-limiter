@@ -152,14 +152,12 @@ def test_no_swallow_error(extension_factory):
 
     with app.test_client() as cli:
         with patch("limits.strategies.FixedWindowRateLimiter.hit") as hit:
-
             hit.side_effect = raiser
             assert 500 == cli.get("/").status_code
             assert "underlying" == cli.get("/").data.decode()
         with patch(
             "limits.strategies.FixedWindowRateLimiter.get_window_stats"
         ) as get_window_stats:
-
             get_window_stats.side_effect = raiser
             assert 500 == cli.get("/").status_code
             assert "underlying" == cli.get("/").data.decode()

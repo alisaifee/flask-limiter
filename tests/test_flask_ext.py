@@ -517,7 +517,6 @@ def test_callable_default_limit(extension_factory):
 
 
 def test_callable_application_limit(extension_factory):
-
     app, limiter = extension_factory(
         application_limits=[
             lambda: request.headers.get("suspect", 0) and "1/minute" or "2/minute"

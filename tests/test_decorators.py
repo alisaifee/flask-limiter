@@ -505,7 +505,6 @@ def test_conditional_shared_limits():
 
 
 def test_whitelisting():
-
     app = Flask(__name__)
     limiter = Limiter(
         get_ip_from_header,
@@ -595,7 +594,6 @@ def test_decorated_limit_immediate(extension_factory):
 
 
 def test_decorated_shared_limit_immediate(extension_factory):
-
     app, limiter = extension_factory(default_limits=["1/minute"])
     shared = limiter.shared_limit(lambda: g.rate_limit, "shared")
 

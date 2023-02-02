@@ -4,21 +4,16 @@ Flask-Limiter Extension
 from __future__ import annotations
 
 import dataclasses
-import traceback
-import warnings
-from types import TracebackType
-
-from ordered_set import OrderedSet
-
-from .util import get_qualified_name
-
 import datetime
 import itertools
 import logging
 import time
+import traceback
+import warnings
 import weakref
 from collections import defaultdict
 from functools import partial, wraps
+from types import TracebackType
 from typing import Type, overload
 
 import flask
@@ -26,6 +21,7 @@ import flask.wrappers
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
+from ordered_set import OrderedSet
 from werkzeug.http import http_date, parse_date
 
 from ._compat import request_context
@@ -46,6 +42,7 @@ from .typing import (
     Union,
     cast,
 )
+from .util import get_qualified_name
 from .wrappers import Limit, LimitGroup, RequestLimit
 
 
@@ -901,7 +898,6 @@ class Limiter:
         callable_name: Optional[str],
         in_middleware: bool = False,
     ) -> List[Limit]:
-
         if callable_name:
             name = callable_name
         else:
