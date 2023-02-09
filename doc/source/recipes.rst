@@ -33,7 +33,7 @@ Rate limiting all requests by country::
         return gi.record_by_name(request.remote_addr)['region_name']
 
     app = Flask(__name__)
-    limiter = Limiter(app, default_limits=["10/hour"], key_func = get_request_country)
+    limiter = Limiter(get_request_country, app=app, default_limits=["10/hour"])
 
 
 
