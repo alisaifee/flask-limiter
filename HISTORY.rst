@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v3.2.0
+------
+Release Date: 2023-02-15
+
+* Feature
+
+  * Allow configuring request identity
+
+* Chores
+
+  * Improve linting with ruff
+  * Update development dependencies
+
+
 v3.1.0
 ------
 Release Date: 2022-12-29
@@ -31,6 +45,10 @@ Release Date: 2022-12-28
 
   * Allow scoping regular limit decorators / context managers
 
+v3.2.0
+------
+Release Date: 2023-02-15
+
 v3.1.0
 ------
 Release Date: 2022-12-29
@@ -49,6 +67,10 @@ Release Date: 2022-12-28
 
   * Simplify registration of decorated function & blueprint limits
 
+
+v3.2.0
+------
+Release Date: 2023-02-15
 
 v3.1.0
 ------
@@ -814,6 +836,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
