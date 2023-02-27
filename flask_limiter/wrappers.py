@@ -28,18 +28,23 @@ class RequestLimit:
     #: Whether the limit was breached within the context of this request
     breached: bool
 
+    #: Whether the limit is a shared limit
+    shared: bool
+
     def __init__(
         self,
         extension: Limiter,
         limit: RateLimitItem,
         request_args: List[str],
         breached: bool,
+        shared: bool,
     ) -> None:
         self.extension: weakref.ProxyType[Limiter] = weakref.proxy(extension)
         self.limit = limit
         self.request_args = request_args
         self.key = limit.key_for(*request_args)
         self.breached = breached
+        self.shared = shared
         self._window: Optional[Tuple[int, int]] = None
 
     @property

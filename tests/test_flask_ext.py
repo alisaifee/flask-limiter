@@ -326,6 +326,7 @@ def test_headers_no_breach():
     limiter = Limiter(
         get_remote_address,
         app=app,
+        application_limits=["60/minute"],
         default_limits=["10/minute"],
         headers_enabled=True,
     )
@@ -344,6 +345,39 @@ def test_headers_no_breach():
             resp = cli.get("/t1")
             assert resp.headers.get("X-RateLimit-Limit") == "10"
             assert resp.headers.get("X-RateLimit-Remaining") == "9"
+            assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 61))
+            assert resp.headers.get("Retry-After") == str(60)
+            resp = cli.get("/t2")
+            assert resp.headers.get("X-RateLimit-Limit") == "2"
+            assert resp.headers.get("X-RateLimit-Remaining") == "1"
+            assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 2))
+
+            assert resp.headers.get("Retry-After") == str(1)
+
+
+def test_headers_application_limits():
+    app = Flask(__name__)
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        application_limits=["60/minute"],
+        headers_enabled=True,
+    )
+
+    @app.route("/t1")
+    def t1():
+        return "test"
+
+    @app.route("/t2")
+    @limiter.limit("2/second; 5 per minute; 10/hour")
+    def t2():
+        return "test"
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            resp = cli.get("/t1")
+            assert resp.headers.get("X-RateLimit-Limit") == "60"
+            assert resp.headers.get("X-RateLimit-Remaining") == "59"
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 61))
             assert resp.headers.get("Retry-After") == str(60)
             resp = cli.get("/t2")

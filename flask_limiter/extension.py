@@ -972,10 +972,8 @@ class Limiter:
                 method = self.limiter.hit
                 kwargs["cost"] = lim.cost
 
-            if not limit_for_header or lim.limit < limit_for_header.limit:
-                limit_for_header = RequestLimit(self, lim.limit, args, False)
-
-            view_limits.append(RequestLimit(self, lim.limit, args, False))
+            request_limit = RequestLimit(self, lim.limit, args, False, lim.shared)
+            view_limits.append(request_limit)
 
             if not method(lim.limit, *args, **kwargs):
                 self.logger.info(
@@ -990,12 +988,21 @@ class Limiter:
                 if self._fail_on_first_breach:
                     break
 
+        if not limit_for_header and view_limits:
+            # Pick a non shared limit over a shared one if possible
+            # when no rate limit has been hit. This should be the best hint
+            # for the client.
+            explicit = [limit for limit in view_limits if not limit.shared]
+            limit_for_header = explicit[0] if explicit else view_limits[0]
+
         self.context.view_rate_limit = limit_for_header or None
         self.context.view_rate_limits = view_limits
 
         on_breach_response = None
         for limit in failed_limits:
-            request_limit = RequestLimit(self, limit[0].limit, limit[1], True)
+            request_limit = RequestLimit(
+                self, limit[0].limit, limit[1], True, limit[0].shared
+            )
             for cb in dict.fromkeys([self._on_breach, limit[0].on_breach]):
                 if cb:
                     try:
