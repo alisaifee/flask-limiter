@@ -70,8 +70,8 @@ class Limiter:
       by.
     :param app: :class:`flask.Flask` instance to initialize the extension with.
     :param default_limits: a variable list of strings or callables
-     returning strings denoting default limits to apply to all routes.
-     :ref:`ratelimit-string` for  more details.
+     returning strings denoting default limits to apply to all routes that are
+     not explicitely decorated with a limit. :ref:`ratelimit-string` for  more details.
     :param default_limits_per_method: whether default limits are applied
      per method, per route or as a combination of all method per route.
     :param default_limits_exempt_when: a function that should return

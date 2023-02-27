@@ -48,7 +48,8 @@ take priority.
        Constructor argument: :paramref:`~flask_limiter.Limiter.default_limits`
 
      - A comma (or some other delimiter) separated string that will be used to
-       apply a default limit on all routes. If not provided, the default limits can be
+       apply a default limit on all routes that are otherwise not decorated with
+       an explicit rate limit. If not provided, the default limits can be
        passed to the :class:`~flask_limiter.Limiter` constructor as well (the values passed to the
        constructor take precedence over those in the config).
        :ref:`ratelimit-string` for details.
