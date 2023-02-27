@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v3.3.0
+------
+Release Date: 2023-02-26
+
+* Bug Fix
+
+  * Ensure per route limits are preferred (over application limits)
+    when populating rate limiting headers in the case where no rate limit has been
+    breached in the request.
+
 v3.2.0
 ------
 Release Date: 2023-02-15
@@ -45,6 +55,10 @@ Release Date: 2022-12-28
 
   * Allow scoping regular limit decorators / context managers
 
+v3.3.0
+------
+Release Date: 2023-02-26
+
 v3.2.0
 ------
 Release Date: 2023-02-15
@@ -67,6 +81,10 @@ Release Date: 2022-12-28
 
   * Simplify registration of decorated function & blueprint limits
 
+
+v3.3.0
+------
+Release Date: 2023-02-26
 
 v3.2.0
 ------
@@ -836,6 +854,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
