@@ -1,7 +1,8 @@
 -r test.txt
 -r docs.txt
-ruff
+autoflake8
 black
+flake8
 isort
 keyring
 mypy
