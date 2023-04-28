@@ -832,9 +832,12 @@ class Limiter:
                     str(header_limit.limit.amount),
                 )
                 response.headers.add(
-                    self._header_mapping[HeaderNames.REMAINING], header_limit.remaining
+                    self._header_mapping[HeaderNames.REMAINING],
+                    str(header_limit.remaining),
                 )
-                response.headers.add(self._header_mapping[HeaderNames.RESET], reset_at)
+                response.headers.add(
+                    self._header_mapping[HeaderNames.RESET], str(reset_at)
+                )
 
                 # response may have an existing retry after
                 existing_retry_after_header = response.headers.get("Retry-After")
@@ -858,9 +861,11 @@ class Limiter:
                 # set the header instead of using add
                 response.headers.set(
                     self._header_mapping[HeaderNames.RETRY_AFTER],
-                    self._retry_after == "http-date"
-                    and http_date(reset_at)
-                    or int(reset_at - time.time()),
+                    str(
+                        http_date(reset_at)
+                        if self._retry_after == "http-date"
+                        else int(reset_at - time.time())
+                    ),
                 )
             except Exception as e:  # noqa: E722
                 if self._in_memory_fallback_enabled and not self._storage_dead:
