@@ -809,7 +809,7 @@ class Limiter:
                 except Exception as err:
                     if self._swallow_errors:
                         self.logger.exception(
-                            "Failed to deduct rate limit. " "Swallowing error"
+                            "Failed to deduct rate limit. Swallowing error"
                         )
                     else:
                         raise err
