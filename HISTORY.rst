@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v3.3.1
+------
+Release Date: 2023-05-03
+
+* Chores
+
+  * Improve default limits documentation
+  * Update documentation dependencies
+  * Fix typing compatibility errors in headers
+
 v3.3.0
 ------
 Release Date: 2023-02-26
@@ -55,6 +65,10 @@ Release Date: 2022-12-28
 
   * Allow scoping regular limit decorators / context managers
 
+v3.3.1
+------
+Release Date: 2023-05-03
+
 v3.3.0
 ------
 Release Date: 2023-02-26
@@ -81,6 +95,10 @@ Release Date: 2022-12-28
 
   * Simplify registration of decorated function & blueprint limits
 
+
+v3.3.1
+------
+Release Date: 2023-05-03
 
 v3.3.0
 ------
@@ -854,6 +872,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
