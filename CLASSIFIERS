@@ -1,5 +1,6 @@
 Development Status :: 5 - Production/Stable
 Environment :: Web Environment
+Framework :: Flask
 Intended Audience :: Developers
 License :: OSI Approved :: MIT License
 Operating System :: MacOS
