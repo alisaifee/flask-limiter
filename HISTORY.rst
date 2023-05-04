@@ -65,22 +65,6 @@ Release Date: 2022-12-28
 
   * Allow scoping regular limit decorators / context managers
 
-v3.3.1
-------
-Release Date: 2023-05-03
-
-v3.3.0
-------
-Release Date: 2023-02-26
-
-v3.2.0
-------
-Release Date: 2023-02-15
-
-v3.1.0
-------
-Release Date: 2022-12-29
-
 v3.0.0b2
 --------
 Release Date: 2022-12-28
@@ -94,23 +78,6 @@ Release Date: 2022-12-28
 * Chores
 
   * Simplify registration of decorated function & blueprint limits
-
-
-v3.3.1
-------
-Release Date: 2023-05-03
-
-v3.3.0
-------
-Release Date: 2023-02-26
-
-v3.2.0
-------
-Release Date: 2023-02-15
-
-v3.1.0
-------
-Release Date: 2022-12-29
 
 v3.0.0b1
 --------
