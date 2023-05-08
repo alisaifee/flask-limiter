@@ -70,7 +70,7 @@ jobs:
       run: |
         pytest --cov-report=xml
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
     - name: Check Coverage
       run: |
         coverage report --fail-under=100 || (echo 'Insufficient coverage' && $(exit 1))
