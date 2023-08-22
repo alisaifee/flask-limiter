@@ -1,5 +1,4 @@
 -r main.txt
-enum-tools[sphinx]==0.10.0
 furo==2023.8.19
 Sphinx>4,<8
 sphinx-autobuild==2021.3.14

@@ -50,7 +50,6 @@ html_css_files = [
 html_theme_options.update({"light_logo": "tap-icon.png", "dark_logo": "tap-icon.png"})
 
 extensions = [
-    "enum_tools.autoenum",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.autosummary",
