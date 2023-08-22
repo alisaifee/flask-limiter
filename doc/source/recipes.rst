@@ -78,7 +78,7 @@ For example::
 
     def default_error_responder(request_limit: RequestLimit):
         return make_response(
-            render_template("my_ratelimit_template.tmpl", request_limit=request_limit)
+            render_template("my_ratelimit_template.tmpl", request_limit=request_limit),
             429
         )
 
