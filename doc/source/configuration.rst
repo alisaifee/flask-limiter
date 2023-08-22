@@ -37,6 +37,26 @@ take priority.
 
      - A comma (or some other delimiter) separated string that will be used to
        apply limits to the application as a whole (i.e. shared by all routes).
+   * - .. data:: RATELIMIT_APPLICATION_PER_METHOD
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.application_limits_per_method`
+
+     - Whether application limits are applied per method, per route or as a combination
+       of all method per route.
+   * - .. data:: RATELIMIT_APPLICATION_EXEMPT_WHEN
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.application_limits_exempt_when`
+
+     - A function that should return a truthy value if the application rate limit(s)
+       should be skipped for the current request. This callback is called from the
+       :doc:`flask request context <flask:reqcontext>` :meth:`~flask.Flask.before_request` hook.
+   * - .. data:: RATELIMIT_APPLICATION_DEDUCT_WHEN
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.application_limits_deduct_when`
+
+     - A function that should return a truthy value if a deduction should be made
+       from the application rate limit(s) for the current request. This callback is called
+       from the :doc:`flask request context <flask:reqcontext>` :meth:`~flask.Flask.after_request` hook.
    * - .. data:: RATELIMIT_APPLICATION_COST
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.application_limits_cost`
