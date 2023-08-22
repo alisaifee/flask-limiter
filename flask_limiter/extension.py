@@ -892,7 +892,7 @@ class Limiter:
         return bool(
             not endpoint
             or not (self.enabled and self.initialized)
-            or endpoint == "static"
+            or endpoint.split(".")[-1] == "static"
             or any(fn() for fn in self._request_filters)
         )
 
