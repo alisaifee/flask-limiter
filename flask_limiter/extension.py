@@ -85,6 +85,13 @@ class Limiter:
     :param application_limits: a variable list of strings or callables
      returning strings for limits that are applied to the entire application
      (i.e a shared limit for all routes)
+    :param application_limits_per_method: whether application limits are applied
+     per method, per route or as a combination of all method per route.
+    :param application_limits_exempt_when: a function that should return
+     True/False to decide if the application limits should be skipped
+    :param application_limits_deduct_when: a function that receives the
+     current :class:`flask.Response` object and returns True/False to decide
+     if a deduction should be made from the application rate limit(s)
     :param application_limits_cost: The cost of a hit to the global application
      limits as an integer or a function that takes no parameters and returns an
      integer (Default: ``1``).
@@ -135,6 +142,11 @@ class Limiter:
         ] = None,
         default_limits_cost: Optional[Union[int, Callable[[], int]]] = None,
         application_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
+        application_limits_per_method: Optional[bool] = None,
+        application_limits_exempt_when: Optional[Callable[[], bool]] = None,
+        application_limits_deduct_when: Optional[
+            Callable[[flask.wrappers.Response], bool]
+        ] = None,
         application_limits_cost: Optional[Union[int, Callable[[], int]]] = None,
         headers_enabled: Optional[bool] = None,
         header_name_mapping: Optional[Dict[HeaderNames, str]] = None,
@@ -163,6 +175,9 @@ class Limiter:
         self._default_limits_exempt_when = default_limits_exempt_when
         self._default_limits_deduct_when = default_limits_deduct_when
         self._default_limits_cost = default_limits_cost
+        self._application_limits_per_method = application_limits_per_method
+        self._application_limits_exempt_when = application_limits_exempt_when
+        self._application_limits_deduct_when = application_limits_deduct_when
         self._application_limits_cost = application_limits_cost
         self._in_memory_fallback = []
         self._in_memory_fallback_enabled = in_memory_fallback_enabled or (
@@ -345,6 +360,18 @@ class Limiter:
         self._application_limits_cost = self._application_limits_cost or config.get(
             ConfigVars.APPLICATION_LIMITS_COST, 1
         )
+        if self._application_limits_per_method is None:
+            self._application_limits_per_method = bool(
+                config.get(ConfigVars.APPLICATION_LIMITS_PER_METHOD, False)
+            )
+        self._application_limits_exempt_when = (
+            self._application_limits_exempt_when
+            or config.get(ConfigVars.APPLICATION_LIMITS_EXEMPT_WHEN)
+        )
+        self._application_limits_deduct_when = (
+            self._application_limits_deduct_when
+            or config.get(ConfigVars.APPLICATION_LIMITS_DEDUCT_WHEN)
+        )
 
         if not self.limit_manager._application_limits and app_limits:
             self.limit_manager.set_application_limits(
@@ -354,6 +381,9 @@ class Limiter:
                         key_function=self._key_func,
                         scope="global",
                         shared=True,
+                        per_method=self._application_limits_per_method,
+                        exempt_when=self._application_limits_exempt_when,
+                        deduct_when=self._application_limits_deduct_when,
                         cost=self._application_limits_cost,
                     )
                 ]
@@ -362,6 +392,9 @@ class Limiter:
             app_limits = self.limit_manager._application_limits
             for group in app_limits:
                 group.cost = self._application_limits_cost
+                group.per_method = self._application_limits_per_method
+                group.exempt_when = self._application_limits_exempt_when
+                group.deduct_when = self._application_limits_deduct_when
             self.limit_manager.set_application_limits(app_limits)
 
         conf_limits = config.get(ConfigVars.DEFAULT_LIMITS, None)

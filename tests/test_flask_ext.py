@@ -7,7 +7,7 @@ from collections import Counter
 from unittest import mock
 
 import hiro
-from flask import Flask, request
+from flask import Flask, abort, request
 from werkzeug.exceptions import BadRequest
 
 from flask_limiter.constants import ConfigVars
@@ -538,6 +538,63 @@ def test_application_shared_limit(extension_factory):
             assert 200 == cli.get("/t1").status_code
             assert 200 == cli.get("/t2").status_code
             assert 429 == cli.get("/t1").status_code
+
+
+def test_application_limit_conditional(extension_factory):
+    def app_limit_exempt():
+        return "X" in request.headers
+
+    def app_limit_deduct(response):
+        return response.status_code == 400
+
+    app, limiter = extension_factory(
+        application_limits=["2/minute"],
+        application_limits_exempt_when=app_limit_exempt,
+        application_limits_deduct_when=app_limit_deduct,
+    )
+
+    @app.route("/t1", methods=["GET", "POST"])
+    def t1():
+        return "route1"
+
+    @app.route("/t2")
+    def t2():
+        abort(400)
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1").status_code
+            assert 400 == cli.get("/t2").status_code
+            assert 200 == cli.get("/t1").status_code
+            assert 400 == cli.get("/t2").status_code
+            assert 429 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t2").status_code
+
+
+def test_application_limit_per_method(extension_factory):
+    app, limiter = extension_factory(
+        application_limits=["2/minute"],
+        application_limits_per_method=True,
+    )
+
+    @app.route("/t1", methods=["GET", "POST"])
+    def t1():
+        return "route1"
+
+    @app.route("/t2", methods=["GET", "POST"])
+    def t2():
+        return "route2"
+
+    with hiro.Timeline().freeze():
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1").status_code
+            assert 200 == cli.get("/t2").status_code
+            assert 429 == cli.get("/t1").status_code
+            assert 429 == cli.get("/t2").status_code
+            assert 200 == cli.post("/t1").status_code
+            assert 200 == cli.post("/t2").status_code
+            assert 429 == cli.post("/t1").status_code
+            assert 429 == cli.post("/t2").status_code
 
 
 def test_callable_default_limit(extension_factory):
