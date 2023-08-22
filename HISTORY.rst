@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v3.4.0
+------
+Release Date: 2023-08-22
+
+* Feature
+
+  * Add extended configuration for application limits
+    * `application_limits_exempt_when`
+    * `application_limits_deduct_when`
+    * `application_limits_per_method`
+
+* Bug fix
+
+  * Ensure blueprint static routes are exempt
+
 v3.3.1
 ------
 Release Date: 2023-05-03
@@ -839,6 +854,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
