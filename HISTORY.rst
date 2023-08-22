@@ -10,6 +10,7 @@ Release Date: 2023-08-22
 * Feature
 
   * Add extended configuration for application limits
+
     * `application_limits_exempt_when`
     * `application_limits_deduct_when`
     * `application_limits_per_method`
