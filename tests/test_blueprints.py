@@ -31,6 +31,16 @@ def test_blueprint(extension_factory):
         assert cli.get("/t2").status_code == 429
 
 
+def test_blueprint_static_exempt(extension_factory):
+    app, limiter = extension_factory(default_limits=["1/minute"])
+    bp = Blueprint("main", __name__, static_folder="static")
+    app.register_blueprint(bp, url_prefix="/bp")
+
+    with app.test_client() as cli:
+        assert cli.get("/bp/static/image.png").status_code == 200
+        assert cli.get("/bp/static/image.png").status_code == 200
+
+
 def test_blueprint_limit_with_route_limits(extension_factory):
     app, limiter = extension_factory(default_limits=["1/minute"])
     bp = Blueprint("main", __name__)

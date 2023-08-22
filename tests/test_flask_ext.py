@@ -50,6 +50,20 @@ def test_reset_unsupported(extension_factory, memcached_connection):
         assert "1 per 1 day" in cli.get("/").data.decode()
 
 
+def test_static_exempt(extension_factory):
+    app, limiter = extension_factory(default_limits=["1/minute"])
+
+    @app.route("/")
+    def root():
+        return "root"
+
+    with app.test_client() as cli:
+        assert cli.get("/").status_code == 200
+        assert cli.get("/").status_code == 429
+        assert cli.get("/static/image.png").status_code == 200
+        assert cli.get("/static/image.png").status_code == 200
+
+
 def test_combined_rate_limits(extension_factory):
     app, limiter = extension_factory(
         {ConfigVars.DEFAULT_LIMITS: "1 per hour; 10 per day"}
