@@ -1220,9 +1220,7 @@ class LimitDecorator:
                         in_middleware=False, callable_name=name
                     )
 
-                return cast(
-                    R, flask.current_app.ensure_sync(cast(Callable[P, R], obj))(*a, **k)
-                )
+                return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
 
             # mark this wrapper as wrapped by a decorator from the limiter
             # from which the decorator was created. This ensures that stacked
