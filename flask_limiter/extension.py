@@ -1010,7 +1010,8 @@ class Limiter:
         failed_limits: List[Tuple[Limit, List[str]]] = []
         limit_for_header: Optional[RequestLimit] = None
         view_limits: List[RequestLimit] = []
-        for lim in itertools.chain(*self._breach_limits):
+        breach_limits = list(itertools.chain(*self._breach_limits))
+        for lim in breach_limits:
             limit_key, scope = lim.key_func(), lim.scope_for(endpoint, None)
             args = [limit_key, scope]
             if not self.limiter.test(lim.limit, *args):
@@ -1090,7 +1091,7 @@ class Limiter:
                         else:
                             raise err
         if failed_limits:
-            for lim in itertools.chain(*self._breach_limits):
+            for lim in breach_limits:
                 limit_scope = lim.scope_for(endpoint, flask.request.method)
                 limit_key = lim.key_func()
                 args = [limit_key, limit_scope]

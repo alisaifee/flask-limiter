@@ -898,7 +898,9 @@ def test_multiple_limiters_default_limits():
 
 def test_breach_limits(extension_factory):
     app, limiter = extension_factory(
-        default_limits=["2/second"], breach_limits=["2/minute", "3/hour", "4/day"]
+        default_limits=["2/second"],
+        breach_limits=["2/minute; 3/hour", lambda: "4/day"],
+        headers_enabled=True,
     )
 
     @app.route("/")
@@ -923,7 +925,11 @@ def test_breach_limits(extension_factory):
             assert cli.get("/").status_code == 429
             timeline.forward(59)
             # blocked because of max 3 breaches/hour
-            assert cli.get("/").status_code == 429
+            response = cli.get("/")
+            assert response.status_code == 429
+            assert response.headers.get("X-RateLimit-Limit") == "3"
+            assert response.headers.get("X-RateLimit-Remaining") == "0"
+
             # forward to 1 hour since start
             timeline.forward(60 * 58)
             assert cli.get("/").status_code == 200
@@ -931,7 +937,11 @@ def test_breach_limits(extension_factory):
             assert cli.get("/").status_code == 429
             # forward another hour and it should now be blocked for the day
             timeline.forward(60 * 60)
-            assert cli.get("/").status_code == 429
+            response = cli.get("/")
+            assert response.status_code == 429
+            assert response.headers.get("X-RateLimit-Limit") == "4"
+            assert response.headers.get("X-RateLimit-Remaining") == "0"
+
             # forward 22 hours
             timeline.forward(60 * 60 * 22)
             assert cli.get("/").status_code == 200
