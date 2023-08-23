@@ -894,3 +894,44 @@ def test_multiple_limiters_default_limits():
             assert cli.get("/test1").status_code == 429
             timeline.forward(50)
             assert cli.get("/test1").status_code == 200
+
+
+def test_breach_limits(extension_factory):
+    app, limiter = extension_factory(
+        default_limits=["2/second"], breach_limits=["2/minute", "3/hour", "4/day"]
+    )
+
+    @app.route("/")
+    def root():
+        return "root"
+
+    with hiro.Timeline().freeze() as timeline:
+        start = time.time()
+        print(start)
+        with app.test_client() as cli:
+            for _ in range(2):
+                assert cli.get("/").status_code == 200
+                assert cli.get("/").status_code == 200
+                assert cli.get("/").status_code == 429
+                timeline.forward(1)
+
+            # blocked because of max 2 breaches/minute
+            assert cli.get("/").status_code == 429
+            timeline.forward(59)
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 429
+            timeline.forward(59)
+            # blocked because of max 3 breaches/hour
+            assert cli.get("/").status_code == 429
+            # forward to 1 hour since start
+            timeline.forward(60 * 58)
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 429
+            # forward another hour and it should now be blocked for the day
+            timeline.forward(60 * 60)
+            assert cli.get("/").status_code == 429
+            # forward 22 hours
+            timeline.forward(60 * 60 * 22)
+            assert cli.get("/").status_code == 200

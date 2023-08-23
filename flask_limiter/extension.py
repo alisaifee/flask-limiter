@@ -159,6 +159,7 @@ class Limiter:
         on_breach: Optional[
             Callable[[RequestLimit], Optional[flask.wrappers.Response]]
         ] = None,
+        breach_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
         in_memory_fallback: Optional[List[str]] = None,
         in_memory_fallback_enabled: Optional[bool] = None,
         retry_after: Optional[str] = None,
@@ -229,6 +230,20 @@ class Limiter:
                 for limit in application_limits
             ]
             if application_limits
+            else []
+        )
+
+        self._breach_limits = (
+            [
+                LimitGroup(
+                    limit_provider=limit,
+                    key_function=self._key_func,
+                    scope="meta",
+                    shared=True,
+                )
+                for limit in breach_limits
+            ]
+            if breach_limits
             else []
         )
 
@@ -420,6 +435,17 @@ class Limiter:
                 group.deduct_when = self._default_limits_deduct_when
                 group.cost = self._default_limits_cost
             self.limit_manager.set_default_limits(default_limit_groups)
+
+        breach_limits = config.get(ConfigVars.BREACH_LIMITS, None)
+        if not self._breach_limits and breach_limits:
+            self._breach_limits = [
+                LimitGroup(
+                    limit_provider=app_limits,
+                    key_function=self._key_func,
+                    scope="meta",
+                    shared=True,
+                )
+            ]
         self.__configure_fallbacks(app, self._strategy)
 
         if self not in app.extensions.setdefault("limiter", set()):
@@ -984,6 +1010,15 @@ class Limiter:
         failed_limits: List[Tuple[Limit, List[str]]] = []
         limit_for_header: Optional[RequestLimit] = None
         view_limits: List[RequestLimit] = []
+        for lim in itertools.chain(*self._breach_limits):
+            limit_key, scope = lim.key_func(), lim.scope_for(endpoint, None)
+            args = [limit_key, scope]
+            if not self.limiter.test(lim.limit, *args):
+                breach_limit = RequestLimit(self, lim.limit, args, True, lim.shared)
+                self.context.view_rate_limit = breach_limit
+                self.context.view_rate_limits = [breach_limit]
+                raise RateLimitExceeded(lim)
+
         for lim in sorted(limits, key=lambda x: x.limit):
             if lim.is_exempt or lim.method_exempt:
                 continue
@@ -1055,6 +1090,11 @@ class Limiter:
                         else:
                             raise err
         if failed_limits:
+            for lim in itertools.chain(*self._breach_limits):
+                limit_scope = lim.scope_for(endpoint, flask.request.method)
+                limit_key = lim.key_func()
+                args = [limit_key, limit_scope]
+                self.limiter.hit(lim.limit, *args)
             raise RateLimitExceeded(
                 sorted(failed_limits, key=lambda x: x[0].limit)[0][0],
                 response=on_breach_response,
