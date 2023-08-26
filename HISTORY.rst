@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v3.4.1
+------
+Release Date: 2023-08-26
+
+* Bug fix
+
+  - Ensure _version.py has stable content when generated
+    using `git archive` from a tag regardless of when it is
+    run.
+
 v3.4.0
 ------
 Release Date: 2023-08-22
@@ -855,6 +865,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
