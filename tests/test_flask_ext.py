@@ -908,8 +908,6 @@ def test_breach_limits(extension_factory):
         return "root"
 
     with hiro.Timeline().freeze() as timeline:
-        start = time.time()
-        print(start)
         with app.test_client() as cli:
             for _ in range(2):
                 assert cli.get("/").status_code == 200
