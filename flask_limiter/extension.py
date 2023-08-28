@@ -440,7 +440,7 @@ class Limiter:
         if not self._breach_limits and breach_limits:
             self._breach_limits = [
                 LimitGroup(
-                    limit_provider=app_limits,
+                    limit_provider=breach_limits,
                     key_function=self._key_func,
                     scope="meta",
                     shared=True,
