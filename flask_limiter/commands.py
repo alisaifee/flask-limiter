@@ -241,6 +241,21 @@ def config() -> None:
                 )
                 extension_details.add_row(
                     None,
+                    ConfigVars.APPLICATION_LIMITS_PER_METHOD,
+                    Pretty(limiter._application_limits_per_method),
+                )
+                extension_details.add_row(
+                    None,
+                    ConfigVars.APPLICATION_LIMITS_EXEMPT_WHEN,
+                    render_func(limiter._application_limits_exempt_when),
+                )
+                extension_details.add_row(
+                    None,
+                    ConfigVars.APPLICATION_LIMITS_DEDUCT_WHEN,
+                    render_func(limiter._application_limits_deduct_when),
+                )
+                extension_details.add_row(
+                    None,
                     ConfigVars.APPLICATION_LIMITS_COST,
                     Pretty(limiter._application_limits_cost),
                 )
