@@ -9,7 +9,7 @@ Extension
 
 Utilities
 ---------
-.. autoflag:: ExemptionScope
+.. autoclass:: ExemptionScope
 .. autoclass:: RequestLimit
 .. automodule:: flask_limiter.util
 
