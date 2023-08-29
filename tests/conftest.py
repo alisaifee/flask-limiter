@@ -79,6 +79,7 @@ def kitchensink_factory(extension_factory):
             default_limits_deduct_when=lambda response: response.status_code != 200,
             default_limits_cost=dynamic_default_cost,
             application_limits=["5000/hour"],
+            breach_limits=["2/day"],
             headers_enabled=True,
             **kwargs
         )
