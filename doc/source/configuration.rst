@@ -200,6 +200,14 @@ take priority.
 
      - A function that will be called when any limit in this
        extension is breached.
+   * - .. data:: RATELIMIT_BREACH
+
+       Constructor argument: :paramref:`~flask_limiter.Limiter.breach_limits`
+
+     - A comma (or some other delimiter) separated string that will be used to
+       control the upper limit of a requesting client hitting any configured rate limit.
+       Once a breach limit is exceeded all subsequent requests will raise a
+       :class:`~flask_limiter.RateLimitExceeded` for the duration of the breach limit window.
 
 .. _ratelimit-string:
 

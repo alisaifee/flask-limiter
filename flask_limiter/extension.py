@@ -115,6 +115,11 @@ class Limiter:
      extension is breached. If the function returns an instance of :class:`flask.Response`
      that will be the response embedded into the :exc:`RateLimitExceeded` exception
      raised.
+    :param breach_limits: a variable list of strings or callables
+     returning strings for limits that are used to control the upper limit of
+     a requesting client hitting any configured rate limit. Once a breach limit is
+     exceeded all subsequent requests will raise a :class:`~flask_limiter.RateLimitExceeded`
+     for the duration of the breach limit window.
     :param in_memory_fallback: a variable list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
