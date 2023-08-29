@@ -103,7 +103,7 @@ take priority.
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.storage_uri`
 
-     - A storage location conforming to the scheme in :ref:`storage-scheme`.
+     - A storage location conforming to the scheme in :ref:`limits:storage:storage scheme`.
        A basic in-memory storage can be used by specifying ``memory://`` but it
        should be used with caution in any production setup since:
 
@@ -117,7 +117,7 @@ take priority.
        - Redis: ``redis://host:port``
 
        For specific examples and requirements of supported backends please
-       refer to :ref:`storage-scheme` and the :doc:`limits <limits:storage>` library.
+       refer to :ref:`limits:storage:storage scheme` and the :doc:`limits <limits:storage>` library.
    * - .. data:: RATELIMIT_STORAGE_OPTIONS
 
        Constructor argument: :paramref:`~flask_limiter.Limiter.storage_options`
