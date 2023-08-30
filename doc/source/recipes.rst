@@ -211,7 +211,7 @@ After a minute the ``slow`` endpoint can be accessed again once per minute
     <p>1 per 1 minute</p>
 
 Now, even after waiting a minute both the ``slow`` and ``fast`` endpoints
-are rate limited by the ``2/hour`` meta limit.
+are rejected due to the ``2/hour`` meta limit.
 
 .. code-block:: shell
 
