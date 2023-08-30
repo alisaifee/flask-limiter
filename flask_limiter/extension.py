@@ -459,6 +459,12 @@ class Limiter:
                     shared=True,
                 )
             ]
+
+        self._on_breach = self._on_breach or config.get(ConfigVars.ON_BREACH, None)
+        self._on_meta_breach = self._on_meta_breach or config.get(
+            ConfigVars.ON_META_BREACH, None
+        )
+
         self.__configure_fallbacks(app, self._strategy)
 
         if self not in app.extensions.setdefault("limiter", set()):
@@ -1042,7 +1048,7 @@ class Limiter:
                     except Exception as err:  # noqa
                         if self._swallow_errors:
                             self.logger.exception(
-                                "on_breach callback failed with error %s", err
+                                "on_meta_breach callback failed with error %s", err
                             )
                         else:
                             raise err
