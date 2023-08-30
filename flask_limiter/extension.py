@@ -117,9 +117,9 @@ class Limiter:
      raised.
     :param meta_limits: a variable list of strings or callables
      returning strings for limits that are used to control the upper limit of
-     a requesting client hitting any configured rate limit. Once a breach limit is
+     a requesting client hitting any configured rate limit. Once a meta limit is
      exceeded all subsequent requests will raise a :class:`~flask_limiter.RateLimitExceeded`
-     for the duration of the breach limit window.
+     for the duration of the meta limit window.
     :param on_meta_breach: a function that will be called when a meta limit in this
      extension is breached. If the function returns an instance of :class:`flask.Response`
      that will be the response embedded into the :exc:`RateLimitExceeded` exception
