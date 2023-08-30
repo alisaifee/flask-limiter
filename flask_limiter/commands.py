@@ -302,14 +302,14 @@ def config() -> None:
                     "Default Limits", ConfigVars.DEFAULT_LIMITS, Pretty([])
                 )
 
-            if limiter._breach_limits:
+            if limiter._meta_limits:
                 extension_details.add_row(
-                    "Breach Limits",
-                    ConfigVars.BREACH_LIMITS,
+                    "Meta Limits",
+                    ConfigVars.META_LIMITS,
                     Pretty(
                         [
                             render_limit(limit)
-                            for limit in itertools.chain(*limiter._breach_limits)
+                            for limit in itertools.chain(*limiter._meta_limits)
                         ]
                     ),
                 )
@@ -437,10 +437,10 @@ def limits(
                     yield render_limits(
                         current_app,
                         limiter,
-                        (list(itertools.chain(*limiter._breach_limits)), []),
+                        (list(itertools.chain(*limiter._meta_limits)), []),
                         test=key,
                         method=method,
-                        label="[gold3]Breach Limits[/gold3]",
+                        label="[gold3]Meta Limits[/gold3]",
                     )
                     yield render_limits(
                         current_app,

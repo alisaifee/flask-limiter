@@ -7,7 +7,7 @@ from collections import Counter
 from unittest import mock
 
 import hiro
-from flask import Flask, abort, request
+from flask import Flask, abort, make_response, request
 from werkzeug.exceptions import BadRequest
 
 from flask_limiter.constants import ConfigVars
@@ -896,10 +896,14 @@ def test_multiple_limiters_default_limits():
             assert cli.get("/test1").status_code == 200
 
 
-def test_breach_limits(extension_factory):
+def test_meta_limits(extension_factory):
+    def meta_breach_cb(limit):
+        return make_response("Would you like some tea?", 429)
+
     app, limiter = extension_factory(
         default_limits=["2/second"],
-        breach_limits=["2/minute; 3/hour", lambda: "4/day"],
+        meta_limits=["2/minute; 3/hour", lambda: "4/day"],
+        on_meta_breach=meta_breach_cb,
         headers_enabled=True,
     )
 
@@ -924,6 +928,7 @@ def test_breach_limits(extension_factory):
             timeline.forward(59)
             # blocked because of max 3 breaches/hour
             response = cli.get("/")
+            assert response.text == "Would you like some tea?"
             assert response.status_code == 429
             assert response.headers.get("X-RateLimit-Limit") == "3"
             assert response.headers.get("X-RateLimit-Remaining") == "0"
