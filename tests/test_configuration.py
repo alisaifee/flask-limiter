@@ -1,10 +1,11 @@
 import math
 import time
 
+import hiro
 import pytest
 from flask import Flask
 from limits.errors import ConfigurationError
-from limits.storage import MemcachedStorage
+from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
 
 from flask_limiter import HeaderNames
@@ -34,10 +35,22 @@ def test_constructor_arguments_over_config(redis_connection):
     limiter.init_app(app)
     app.config.setdefault(ConfigVars.STORAGE_URI, "redis://localhost:46379")
     app.config.setdefault(ConfigVars.APPLICATION_LIMITS, "1/minute")
+    app.config.setdefault(ConfigVars.META_LIMITS, "1/hour")
     assert type(limiter._limiter) == MovingWindowRateLimiter
-    limiter = Limiter(get_remote_address, storage_uri="memcached://localhost:31211")
+    limiter = Limiter(get_remote_address, storage_uri="memory://")
     limiter.init_app(app)
-    assert type(limiter._storage) == MemcachedStorage
+    assert type(limiter._storage) == MemoryStorage
+
+    @app.route("/")
+    def root():
+        return "root"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 429
+            timeline.forward(60)
+            assert cli.get("/").status_code == 429
 
 
 def test_header_names_config():

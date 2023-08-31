@@ -145,6 +145,89 @@ response from :paramref:`Limiter.limiter.on_breach` callback (if provided) will
 take priority over the response from the :paramref:`Limiter.on_breach` callback if
 there is one.
 
+Meta limits
+-----------
+.. versionadded:: 3.5.0
+
+Meta limits can be used for an additional layer of protection (for example
+against denial of service attacks) by limiting the number of times a requesting
+client can hit any rate limit in the application within configured time slices.
+
+These can be configured by using the :paramref:`~flask_limiter.Limiter.meta_limits`
+constructor argument (or the associated :data:`RATELIMIT_META` flask
+config attribute).
+
+
+Consider the following application & limiter configuration::
+
+    app = Limiter(
+        key_func=get_remote_address,
+        meta_limits=["2/hour", "4/day"],
+        default_limits=["10/minute"],
+    )
+
+    @app.route("/fast")
+    def fast():
+        return "fast"
+
+    @app.route("/slow")
+    @limiter.limit("1/minute")
+    def slow():
+        return "slow"
+
+
+The ``2/hour, 4/day`` value of :paramref:`~flask_limiter.Limiter.meta_limits` ensures that if
+any of the ``default_limits`` or per route limit of ``1/minute`` is exceeded more than
+**twice an hour** or **four times a day**, a :class:`~flask_limiter.RateLimitExceeded` exception will be
+raised (i.e. a ``429`` response will be returned) for any subsequent request until the ``meta_limit`` is reset.
+
+For example
+
+.. code-block:: shell
+
+    $ curl localhost:5000/fast
+    fast
+    $ curl localhost:5000/slow
+    slow
+    $ curl localhost:5000/slow
+    <!doctype html>
+    <html lang=en>
+    <title>429 Too Many Requests</title>
+    <h1>Too Many Requests</h1>
+    <p>1 per 1 minute</p>
+
+After a minute the ``slow`` endpoint can be accessed again once per minute
+
+.. code-block:: shell
+
+    $ sleep 60
+    $ curl localhost:5000/slow
+    slow
+    $ curl localhost:5000/slow
+    <!doctype html>
+    <html lang=en>
+    <title>429 Too Many Requests</title>
+    <h1>Too Many Requests</h1>
+    <p>1 per 1 minute</p>
+
+Now, even after waiting a minute both the ``slow`` and ``fast`` endpoints
+are rejected due to the ``2/hour`` meta limit.
+
+.. code-block:: shell
+
+    $ sleep 60
+    $ curl localhost:5000/slow
+    <!doctype html>
+    <html lang=en>
+    <title>429 Too Many Requests</title>
+    <h1>Too Many Requests</h1>
+    <p>2 per 1 hour</p>
+    $ curl localhost:5000/fast
+    <!doctype html>
+    <html lang=en>
+    <title>429 Too Many Requests</title>
+    <h1>Too Many Requests</h1>
+    <p>2 per 1 hour</p>
 
 Customizing the cost of a request
 ---------------------------------

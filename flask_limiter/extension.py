@@ -115,6 +115,15 @@ class Limiter:
      extension is breached. If the function returns an instance of :class:`flask.Response`
      that will be the response embedded into the :exc:`RateLimitExceeded` exception
      raised.
+    :param meta_limits: a variable list of strings or callables
+     returning strings for limits that are used to control the upper limit of
+     a requesting client hitting any configured rate limit. Once a meta limit is
+     exceeded all subsequent requests will raise a :class:`~flask_limiter.RateLimitExceeded`
+     for the duration of the meta limit window.
+    :param on_meta_breach: a function that will be called when a meta limit in this
+     extension is breached. If the function returns an instance of :class:`flask.Response`
+     that will be the response embedded into the :exc:`RateLimitExceeded` exception
+     raised.
     :param in_memory_fallback: a variable list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
@@ -159,6 +168,10 @@ class Limiter:
         on_breach: Optional[
             Callable[[RequestLimit], Optional[flask.wrappers.Response]]
         ] = None,
+        meta_limits: Optional[List[Union[str, Callable[[], str]]]] = None,
+        on_meta_breach: Optional[
+            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
+        ] = None,
         in_memory_fallback: Optional[List[str]] = None,
         in_memory_fallback_enabled: Optional[bool] = None,
         retry_after: Optional[str] = None,
@@ -201,6 +214,7 @@ class Limiter:
         self._swallow_errors = swallow_errors
         self._fail_on_first_breach = fail_on_first_breach
         self._on_breach = on_breach
+        self._on_meta_breach = on_meta_breach
 
         self._key_func = key_func
         self._key_prefix = key_prefix
@@ -229,6 +243,20 @@ class Limiter:
                 for limit in application_limits
             ]
             if application_limits
+            else []
+        )
+
+        self._meta_limits = (
+            [
+                LimitGroup(
+                    limit_provider=limit,
+                    key_function=self._key_func,
+                    scope="meta",
+                    shared=True,
+                )
+                for limit in meta_limits
+            ]
+            if meta_limits
             else []
         )
 
@@ -420,6 +448,23 @@ class Limiter:
                 group.deduct_when = self._default_limits_deduct_when
                 group.cost = self._default_limits_cost
             self.limit_manager.set_default_limits(default_limit_groups)
+
+        meta_limits = config.get(ConfigVars.META_LIMITS, None)
+        if not self._meta_limits and meta_limits:
+            self._meta_limits = [
+                LimitGroup(
+                    limit_provider=meta_limits,
+                    key_function=self._key_func,
+                    scope="meta",
+                    shared=True,
+                )
+            ]
+
+        self._on_breach = self._on_breach or config.get(ConfigVars.ON_BREACH, None)
+        self._on_meta_breach = self._on_meta_breach or config.get(
+            ConfigVars.ON_META_BREACH, None
+        )
+
         self.__configure_fallbacks(app, self._strategy)
 
         if self not in app.extensions.setdefault("limiter", set()):
@@ -984,6 +1029,31 @@ class Limiter:
         failed_limits: List[Tuple[Limit, List[str]]] = []
         limit_for_header: Optional[RequestLimit] = None
         view_limits: List[RequestLimit] = []
+        meta_limits = list(itertools.chain(*self._meta_limits))
+        for lim in meta_limits:
+            limit_key, scope = lim.key_func(), lim.scope_for(endpoint, None)
+            args = [limit_key, scope]
+            if not self.limiter.test(lim.limit, *args):
+                breached_meta_limit = RequestLimit(
+                    self, lim.limit, args, True, lim.shared
+                )
+                self.context.view_rate_limit = breached_meta_limit
+                self.context.view_rate_limits = [breached_meta_limit]
+                meta_breach_response = None
+                if self._on_meta_breach:
+                    try:
+                        cb_response = self._on_meta_breach(breached_meta_limit)
+                        if isinstance(cb_response, flask.wrappers.Response):
+                            meta_breach_response = cb_response
+                    except Exception as err:  # noqa
+                        if self._swallow_errors:
+                            self.logger.exception(
+                                "on_meta_breach callback failed with error %s", err
+                            )
+                        else:
+                            raise err
+                raise RateLimitExceeded(lim, response=meta_breach_response)
+
         for lim in sorted(limits, key=lambda x: x.limit):
             if lim.is_exempt or lim.method_exempt:
                 continue
@@ -1055,6 +1125,11 @@ class Limiter:
                         else:
                             raise err
         if failed_limits:
+            for lim in meta_limits:
+                limit_scope = lim.scope_for(endpoint, flask.request.method)
+                limit_key = lim.key_func()
+                args = [limit_key, limit_scope]
+                self.limiter.hit(lim.limit, *args)
             raise RateLimitExceeded(
                 sorted(failed_limits, key=lambda x: x[0].limit)[0][0],
                 response=on_breach_response,

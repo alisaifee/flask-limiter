@@ -1,3 +1,4 @@
+import itertools
 import time
 from functools import partial
 from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union
@@ -301,6 +302,17 @@ def config() -> None:
                     "Default Limits", ConfigVars.DEFAULT_LIMITS, Pretty([])
                 )
 
+            if limiter._meta_limits:
+                extension_details.add_row(
+                    "Meta Limits",
+                    ConfigVars.META_LIMITS,
+                    Pretty(
+                        [
+                            render_limit(limit)
+                            for limit in itertools.chain(*limiter._meta_limits)
+                        ]
+                    ),
+                )
             if limiter._headers_enabled:
                 header_configs = Tree(ConfigVars.HEADERS_ENABLED)
                 header_configs.add(ConfigVars.HEADER_RESET)
@@ -422,6 +434,14 @@ def limits(
                     and limiter.limit_manager.application_limits
                     and not (endpoint or path)
                 ):
+                    yield render_limits(
+                        current_app,
+                        limiter,
+                        (list(itertools.chain(*limiter._meta_limits)), []),
+                        test=key,
+                        method=method,
+                        label="[gold3]Meta Limits[/gold3]",
+                    )
                     yield render_limits(
                         current_app,
                         limiter,

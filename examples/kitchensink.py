@@ -36,6 +36,7 @@ def app():
         default_limits_deduct_when=lambda response: response.status_code == 200,
         default_limits_cost=default_cost,
         application_limits=["5000/hour"],
+        meta_limits=["2/day"],
         headers_enabled=True,
         storage_uri=os.environ.get("FLASK_RATELIMIT_STORAGE_URI", "memory://"),
     )
