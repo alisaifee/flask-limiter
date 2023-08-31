@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v3.5.0
+------
+Release Date: 2023-08-30
+
+* Feature
+
+  * Add `meta_limits` to allow for creating upper limits for
+    requesting clients to breach application rate limits.
+
+* Bug fix
+
+  * Ensure on breach callbacks can be configured using flask config
+
 v3.4.1
 ------
 Release Date: 2023-08-26
@@ -865,6 +878,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
