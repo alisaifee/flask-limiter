@@ -38,7 +38,7 @@ setup(
     description="Rate limiting for flask applications",
     long_description=open("README.rst").read(),
     packages=find_packages(exclude=["tests*"]),
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     extras_require=EXTRA_REQUIREMENTS,
     include_package_data=True,
     package_data={

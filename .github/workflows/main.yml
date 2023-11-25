@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11"]
+        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
     steps:
     - uses: actions/checkout@v3
     - name: Cache dependencies
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", "3.11"]
+        python-version: [3.8, 3.9, "3.10", "3.11", "3.12"]
         flask-version: [">2,<2.1", ">=2.1,<2.2", ">=2.2,<2.3", ">=2.3,<2.4"]
     steps:
     - uses: actions/checkout@v3
