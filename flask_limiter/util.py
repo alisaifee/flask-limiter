@@ -11,7 +11,10 @@ def get_remote_address() -> str:
      (or 127.0.0.1 if none found)
 
     """
-    return request.remote_addr or "127.0.0.1"
+    if request.headers.getlist("X-Forwarded-For"):
+        return request.headers.getlist("X-Forwarded-For")[0]
+    else:
+        return request.remote_addr or "127.0.0.1"
 
 
 def get_qualified_name(callable: Callable[..., Any]) -> str:
