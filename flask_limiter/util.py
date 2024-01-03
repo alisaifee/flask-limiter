@@ -12,7 +12,8 @@ def get_remote_address() -> str:
 
     """
     if request.headers.getlist("X-Forwarded-For"):
-        return request.headers.getlist("X-Forwarded-For")[0]
+        #return the last ip of the list as the client may add its own
+        return request.headers.getlist("X-Forwarded-For")[-1]
     else:
         return request.remote_addr or "127.0.0.1"
 
