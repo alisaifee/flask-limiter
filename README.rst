@@ -18,15 +18,6 @@ Flask-Limiter
 
 **Flask-Limiter** adds rate limiting to `Flask <https://flask.palletsprojects.com>`_ applications.
 
-----
-
-Sponsored by `Zuplo <https://zuplo.link/3NuX0co>`_ a fully-managed API Gateway for developers.
-Add `dynamic rate-limiting <https://zuplo.link/flask-dynamic-rate-limit>`_ authentication and more to any API in minutes.
-Learn more at `zuplo.com <https://zuplo.link/3NuX0co>`_
-
-----
-
-
 You can configure rate limits at different levels such as:
 
 - Application wide global limits per user
