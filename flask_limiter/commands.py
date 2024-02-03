@@ -200,7 +200,7 @@ def cli() -> None:
 
 
 @cli.command(help="View the extension configuration")
-@with_appcontext  # type: ignore
+@with_appcontext
 def config() -> None:
     with current_app.test_request_context():
         console = Console(theme=limiter_theme)
@@ -366,7 +366,7 @@ def config() -> None:
 @click.option("--method", default=None, help="HTTP Method to filter by")
 @click.option("--key", default=None, help="Test the limit")
 @click.option("--watch/--no-watch", default=False, help="Create a live dashboard")
-@with_appcontext  # type: ignore
+@with_appcontext
 def limits(
     endpoint: Optional[str] = None,
     path: Optional[str] = None,
@@ -488,7 +488,7 @@ def limits(
 @click.option("--method", default=None, help="HTTP Method to filter by")
 @click.option("--key", default=None, required=True, help="Key to reset the limits for")
 @click.option("-y", is_flag=True, help="Skip prompt for confirmation")
-@with_appcontext  # type: ignore
+@with_appcontext
 def clear(
     key: str,
     endpoint: Optional[str] = None,
