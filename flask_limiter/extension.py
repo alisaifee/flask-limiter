@@ -1,6 +1,7 @@
 """
 Flask-Limiter Extension
 """
+
 from __future__ import annotations
 
 import dataclasses
@@ -651,8 +652,7 @@ class Limiter:
         obj: flask.Blueprint,
         *,
         flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
-    ) -> flask.Blueprint:
-        ...
+    ) -> flask.Blueprint: ...
 
     @overload
     def exempt(
@@ -660,8 +660,7 @@ class Limiter:
         obj: Callable[..., R],
         *,
         flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
-    ) -> Callable[..., R]:
-        ...
+    ) -> Callable[..., R]: ...
 
     @overload
     def exempt(
@@ -671,8 +670,7 @@ class Limiter:
     ) -> Union[
         Callable[[Callable[P, R]], Callable[P, R]],
         Callable[[flask.Blueprint], flask.Blueprint],
-    ]:
-        ...
+    ]: ...
 
     def exempt(
         self,
@@ -1252,16 +1250,13 @@ class LimitDecorator:
         exc_type: Optional[Type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
-    def __call__(self, obj: Callable[P, R]) -> Callable[P, R]:
-        ...
+    def __call__(self, obj: Callable[P, R]) -> Callable[P, R]: ...
 
     @overload
-    def __call__(self, obj: flask.Blueprint) -> None:
-        ...
+    def __call__(self, obj: flask.Blueprint) -> None: ...
 
     def __call__(
         self, obj: Union[Callable[P, R], flask.Blueprint]
