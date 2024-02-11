@@ -29,7 +29,7 @@ You can configure rate limits at different levels such as:
 **Flask-Limiter** can be `configured <https://flask-limiter.readthedocs.io/en/latest/configuration.html>`_ to fit your application in many ways, including:
 
 - Persistance to various commonly used `storage backends <https://flask-limiter.readthedocs.io/en/latest/#configuring-a-storage-backend>`_
-  (such as Redis, Memcached & MongoDB)
+  (such as Redis, Memcached, MongoDB & Etcd)
   via `limits <https://limits.readthedocs.io/en/stable/storage.html>`__
 - Any rate limiting strategy supported by `limits <https://limits.readthedocs.io/en/stable/strategies.html>`__
 
@@ -71,6 +71,8 @@ Add the rate limiter to your flask app
        # storage_uri="memcached://localhost:11211,localhost:11212,localhost:11213",
        # MongoDB
        # storage_uri="mongodb://localhost:27017",
+       # Etcd
+       # storage_uri="etcd://localhost:2379",
        strategy="fixed-window", # or "moving-window"
    )
 
