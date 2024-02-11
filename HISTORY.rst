@@ -3,6 +3,16 @@
 Changelog
 =========
 
+v3.5.1
+------
+Release Date: 2024-02-11
+
+* Chores
+
+  * Update development dependencies
+  * Use ruff for all linting
+  * Update CI compatibility matrix
+
 v3.5.0
 ------
 Release Date: 2023-08-30
@@ -878,6 +888,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
