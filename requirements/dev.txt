@@ -1,7 +1,5 @@
 -r test.txt
 -r docs.txt
 ruff
-black
-isort
 keyring
 mypy

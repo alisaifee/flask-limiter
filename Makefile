@@ -1,10 +1,11 @@
 lint:
-	black --check tests flask_limiter
-	mypy flask_limiter
+	ruff check --select I
+	ruff format --check flask_limiter tests
 	ruff flask_limiter tests 
+	mypy flask_limiter
 
 lint-fix:
-	black tests flask_limiter
-	mypy flask_limiter
-	isort -r --profile=black tests flask_limiter
+	ruff check --select I --fix
+	ruff format flask_limiter tests
 	ruff --fix flask_limiter tests 
+	mypy flask_limiter

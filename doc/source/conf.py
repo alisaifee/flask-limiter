@@ -7,9 +7,9 @@ import sys
 sys.path.insert(0, os.path.abspath("../../"))
 sys.path.insert(0, os.path.abspath("./"))
 
-import flask_limiter
-
 from theme_config import *
+
+import flask_limiter
 
 description = "Flask-Limiter adds rate limiting to flask applications."
 copyright = "2023, Ali-Akber Saifee"

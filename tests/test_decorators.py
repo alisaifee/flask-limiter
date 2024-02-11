@@ -705,7 +705,8 @@ def test_on_breach_callback_custom_response(extension_factory):
             f"default custom response {request_limit.limit} @ {request.path}", 429
         )
 
-    def on_breach_invalid(): ...
+    def on_breach_invalid():
+        ...
 
     def on_breach_fail(request_limit):
         1 / 0

@@ -81,7 +81,7 @@ def kitchensink_factory(extension_factory):
             application_limits=["5000/hour"],
             meta_limits=["2/day"],
             headers_enabled=True,
-            **kwargs
+            **kwargs,
         )
 
         @app.route("/")

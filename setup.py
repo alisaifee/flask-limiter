@@ -7,8 +7,10 @@ __author__ = "Ali-Akber Saifee"
 __email__ = "ali@indydevs.org"
 __copyright__ = "Copyright 2023, Ali-Akber Saifee"
 
-from setuptools import setup, find_packages
 import os
+
+from setuptools import find_packages, setup
+
 import versioneer
 
 this_dir = os.path.abspath(os.path.dirname(__file__))

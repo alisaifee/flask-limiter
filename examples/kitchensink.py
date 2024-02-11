@@ -1,6 +1,7 @@
 import os
+
 import jinja2
-from flask import Blueprint, Flask, jsonify, request, render_template, make_response
+from flask import Blueprint, Flask, jsonify, make_response, render_template, request
 from flask.views import View
 
 import flask_limiter
