@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.6.0
+------
+Release Date: 2024-04-21
+
+* Bug fix
+
+  * Ensure `exempt` routes are exempt from meta limits as well
+
+
 v3.5.1
 ------
 Release Date: 2024-02-11
@@ -888,6 +897,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
