@@ -12,7 +12,7 @@ echo "Release Date: `date +"%Y-%m-%d"`" >> $changelog_file
 python -c "print(open('HISTORY.rst').read().replace('$last_portion', open('$changelog_file').read() +'\n' +  '$last_portion'))" > HISTORY.rst.new
 cp HISTORY.rst.new HISTORY.rst
 vim -O HISTORY.rst <(echo \# vim:filetype=git;git log $last_tag..HEAD --format='* %s (%h)%n%b' | sed -E '/^\*/! s/(.*)/    \1/g')
-if rst2html.py HISTORY.rst > /dev/null
+if rst2html HISTORY.rst > /dev/null
 then
     echo "Tag $new_version"
     git add HISTORY.rst
