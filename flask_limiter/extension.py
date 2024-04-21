@@ -651,35 +651,40 @@ class Limiter:
         self,
         obj: flask.Blueprint,
         *,
-        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
-    ) -> flask.Blueprint:
-        ...
+        flags: ExemptionScope = ExemptionScope.APPLICATION
+        | ExemptionScope.DEFAULT
+        | ExemptionScope.META,
+    ) -> flask.Blueprint: ...
 
     @overload
     def exempt(
         self,
         obj: Callable[..., R],
         *,
-        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
-    ) -> Callable[..., R]:
-        ...
+        flags: ExemptionScope = ExemptionScope.APPLICATION
+        | ExemptionScope.DEFAULT
+        | ExemptionScope.META,
+    ) -> Callable[..., R]: ...
 
     @overload
     def exempt(
         self,
         *,
-        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
+        flags: ExemptionScope = ExemptionScope.APPLICATION
+        | ExemptionScope.DEFAULT
+        | ExemptionScope.META,
     ) -> Union[
         Callable[[Callable[P, R]], Callable[P, R]],
         Callable[[flask.Blueprint], flask.Blueprint],
-    ]:
-        ...
+    ]: ...
 
     def exempt(
         self,
         obj: Optional[Union[Callable[..., R], flask.Blueprint]] = None,
         *,
-        flags: ExemptionScope = ExemptionScope.APPLICATION | ExemptionScope.DEFAULT,
+        flags: ExemptionScope = ExemptionScope.APPLICATION
+        | ExemptionScope.DEFAULT
+        | ExemptionScope.META,
     ) -> Union[
         Callable[..., R],
         flask.Blueprint,
@@ -692,7 +697,7 @@ class Limiter:
 
         :param obj: view function or blueprint to mark as exempt.
         :param flags: Controls the scope of the exemption. By default
-         application wide limits and defaults configured on the extension
+         application wide limits, defaults configured on the extension and meta limits
          are opted out of. Additional flags can be used to control the behavior
          when :paramref:`obj` is a Blueprint that is nested under another Blueprint
          or has other Blueprints nested under it (See :ref:`recipes:nested blueprints`)
@@ -1031,29 +1036,35 @@ class Limiter:
         limit_for_header: Optional[RequestLimit] = None
         view_limits: List[RequestLimit] = []
         meta_limits = list(itertools.chain(*self._meta_limits))
-        for lim in meta_limits:
-            limit_key, scope = lim.key_func(), lim.scope_for(endpoint, None)
-            args = [limit_key, scope]
-            if not self.limiter.test(lim.limit, *args):
-                breached_meta_limit = RequestLimit(
-                    self, lim.limit, args, True, lim.shared
-                )
-                self.context.view_rate_limit = breached_meta_limit
-                self.context.view_rate_limits = [breached_meta_limit]
-                meta_breach_response = None
-                if self._on_meta_breach:
-                    try:
-                        cb_response = self._on_meta_breach(breached_meta_limit)
-                        if isinstance(cb_response, flask.wrappers.Response):
-                            meta_breach_response = cb_response
-                    except Exception as err:  # noqa
-                        if self._swallow_errors:
-                            self.logger.exception(
-                                "on_meta_breach callback failed with error %s", err
-                            )
-                        else:
-                            raise err
-                raise RateLimitExceeded(lim, response=meta_breach_response)
+        if not (
+            ExemptionScope.META
+            & self.limit_manager.exemption_scope(
+                flask.current_app, endpoint, flask.request.blueprint
+            )
+        ):
+            for lim in meta_limits:
+                limit_key, scope = lim.key_func(), lim.scope_for(endpoint, None)
+                args = [limit_key, scope]
+                if not self.limiter.test(lim.limit, *args):
+                    breached_meta_limit = RequestLimit(
+                        self, lim.limit, args, True, lim.shared
+                    )
+                    self.context.view_rate_limit = breached_meta_limit
+                    self.context.view_rate_limits = [breached_meta_limit]
+                    meta_breach_response = None
+                    if self._on_meta_breach:
+                        try:
+                            cb_response = self._on_meta_breach(breached_meta_limit)
+                            if isinstance(cb_response, flask.wrappers.Response):
+                                meta_breach_response = cb_response
+                        except Exception as err:  # noqa
+                            if self._swallow_errors:
+                                self.logger.exception(
+                                    "on_meta_breach callback failed with error %s", err
+                                )
+                            else:
+                                raise err
+                    raise RateLimitExceeded(lim, response=meta_breach_response)
 
         for lim in sorted(limits, key=lambda x: x.limit):
             if lim.is_exempt or lim.method_exempt:
@@ -1253,16 +1264,13 @@ class LimitDecorator:
         exc_type: Optional[Type[BaseException]],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
-    ) -> None:
-        ...
+    ) -> None: ...
 
     @overload
-    def __call__(self, obj: Callable[P, R]) -> Callable[P, R]:
-        ...
+    def __call__(self, obj: Callable[P, R]) -> Callable[P, R]: ...
 
     @overload
-    def __call__(self, obj: flask.Blueprint) -> None:
-        ...
+    def __call__(self, obj: flask.Blueprint) -> None: ...
 
     def __call__(
         self, obj: Union[Callable[P, R], flask.Blueprint]
