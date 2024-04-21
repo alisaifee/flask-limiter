@@ -240,24 +240,22 @@ def test_fallback_to_memory_backoff_check(redis_connection, extension_factory):
             raise Exception("redis dead")
 
         with hiro.Timeline() as timeline:
-            with patch("limits.storage.RedisStorage.incr") as incr:
-                with patch("limits.storage.RedisStorage.check") as check:
-                    check.return_value = False
-                    incr.side_effect = raiser
-                    assert cli.get("/t1").status_code == 200
-                    assert cli.get("/t1").status_code == 429
-                    timeline.forward(1)
-                    assert cli.get("/t1").status_code == 429
-                    timeline.forward(2)
-                    assert cli.get("/t1").status_code == 429
-                    timeline.forward(4)
-                    assert cli.get("/t1").status_code == 429
-                    timeline.forward(8)
-                    assert cli.get("/t1").status_code == 429
-                    timeline.forward(16)
-                    assert cli.get("/t1").status_code == 429
-                    timeline.forward(32)
-                    assert cli.get("/t1").status_code == 200
+            with patch("redis.Redis.execute_command") as exec_command:
+                exec_command.side_effect = raiser
+                assert cli.get("/t1").status_code == 200
+                assert cli.get("/t1").status_code == 429
+                timeline.forward(1)
+                assert cli.get("/t1").status_code == 429
+                timeline.forward(2)
+                assert cli.get("/t1").status_code == 429
+                timeline.forward(4)
+                assert cli.get("/t1").status_code == 429
+                timeline.forward(8)
+                assert cli.get("/t1").status_code == 429
+                timeline.forward(16)
+                assert cli.get("/t1").status_code == 429
+                timeline.forward(32)
+                assert cli.get("/t1").status_code == 200
             # redis back to normal, but exponential backoff will only
             # result in it being marked after pow(2,0) seconds and next
             # check
@@ -303,14 +301,12 @@ def test_fallback_to_memory_with_global_override(redis_connection, extension_fac
         def raiser(*a):
             raise Exception("redis dead")
 
-        with patch("limits.storage.RedisStorage.incr") as incr:
-            with patch("limits.storage.RedisStorage.check") as check:
-                check.return_value = False
-                incr.side_effect = raiser
-                assert cli.get("/t1").status_code == 200
-                assert cli.get("/t1").status_code == 429
-                assert cli.get("/t2").status_code == 200
-                assert cli.get("/t2").status_code == 429
+        with patch("redis.Redis.execute_command") as exec_command:
+            exec_command.side_effect = raiser
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            assert cli.get("/t2").status_code == 200
+            assert cli.get("/t2").status_code == 429
         # redis back to normal, go back to regular limits
         with hiro.Timeline() as timeline:
             timeline.forward(2)
@@ -349,8 +345,8 @@ def test_fallback_to_memory(extension_factory):
         def raiser(*a):
             raise Exception("redis dead")
 
-        with patch("limits.storage.RedisStorage.incr") as hit:
-            hit.side_effect = raiser
+        with patch("redis.Redis.execute_command") as exec_command:
+            exec_command.side_effect = raiser
             assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 200
             assert cli.get("/t1").status_code == 429
@@ -361,6 +357,3 @@ def test_fallback_to_memory(extension_factory):
             limiter._storage.storage.flushall()
             assert cli.get("/t2").status_code == 200
             assert cli.get("/t2").status_code == 429
-        with patch("limits.storage.RedisStorage.get") as get:
-            get.side_effect = raiser
-            assert cli.get("/t1").status_code == 200
