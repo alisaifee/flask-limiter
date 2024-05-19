@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.7.0
+------
+Release Date: 2024-05-19
+
+* Bug fix
+
+  * Fix errors with concurrent access to internal exemption maps
+    during application startup.
+
 v3.6.0
 ------
 Release Date: 2024-04-21
@@ -897,6 +906,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
