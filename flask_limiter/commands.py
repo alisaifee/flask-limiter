@@ -1,7 +1,18 @@
 import itertools
 import time
 from functools import partial
-from typing import Any, Callable, Dict, Generator, List, Optional, Set, Tuple, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Union,
+    cast,
+)
 from urllib.parse import urlparse
 
 import click
@@ -180,7 +191,7 @@ def get_filtered_endpoint(
             filter_endpoint, _ = adapter.match(
                 parsed.path, method=method, query_args=parsed.query
             )
-            return filter_endpoint
+            return cast(str, filter_endpoint)
         except NotFound:
             console.print(
                 f"[error]Error: {path} could not be matched to an endpoint[/error]"
