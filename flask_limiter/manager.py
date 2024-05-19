@@ -139,7 +139,7 @@ class LimitManager:
     ) -> ExemptionScope:
         view_func = app.view_functions.get(endpoint or "", None)
         name = get_qualified_name(view_func) if view_func else ""
-        route_exemption_scope = self._route_exemptions[name]
+        route_exemption_scope = self._route_exemptions.get(name, ExemptionScope.NONE)
         blueprint_instance = app.blueprints.get(blueprint) if blueprint else None
 
         if not blueprint_instance:
@@ -161,7 +161,7 @@ class LimitManager:
 
     def decorated_limits(self, callable_name: str) -> List[Limit]:
         limits = []
-        if not self._route_exemptions[callable_name]:
+        if not self._route_exemptions.get(callable_name, ExemptionScope.NONE):
             if callable_name in self._decorated_limits:
                 for group in self._decorated_limits[callable_name]:
                     try:
@@ -206,7 +206,9 @@ class LimitManager:
                             limit.override_defaults for limit in blueprint_self_limits
                         )
                     )
-                    and not self._blueprint_exemptions[blueprint_name]
+                    and not self._blueprint_exemptions.get(
+                        blueprint_name, ExemptionScope.NONE
+                    )
                     & ExemptionScope.ANCESTORS
                     else blueprint_self_limits
                 )
@@ -242,7 +244,9 @@ class LimitManager:
         self, app: flask.Flask, blueprint_name: str
     ) -> Tuple[ExemptionScope, Dict[str, ExemptionScope]]:
         name = app.blueprints[blueprint_name].name
-        exemption = self._blueprint_exemptions[name] & ~(ExemptionScope.ANCESTORS)
+        exemption = self._blueprint_exemptions.get(name, ExemptionScope.NONE) & ~(
+            ExemptionScope.ANCESTORS
+        )
 
         ancestory = set(blueprint_name.split("."))
         ancestor_exemption = {
@@ -251,4 +255,7 @@ class LimitManager:
             if f & ExemptionScope.DESCENDENTS
         }.intersection(ancestory)
 
-        return exemption, {k: self._blueprint_exemptions[k] for k in ancestor_exemption}
+        return exemption, {
+            k: self._blueprint_exemptions.get(k, ExemptionScope.NONE)
+            for k in ancestor_exemption
+        }

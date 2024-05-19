@@ -197,12 +197,8 @@ class Limiter:
         self._in_memory_fallback_enabled = in_memory_fallback_enabled or (
             in_memory_fallback and len(in_memory_fallback) > 0
         )
-        self._route_exemptions: Dict[str, ExemptionScope] = defaultdict(
-            lambda: ExemptionScope.NONE
-        )
-        self._blueprint_exemptions: Dict[str, ExemptionScope] = defaultdict(
-            lambda: ExemptionScope.NONE
-        )
+        self._route_exemptions: Dict[str, ExemptionScope] = {}
+        self._blueprint_exemptions: Dict[str, ExemptionScope] = {}
         self._request_filters: List[Callable[[], bool]] = []
 
         self._headers_enabled = headers_enabled
