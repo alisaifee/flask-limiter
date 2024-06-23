@@ -199,6 +199,20 @@ def test_default_limit_with_conditional_deduction(extension_factory):
             assert cli.get("/t1/2").status_code == 400
 
 
+def test_deduct_when_custom_cost_moving_window(extension_factory):
+    app, limiter = extension_factory(strategy="moving-window")
+
+    @app.route("/")
+    @limiter.limit("20/minute", cost=15, deduct_when=lambda r: r.status_code == 200)
+    def root():
+        return "root"
+
+    with hiro.Timeline():
+        with app.test_client() as cli:
+            assert cli.get("/").status_code == 200
+            assert cli.get("/").status_code == 429
+
+
 def test_key_func(extension_factory):
     app, limiter = extension_factory()
 

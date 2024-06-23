@@ -1041,7 +1041,7 @@ class Limiter:
             for lim in meta_limits:
                 limit_key, scope = lim.key_func(), lim.scope_for(endpoint, None)
                 args = [limit_key, scope]
-                if not self.limiter.test(lim.limit, *args):
+                if not self.limiter.test(lim.limit, *args, cost=lim.cost):
                     breached_meta_limit = RequestLimit(
                         self, lim.limit, args, True, lim.shared
                     )
@@ -1086,7 +1086,7 @@ class Limiter:
                 method = self.limiter.test
             else:
                 method = self.limiter.hit
-                kwargs["cost"] = lim.cost
+            kwargs["cost"] = lim.cost
 
             request_limit = RequestLimit(self, lim.limit, args, False, lim.shared)
             view_limits.append(request_limit)
