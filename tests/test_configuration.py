@@ -36,10 +36,10 @@ def test_constructor_arguments_over_config(redis_connection):
     app.config.setdefault(ConfigVars.STORAGE_URI, "redis://localhost:46379")
     app.config.setdefault(ConfigVars.APPLICATION_LIMITS, "1/minute")
     app.config.setdefault(ConfigVars.META_LIMITS, "1/hour")
-    assert type(limiter._limiter) == MovingWindowRateLimiter
+    assert type(limiter._limiter) is MovingWindowRateLimiter
     limiter = Limiter(get_remote_address, storage_uri="memory://")
     limiter.init_app(app)
-    assert type(limiter._storage) == MemoryStorage
+    assert type(limiter._storage) is MemoryStorage
 
     @app.route("/")
     def root():
