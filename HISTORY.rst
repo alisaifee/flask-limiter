@@ -3,6 +3,14 @@
 Changelog
 =========
 
+v3.8.0
+------
+Release Date: 2024-07-20
+
+* Bug fix
+
+  * Ensure cost is accounted for when testing conditional limits
+
 v3.7.0
 ------
 Release Date: 2024-05-19
@@ -906,6 +914,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
