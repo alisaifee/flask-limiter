@@ -129,7 +129,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4.1.7
         with:
-          name: artifact
+          name: wheels
+          path: dist
+      - uses: actions/download-artifact@v4.1.7
+        with:
+          name: src_dist
           path: dist
 
       - uses: pypa/gh-action-pypi-publish@v1.4.2
@@ -147,10 +151,15 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Download artifacts
+      - name: Download wheels
         uses: actions/download-artifact@v4.1.7
         with:
-          name: artifact
+          name: wheels
+          path: dist
+      - name: Download src dist
+        uses: actions/download-artifact@v4.1.7
+        with:
+          name: src_dist
           path: dist
       - name: Generate release notes
         run: |
