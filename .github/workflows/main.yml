@@ -86,7 +86,7 @@ jobs:
           python -m build --wheel
       - uses: actions/upload-artifact@v4
         with:
-          overwrite: true
+          name: wheels
           path: ./dist/*.whl
   build_sdist:
     needs: [lint]
@@ -101,8 +101,8 @@ jobs:
           pipx run build --sdist
       - uses: actions/upload-artifact@v4
         with:
+          name: src_dist
           path: dist/*.tar.gz
-          overwrite: true
   upload_pypi:
     needs: [test, build_wheels, build_sdist]
     runs-on: ubuntu-latest
@@ -110,7 +110,11 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4.1.7
         with:
-          name: artifact
+          name: wheels
+          path: dist
+      - uses: actions/download-artifact@v4.1.7
+        with:
+          name: src_dist
           path: dist
       - uses: pypa/gh-action-pypi-publish@v1.4.2
         with:
