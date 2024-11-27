@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.9.1
+------
+Release Date: 2024-11-27
+
+* Compatibility
+
+  * Ensure wheels are uploaded to pypi as well
+
+
 v3.9.0
 ------
 Release Date: 2024-11-27
@@ -928,6 +937,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
