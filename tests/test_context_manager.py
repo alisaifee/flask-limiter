@@ -15,8 +15,7 @@ def test_static_limit(extension_factory):
                 resp += "maybe"
         except RateLimitExceeded:
             pass
-        finally:
-            return resp
+        return resp
 
     with hiro.Timeline().freeze() as timeline:
         with app.test_client() as cli:
