@@ -86,6 +86,7 @@ jobs:
           python -m build --wheel
       - uses: actions/upload-artifact@v4
         with:
+          overwrite: true
           path: ./dist/*.whl
   build_sdist:
     needs: [lint]
