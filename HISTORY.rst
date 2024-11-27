@@ -3,6 +3,20 @@
 Changelog
 =========
 
+v3.9.0
+------
+Release Date: 2024-11-27
+
+* Chores
+
+  * Update development dependencies
+
+* Compatibility
+
+  * Drop support for python 3.8
+  * Add support for python 3.13
+  * Add CI matrix entry for flask 3.1
+
 v3.8.0
 ------
 Release Date: 2024-07-20
@@ -914,6 +928,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
