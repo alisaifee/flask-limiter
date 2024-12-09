@@ -7,6 +7,6 @@ sphinx-inline-tabs==2023.4.21
 sphinx-issues==5.0.0
 sphinxext-opengraph==0.9.1
 sphinx-paramlinks==0.6.0
-sphinxcontrib-programoutput==0.17
+sphinxcontrib-programoutput==0.18
 
 
