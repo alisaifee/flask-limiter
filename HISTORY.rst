@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.10.0
+-------
+Release Date: 2025-01-05
+
+* Chores
+
+  * Fix typing error with exempt decorator
+  * Update types for window wrapper to use named tuple
+
 v3.9.2
 ------
 Release Date: 2024-11-27
@@ -945,6 +954,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
