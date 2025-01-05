@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
+import functools
 import itertools
 import logging
 import time
@@ -39,7 +40,6 @@ from .typing import (
     Sequence,
     Set,
     Tuple,
-    TypeVar,
     Union,
     cast,
 )
@@ -730,13 +730,8 @@ class Limiter:
         elif obj:
             self.limit_manager.add_route_exemption(get_qualified_name(obj), flags)
         else:
-            _R = TypeVar("_R")
-            _WO = TypeVar("_WO", Callable[..., _R], flask.Blueprint)
+            return functools.partial(self.exempt, flags=flags)
 
-            def wrapper(obj: _WO) -> _WO:
-                return self.exempt(obj, flags=flags)
-
-            return wrapper
         return obj
 
     def request_filter(self, fn: Callable[[], bool]) -> Callable[[], bool]:
