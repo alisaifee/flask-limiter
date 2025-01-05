@@ -9,6 +9,7 @@ from flask import request
 from flask.wrappers import Response
 from limits import RateLimitItem, parse_many
 from limits.strategies import RateLimiter
+from limits.util import WindowStats
 
 if typing.TYPE_CHECKING:
     from .extension import Limiter
@@ -45,14 +46,14 @@ class RequestLimit:
         self.key = limit.key_for(*request_args)
         self.breached = breached
         self.shared = shared
-        self._window: Optional[Tuple[int, int]] = None
+        self._window: Optional[WindowStats] = None
 
     @property
     def limiter(self) -> RateLimiter:
         return typing.cast(RateLimiter, self.extension.limiter)
 
     @property
-    def window(self) -> Tuple[int, int]:
+    def window(self) -> WindowStats:
         if not self._window:
             self._window = self.limiter.get_window_stats(self.limit, *self.request_args)
 
