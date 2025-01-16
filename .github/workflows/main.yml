@@ -126,6 +126,8 @@ jobs:
     needs: [test, build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4.1.7
         with:
@@ -135,11 +137,7 @@ jobs:
         with:
           name: src_dist
           path: dist
-
-      - uses: pypa/gh-action-pypi-publish@v1.4.2
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
+      - uses: pypa/gh-action-pypi-publish@release/v1
 
   github_release:
     needs: [upload_pypi_release]
