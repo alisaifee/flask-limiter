@@ -953,7 +953,7 @@ class Limiter:
                 else:
                     if self._swallow_errors:
                         self.logger.exception(
-                            "Failed to update rate limit headers. " "Swallowing error"
+                            "Failed to update rate limit headers. Swallowing error"
                         )
                     else:
                         raise e
@@ -1156,8 +1156,7 @@ class Limiter:
 
             if self._in_memory_fallback_enabled and not self._storage_dead:
                 self.logger.warning(
-                    "Rate limit storage unreachable - falling back to"
-                    " in-memory storage"
+                    "Rate limit storage unreachable - falling back to in-memory storage"
                 )
                 self._storage_dead = True
                 self.context.seen_limits.clear()
