@@ -107,6 +107,8 @@ jobs:
     needs: [test, build_wheels, build_sdist]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/master'
+    permissions:
+      id-token: write
     steps:
       - uses: actions/download-artifact@v4.1.7
         with:
@@ -116,10 +118,8 @@ jobs:
         with:
           name: src_dist
           path: dist
-      - uses: pypa/gh-action-pypi-publish@v1.4.2
+      - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          user: __token__
-          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
           repository_url: https://test.pypi.org/legacy/
           skip_existing: true
   upload_pypi_release:
