@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.10.1
+-------
+Release Date: 2025-01-16
+
+* Security
+
+  * Change pypi release to use trusted publishing
+
+
 v3.10.0
 -------
 Release Date: 2025-01-05
@@ -954,6 +963,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
