@@ -1,4 +1,4 @@
-.. |ci| image:: https://github.com/alisaifee/flask-limiter/workflows/CI/badge.svg?branch=master
+.. |ci| image:: https://github.com/alisaifee/flask-limiter/actions/workflows/main.yml/badge.svg?branch=master
    :target: https://github.com/alisaifee/flask-limiter/actions?query=branch%3Amaster+workflow%3ACI
 .. |codecov| image:: https://codecov.io/gh/alisaifee/flask-limiter/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/alisaifee/flask-limiter
