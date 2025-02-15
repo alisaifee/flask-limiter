@@ -196,7 +196,7 @@ take priority.
        Default to ``True``
    * - .. data:: RATELIMIT_ON_BREACH_CALLBACK
 
-       Constructor argument: :paramref:`~flask_limiter.Limiter.on_breach_callback`
+       Constructor argument: :paramref:`~flask_limiter.Limiter.on_breach`
 
      - A function that will be called when any limit in this
        extension is breached.
@@ -210,7 +210,7 @@ take priority.
        :class:`~flask_limiter.RateLimitExceeded` for the duration of the meta limit window.
    * - .. data:: RATELIMIT_ON_META_BREACH_CALLBACK
 
-       Constructor argument: :paramref:`~flask_limiter.Limiter.on_meta_breach_callback`
+       Constructor argument: :paramref:`~flask_limiter.Limiter.on_meta_breach`
 
      - A function that will be called when a meta limit in this
        extension is breached.
