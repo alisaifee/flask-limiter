@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import Dict, Iterable, List, Optional, Tuple
+from collections.abc import Iterable
 
 import flask
 from ordered_set import OrderedSet
@@ -15,12 +15,12 @@ from .wrappers import Limit, LimitGroup
 class LimitManager:
     def __init__(
         self,
-        application_limits: List[LimitGroup],
-        default_limits: List[LimitGroup],
-        decorated_limits: Dict[str, OrderedSet[LimitGroup]],
-        blueprint_limits: Dict[str, OrderedSet[LimitGroup]],
-        route_exemptions: Dict[str, ExemptionScope],
-        blueprint_exemptions: Dict[str, ExemptionScope],
+        application_limits: list[LimitGroup],
+        default_limits: list[LimitGroup],
+        decorated_limits: dict[str, OrderedSet[LimitGroup]],
+        blueprint_limits: dict[str, OrderedSet[LimitGroup]],
+        route_exemptions: dict[str, ExemptionScope],
+        blueprint_exemptions: dict[str, ExemptionScope],
     ) -> None:
         self._application_limits = application_limits
         self._default_limits = default_limits
@@ -28,25 +28,25 @@ class LimitManager:
         self._blueprint_limits = blueprint_limits
         self._route_exemptions = route_exemptions
         self._blueprint_exemptions = blueprint_exemptions
-        self._endpoint_hints: Dict[str, OrderedSet[str]] = {}
+        self._endpoint_hints: dict[str, OrderedSet[str]] = {}
         self._logger = logging.getLogger("flask-limiter")
 
     @property
-    def application_limits(self) -> List[Limit]:
+    def application_limits(self) -> list[Limit]:
         return list(itertools.chain(*self._application_limits))
 
     @property
-    def default_limits(self) -> List[Limit]:
+    def default_limits(self) -> list[Limit]:
         return list(itertools.chain(*self._default_limits))
 
-    def set_application_limits(self, limits: List[LimitGroup]) -> None:
+    def set_application_limits(self, limits: list[LimitGroup]) -> None:
         self._application_limits = limits
 
-    def set_default_limits(self, limits: List[LimitGroup]) -> None:
+    def set_default_limits(self, limits: list[LimitGroup]) -> None:
         self._default_limits = limits
 
     def add_decorated_limit(
-        self, route: str, limit: Optional[LimitGroup], override: bool = False
+        self, route: str, limit: LimitGroup | None, override: bool = False
     ) -> None:
         if limit:
             if not override:
@@ -54,7 +54,7 @@ class LimitManager:
             else:
                 self._decorated_limits[route] = OrderedSet([limit])
 
-    def add_blueprint_limit(self, blueprint: str, limit: Optional[LimitGroup]) -> None:
+    def add_blueprint_limit(self, blueprint: str, limit: LimitGroup | None) -> None:
         if limit:
             self._blueprint_limits.setdefault(blueprint, OrderedSet()).add(limit)
 
@@ -73,12 +73,12 @@ class LimitManager:
     def resolve_limits(
         self,
         app: flask.Flask,
-        endpoint: Optional[str] = None,
-        blueprint: Optional[str] = None,
-        callable_name: Optional[str] = None,
+        endpoint: str | None = None,
+        blueprint: str | None = None,
+        callable_name: str | None = None,
         in_middleware: bool = False,
         marked_for_limiting: bool = False,
-    ) -> Tuple[List[Limit], ...]:
+    ) -> tuple[list[Limit], ...]:
         before_request_context = in_middleware and marked_for_limiting
         decorated_limits = []
         hinted_limits = []
@@ -135,7 +135,7 @@ class LimitManager:
         return all_limits, decorated_limits
 
     def exemption_scope(
-        self, app: flask.Flask, endpoint: Optional[str], blueprint: Optional[str]
+        self, app: flask.Flask, endpoint: str | None, blueprint: str | None
     ) -> ExemptionScope:
         view_func = app.view_functions.get(endpoint or "", None)
         name = get_qualified_name(view_func) if view_func else ""
@@ -159,7 +159,7 @@ class LimitManager:
                     blueprint_exemption_scope |= exemption
             return route_exemption_scope | blueprint_exemption_scope
 
-    def decorated_limits(self, callable_name: str) -> List[Limit]:
+    def decorated_limits(self, callable_name: str) -> list[Limit]:
         limits = []
         if not self._route_exemptions.get(callable_name, ExemptionScope.NONE):
             if callable_name in self._decorated_limits:
@@ -173,8 +173,8 @@ class LimitManager:
                         )
         return limits
 
-    def blueprint_limits(self, app: flask.Flask, blueprint: str) -> List[Limit]:
-        limits: List[Limit] = []
+    def blueprint_limits(self, app: flask.Flask, blueprint: str) -> list[Limit]:
+        limits: list[Limit] = []
 
         blueprint_instance = app.blueprints.get(blueprint) if blueprint else None
         if blueprint_instance:
@@ -242,7 +242,7 @@ class LimitManager:
 
     def _blueprint_exemption_scope(
         self, app: flask.Flask, blueprint_name: str
-    ) -> Tuple[ExemptionScope, Dict[str, ExemptionScope]]:
+    ) -> tuple[ExemptionScope, dict[str, ExemptionScope]]:
         name = app.blueprints[blueprint_name].name
         exemption = self._blueprint_exemptions.get(name, ExemptionScope.NONE) & ~(
             ExemptionScope.ANCESTORS

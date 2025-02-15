@@ -3,13 +3,15 @@ from __future__ import annotations
 import dataclasses
 import typing
 import weakref
-from typing import Callable, Iterator, List, Optional, Tuple, Union
+from collections.abc import Iterator
 
 from flask import request
 from flask.wrappers import Response
 from limits import RateLimitItem, parse_many
 from limits.strategies import RateLimiter
 from limits.util import WindowStats
+
+from .typing import Callable
 
 if typing.TYPE_CHECKING:
     from .extension import Limiter
@@ -36,7 +38,7 @@ class RequestLimit:
         self,
         extension: Limiter,
         limit: RateLimitItem,
-        request_args: List[str],
+        request_args: list[str],
         breached: bool,
         shared: bool,
     ) -> None:
@@ -46,7 +48,7 @@ class RequestLimit:
         self.key = limit.key_for(*request_args)
         self.breached = breached
         self.shared = shared
-        self._window: Optional[WindowStats] = None
+        self._window: WindowStats | None = None
 
     @property
     def limiter(self) -> RateLimiter:
@@ -80,15 +82,15 @@ class Limit:
 
     limit: RateLimitItem
     key_func: Callable[[], str]
-    _scope: Optional[Union[str, Callable[[str], str]]]
+    _scope: str | Callable[[str], str] | None
     per_method: bool = False
-    methods: Optional[Tuple[str, ...]] = None
-    error_message: Optional[str] = None
-    exempt_when: Optional[Callable[[], bool]] = None
-    override_defaults: Optional[bool] = False
-    deduct_when: Optional[Callable[[Response], bool]] = None
-    on_breach: Optional[Callable[[RequestLimit], Optional[Response]]] = None
-    _cost: Union[Callable[[], int], int] = 1
+    methods: tuple[str, ...] | None = None
+    error_message: str | None = None
+    exempt_when: Callable[[], bool] | None = None
+    override_defaults: bool | None = False
+    deduct_when: Callable[[Response], bool] | None = None
+    on_breach: Callable[[RequestLimit], Response | None] | None = None
+    _cost: Callable[[], int] | int = 1
     shared: bool = False
 
     def __post_init__(self) -> None:
@@ -101,10 +103,11 @@ class Limit:
 
         if self.exempt_when:
             return self.exempt_when()
+
         return False
 
     @property
-    def scope(self) -> Optional[str]:
+    def scope(self) -> str | None:
         return (
             self._scope(request.endpoint or "")
             if callable(self._scope)
@@ -124,13 +127,14 @@ class Limit:
 
         return self.methods is not None and request.method.lower() not in self.methods
 
-    def scope_for(self, endpoint: str, method: Optional[str]) -> str:
+    def scope_for(self, endpoint: str, method: str | None) -> str:
         """
         Derive final bucket (scope) for this limit given the endpoint
         and request method. If the limit is shared between multiple
         routes, the scope does not include the endpoint.
         """
         limit_scope = self.scope
+
         if limit_scope:
             if self.shared:
                 scope = limit_scope
@@ -142,6 +146,7 @@ class Limit:
         if self.per_method:
             assert method
             scope += f":{method.upper()}"
+
         return scope
 
 
@@ -152,17 +157,17 @@ class LimitGroup:
     that returns one
     """
 
-    limit_provider: Union[Callable[[], str], str]
+    limit_provider: Callable[[], str] | str
     key_function: Callable[[], str]
-    scope: Optional[Union[str, Callable[[str], str]]] = None
-    methods: Optional[Tuple[str, ...]] = None
-    error_message: Optional[str] = None
-    exempt_when: Optional[Callable[[], bool]] = None
-    override_defaults: Optional[bool] = False
-    deduct_when: Optional[Callable[[Response], bool]] = None
-    on_breach: Optional[Callable[[RequestLimit], Optional[Response]]] = None
+    scope: str | Callable[[str], str] | None = None
+    methods: tuple[str, ...] | None = None
+    error_message: str | None = None
+    exempt_when: Callable[[], bool] | None = None
+    override_defaults: bool | None = False
+    deduct_when: Callable[[Response], bool] | None = None
+    on_breach: Callable[[RequestLimit], Response | None] | None = None
     per_method: bool = False
-    cost: Optional[Union[Callable[[], int], int]] = None
+    cost: Callable[[], int] | int | None = None
     shared: bool = False
 
     def __iter__(self) -> Iterator[Limit]:

@@ -1,15 +1,11 @@
 import itertools
 import time
+from collections.abc import Generator
 from functools import partial
 from typing import (
     Any,
     Callable,
-    Dict,
-    Generator,
-    List,
     Optional,
-    Set,
-    Tuple,
     Union,
     cast,
 )
@@ -111,7 +107,7 @@ def render_limit(limit: Limit, simple: bool = True) -> str:
 def render_limits(
     app: Flask,
     limiter: Limiter,
-    limits: Tuple[List[Limit], ...],
+    limits: tuple[list[Limit], ...],
     endpoint: Optional[str] = None,
     blueprint: Optional[str] = None,
     rule: Optional[Rule] = None,
@@ -386,12 +382,12 @@ def limits(
     watch: bool = False,
 ) -> None:
     with current_app.test_request_context():
-        limiters: Set[Limiter] = current_app.extensions.get("limiter", set())
+        limiters: set[Limiter] = current_app.extensions.get("limiter", set())
         limiter: Optional[Limiter] = list(limiters)[0] if limiters else None
         console = Console(theme=limiter_theme)
         if limiter:
             manager = limiter.limit_manager
-            groups: Dict[str, List[Callable[..., Tree]]] = {}
+            groups: dict[str, list[Callable[..., Tree]]] = {}
 
             filter_endpoint = get_filtered_endpoint(
                 current_app, console, endpoint, path, method
@@ -516,14 +512,12 @@ def clear(
             filter_endpoint = get_filtered_endpoint(
                 current_app, console, endpoint, path, method
             )
-            Details = TypedDict(
-                "Details",
-                {
-                    "rule": Rule,
-                    "limits": Tuple[List[Limit], ...],
-                },
-            )
-            rule_limits: Dict[str, Details] = {}
+
+            class Details(TypedDict):
+                rule: Rule
+                limits: tuple[list[Limit], ...]
+
+            rule_limits: dict[str, Details] = {}
             for rule in sorted(
                 current_app.url_map.iter_rules(filter_endpoint), key=lambda r: str(r)
             ):

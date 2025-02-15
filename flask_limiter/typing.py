@@ -1,11 +1,7 @@
+from collections.abc import Sequence
 from typing import (
     Callable,
-    Dict,
-    List,
     Optional,
-    Sequence,
-    Set,
-    Tuple,
     TypeVar,
     Union,
     cast,
@@ -21,13 +17,9 @@ __all__ = [
     "R",
     "P",
     "Callable",
-    "Dict",
-    "List",
     "Optional",
     "Union",
     "cast",
     "Sequence",
-    "Tuple",
     "TypeVar",
-    "Set",
 ]
