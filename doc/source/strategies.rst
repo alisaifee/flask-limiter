@@ -2,46 +2,51 @@
 
 Rate limiting strategies
 ========================
-Flask-Limiter comes with three different rate limiting strategies built-in. Pick
-the one that works for your use-case by specifying it in your flask config as
-``RATELIMIT_STRATEGY`` (one of ``fixed-window``, ``fixed-window-elastic-expiry``,
-or ``moving-window``), or as a constructor keyword argument. The default
-configuration is ``fixed-window``.
+Flask-Limiter delegates the implementation of rate limiting strategies
+to the :doc:`limits:index` library. See :doc:`limits:strategies` for detail.
 
 
 Fixed Window
 ------------
-This is the most memory efficient strategy to use as it maintains one counter
-per resource and rate limit. It does however have its drawbacks as it allows
-bursts within each window - thus allowing an 'attacker' to by-pass the limits.
-The effects of these bursts can be partially circumvented by enforcing multiple
-granularities of windows per resource.
+This strategy is the most memory‑efficient because it uses a single counter
+per resource and rate limit. When the first request arrives, a window is started
+for a fixed duration (e.g., for a rate limit of 10 requests per minute the window
+expires in 60 seconds from the first request).
+All requests in that window increment the counter and when the window expires,
+the counter resets
 
-For example, if you specify a ``100/minute`` rate limit on a route, this strategy will
-allow 100 hits in the last second of one window and a 100 more in the first
-second of the next window. To ensure that such bursts are managed, you could add a second rate limit
-of ``2/second`` on the same route.
+See the :ref:`limits:strategies:fixed window` documentation in the :doc:`limits:index` library
+for more details.
 
-Fixed Window with Elastic Expiry
---------------------------------
-This strategy works almost identically to the Fixed Window strategy with the exception
-that each hit results in the extension of the window. This strategy works well for
-creating large penalties for breaching a rate limit.
-
-For example, if you specify a ``100/minute`` rate limit on a route and it is being
-attacked at the rate of 5 hits per second for 2 minutes - the attacker will be locked
-out of the resource for an extra 60 seconds after the last hit. This strategy helps
-circumvent bursts.
+To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` to ``fixed-window``
 
 Moving Window
 -------------
-.. warning:: The moving window strategy is not implemented for the memcached
-   storage backend. The strategy requires using a list with fast random access which
-   is not very convenient to implement with a memcached storage.
 
-This strategy is the most effective for preventing bursts from by-passing the
-rate limit as the window for each limit is not fixed at the start and end of each time unit
-(i.e. N/second for a moving window means N in the last 1000 milliseconds). There is
-however a higher memory cost associated with this strategy as it requires ``N`` items to
-be maintained in memory per resource and rate limit.
+This strategy adds each request’s timestamp to a log if the ``nth`` oldest entry (where ``n``
+is the limit) is either not present or is older than the duration of the window (for example with a rate limit of
+``10 requests per minute`` if there are either less than 10 entries or the 10th oldest entry is atleast
+60 seconds old). Upon adding a new entry to the log "expired" entries are truncated.
 
+See the :ref:`limits:strategies:moving window` documentation in the :doc:`limits:index` library
+for more details.
+
+To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` to ``moving-window``
+
+
+Sliding Window
+--------------
+
+This strategy approximates the moving window while using less memory by maintaining
+two counters:
+
+- **Current bucket:** counts requests in the ongoing period.
+- **Previous bucket:** counts requests in the immediately preceding period.
+
+A weighted sum of these counters is computed based on the elapsed time in the current
+bucket.
+
+See the :ref:`limits:strategies:sliding window counter` documentation in the :doc:`limits:index` library
+for more details.
+
+To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` to ``sliding-window-counter``

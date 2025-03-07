@@ -73,7 +73,7 @@ Add the rate limiter to your flask app
        # storage_uri="mongodb://localhost:27017",
        # Etcd
        # storage_uri="etcd://localhost:2379",
-       strategy="fixed-window", # or "moving-window"
+       strategy="fixed-window", # or "moving-window", or "sliding-window-counter"
    )
 
    @app.route("/slow")

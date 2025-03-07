@@ -203,7 +203,7 @@ Here are a few common examples:
           app=app,
           storage_uri="redis://localhost:6379",
           storage_options={"socket_connect_timeout": 30},
-          strategy="fixed-window", # or "moving-window"
+          strategy="fixed-window", # or "moving-window" or "sliding-window-counter"
       )
 
 .. tab:: Redis (reused connection pool)
@@ -224,7 +224,7 @@ Here are a few common examples:
           app=app,
           storage_uri="redis://",
           storage_options={"connection_pool": pool},
-          strategy="fixed-window", # or "moving-window"
+          strategy="fixed-window", # or "moving-window" or "sliding-window-counter"
       )
 
 .. tab:: Redis Cluster
@@ -244,7 +244,7 @@ Here are a few common examples:
           app=app,
           storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002",
           storage_options={"socket_connect_timeout": 30},
-          strategy="fixed-window", # or "moving-window"
+          strategy="fixed-window", # or "moving-window" or "sliding-window-counter"
       )
 
 .. tab:: MongoDB
@@ -259,7 +259,7 @@ Here are a few common examples:
           get_remote_address,
           app=app,
           storage_uri="mongodb://localhost:27017",
-          strategy="fixed-window", # or "moving-window"
+          strategy="fixed-window", # or "moving-window" or "sliding-window-counter"
       )
 
 The :paramref:`~Limiter.storage_uri` and :paramref:`~Limiter.storage_options` parameters
