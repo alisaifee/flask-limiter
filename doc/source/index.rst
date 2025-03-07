@@ -199,11 +199,11 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-        get_remote_address,
-        app=app,
-        storage_uri="redis://localhost:6379",
-        storage_options={"socket_connect_timeout": 30},
-        strategy="fixed-window", # or "moving-window"
+          get_remote_address,
+          app=app,
+          storage_uri="redis://localhost:6379",
+          storage_options={"socket_connect_timeout": 30},
+          strategy="fixed-window", # or "moving-window"
       )
 
 .. tab:: Redis (reused connection pool)
@@ -220,11 +220,11 @@ Here are a few common examples:
 
       pool = redis.connection.BlockingConnectionPool.from_url("redis://.....")
       limiter = Limiter(
-        get_remote_address,
-        app=app,
-        storage_uri="redis://",
-        storage_options={"connection_pool": pool},
-        strategy="fixed-window", # or "moving-window"
+          get_remote_address,
+          app=app,
+          storage_uri="redis://",
+          storage_options={"connection_pool": pool},
+          strategy="fixed-window", # or "moving-window"
       )
 
 .. tab:: Redis Cluster
@@ -240,11 +240,11 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-        get_remote_address,
-        app=app,
-        storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002",
-        storage_options={"socket_connect_timeout": 30},
-        strategy="fixed-window", # or "moving-window"
+          get_remote_address,
+          app=app,
+          storage_uri="redis+cluster://localhost:7000,localhost:7001,localhost:7002",
+          storage_options={"socket_connect_timeout": 30},
+          strategy="fixed-window", # or "moving-window"
       )
 
 .. tab:: MongoDB
@@ -256,10 +256,10 @@ Here are a few common examples:
       ....
 
       limiter = Limiter(
-        get_remote_address,
-        app=app,
-        storage_uri="mongodb://localhost:27017",
-        strategy="fixed-window", # or "moving-window"
+          get_remote_address,
+          app=app,
+          storage_uri="mongodb://localhost:27017",
+          strategy="fixed-window", # or "moving-window"
       )
 
 The :paramref:`~Limiter.storage_uri` and :paramref:`~Limiter.storage_options` parameters
@@ -309,7 +309,7 @@ The limit string can be a single limit or a delimiter separated string
    @app.route("....")
    @limiter.limit("100/day;10/hour;1/minute")
    def my_route()
-     ...
+       ...
 
 -------------------
 Multiple decorators
@@ -325,7 +325,7 @@ or a combination of both.
     @limiter.limit("10/hour")
     @limiter.limit("1/minute")
     def my_route():
-      ...
+        ...
 
 ----------------------
 Custom keying function
@@ -338,12 +338,12 @@ when decorating individual routes. Take a look at :ref:`keyfunc-customization` f
 .. code-block:: python
 
    def my_key_func():
-     ...
+       ...
 
    @app.route("...")
    @limiter.limit("100/day", my_key_func)
    def my_route():
-     ...
+       ...
 
 .. note:: The key function  is called from within a
     :doc:`flask request context <flask:reqcontext>`.
@@ -390,7 +390,7 @@ conditions can be specified by supplying a callable as an
   @app.route("/expensive")
   @limiter.limit("100/day", exempt_when=lambda: current_user.is_admin)
   def expensive_route():
-    ...
+      ...
 
 .. _ratelimit-decorator-shared-limit:
 
