@@ -32,11 +32,9 @@ from .errors import RateLimitExceeded
 from .manager import LimitManager
 from .typing import (
     Callable,
-    Optional,
     P,
     R,
     Sequence,
-    Union,
     cast,
 )
 from .util import get_qualified_name
@@ -45,7 +43,7 @@ from .wrappers import Limit, LimitGroup, RequestLimit
 
 @dataclasses.dataclass
 class LimiterContext:
-    view_rate_limit: Optional[RequestLimit] = None
+    view_rate_limit: RequestLimit | None = None
     view_rate_limits: list[RequestLimit] = dataclasses.field(default_factory=list)
     conditional_deductions: dict[Limit, list[str]] = dataclasses.field(
         default_factory=dict
@@ -139,41 +137,37 @@ class Limiter:
         self,
         key_func: Callable[[], str],
         *,
-        app: Optional[flask.Flask] = None,
-        default_limits: Optional[list[Union[str, Callable[[], str]]]] = None,
-        default_limits_per_method: Optional[bool] = None,
-        default_limits_exempt_when: Optional[Callable[[], bool]] = None,
-        default_limits_deduct_when: Optional[
-            Callable[[flask.wrappers.Response], bool]
-        ] = None,
-        default_limits_cost: Optional[Union[int, Callable[[], int]]] = None,
-        application_limits: Optional[list[Union[str, Callable[[], str]]]] = None,
-        application_limits_per_method: Optional[bool] = None,
-        application_limits_exempt_when: Optional[Callable[[], bool]] = None,
-        application_limits_deduct_when: Optional[
-            Callable[[flask.wrappers.Response], bool]
-        ] = None,
-        application_limits_cost: Optional[Union[int, Callable[[], int]]] = None,
-        headers_enabled: Optional[bool] = None,
-        header_name_mapping: Optional[dict[HeaderNames, str]] = None,
-        strategy: Optional[str] = None,
-        storage_uri: Optional[str] = None,
-        storage_options: Optional[dict[str, Union[str, int]]] = None,
+        app: flask.Flask | None = None,
+        default_limits: list[str | Callable[[], str]] | None = None,
+        default_limits_per_method: bool | None = None,
+        default_limits_exempt_when: Callable[[], bool] | None = None,
+        default_limits_deduct_when: Callable[[flask.wrappers.Response], bool]
+        | None = None,
+        default_limits_cost: int | Callable[[], int] | None = None,
+        application_limits: list[str | Callable[[], str]] | None = None,
+        application_limits_per_method: bool | None = None,
+        application_limits_exempt_when: Callable[[], bool] | None = None,
+        application_limits_deduct_when: Callable[[flask.wrappers.Response], bool]
+        | None = None,
+        application_limits_cost: int | Callable[[], int] | None = None,
+        headers_enabled: bool | None = None,
+        header_name_mapping: dict[HeaderNames, str] | None = None,
+        strategy: str | None = None,
+        storage_uri: str | None = None,
+        storage_options: dict[str, str | int] | None = None,
         auto_check: bool = True,
-        swallow_errors: Optional[bool] = None,
-        fail_on_first_breach: Optional[bool] = None,
-        on_breach: Optional[
-            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
-        ] = None,
-        meta_limits: Optional[list[Union[str, Callable[[], str]]]] = None,
-        on_meta_breach: Optional[
-            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
-        ] = None,
-        in_memory_fallback: Optional[list[str]] = None,
-        in_memory_fallback_enabled: Optional[bool] = None,
-        retry_after: Optional[str] = None,
+        swallow_errors: bool | None = None,
+        fail_on_first_breach: bool | None = None,
+        on_breach: Callable[[RequestLimit], flask.wrappers.Response | None]
+        | None = None,
+        meta_limits: list[str | Callable[[], str]] | None = None,
+        on_meta_breach: Callable[[RequestLimit], flask.wrappers.Response | None]
+        | None = None,
+        in_memory_fallback: list[str] | None = None,
+        in_memory_fallback_enabled: bool | None = None,
+        retry_after: str | None = None,
         key_prefix: str = "",
-        request_identifier: Optional[Callable[..., str]] = None,
+        request_identifier: Callable[..., str] | None = None,
         enabled: bool = True,
     ) -> None:
         self.app = app
@@ -262,10 +256,10 @@ class Limiter:
                     )
                 )
 
-        self._storage: Optional[Storage] = None
-        self._limiter: Optional[RateLimiter] = None
+        self._storage: Storage | None = None
+        self._limiter: RateLimiter | None = None
         self._storage_dead = False
-        self._fallback_limiter: Optional[RateLimiter] = None
+        self._fallback_limiter: RateLimiter | None = None
 
         self.__check_backend_count = 0
         self.__last_check_backend = time.time()
@@ -345,9 +339,7 @@ class Limiter:
         )
 
         if self._strategy not in STRATEGIES:
-            raise ConfigurationError(
-                "Invalid rate limiting strategy %s" % self._strategy
-            )
+            raise ConfigurationError(f"Invalid rate limiting strategy {self._strategy}")
         self._limiter = STRATEGIES[self._strategy](self._storage)
 
         self._header_mapping = {
@@ -497,20 +489,19 @@ class Limiter:
 
     def limit(
         self,
-        limit_value: Union[str, Callable[[], str]],
+        limit_value: str | Callable[[], str],
         *,
-        key_func: Optional[Callable[[], str]] = None,
+        key_func: Callable[[], str] | None = None,
         per_method: bool = False,
-        methods: Optional[list[str]] = None,
-        error_message: Optional[str] = None,
-        exempt_when: Optional[Callable[[], bool]] = None,
+        methods: list[str] | None = None,
+        error_message: str | None = None,
+        exempt_when: Callable[[], bool] | None = None,
         override_defaults: bool = True,
-        deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
-        on_breach: Optional[
-            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
-        ] = None,
-        cost: Union[int, Callable[[], int]] = 1,
-        scope: Optional[Union[str, Callable[[str], str]]] = None,
+        deduct_when: Callable[[flask.wrappers.Response], bool] | None = None,
+        on_breach: Callable[[RequestLimit], flask.wrappers.Response | None]
+        | None = None,
+        cost: int | Callable[[], int] = 1,
+        scope: str | Callable[[str], str] | None = None,
     ) -> LimitDecorator:
         """
         Decorator to be used for rate limiting individual routes or blueprints.
@@ -579,20 +570,19 @@ class Limiter:
 
     def shared_limit(
         self,
-        limit_value: Union[str, Callable[[], str]],
-        scope: Union[str, Callable[[str], str]],
+        limit_value: str | Callable[[], str],
+        scope: str | Callable[[str], str],
         *,
-        key_func: Optional[Callable[[], str]] = None,
+        key_func: Callable[[], str] | None = None,
         per_method: bool = False,
-        methods: Optional[list[str]] = None,
-        error_message: Optional[str] = None,
-        exempt_when: Optional[Callable[[], bool]] = None,
+        methods: list[str] | None = None,
+        error_message: str | None = None,
+        exempt_when: Callable[[], bool] | None = None,
         override_defaults: bool = True,
-        deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
-        on_breach: Optional[
-            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
-        ] = None,
-        cost: Union[int, Callable[[], int]] = 1,
+        deduct_when: Callable[[flask.wrappers.Response], bool] | None = None,
+        on_breach: Callable[[RequestLimit], flask.wrappers.Response | None]
+        | None = None,
+        cost: int | Callable[[], int] = 1,
     ) -> LimitDecorator:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -672,24 +662,24 @@ class Limiter:
         flags: ExemptionScope = ExemptionScope.APPLICATION
         | ExemptionScope.DEFAULT
         | ExemptionScope.META,
-    ) -> Union[
-        Callable[[Callable[P, R]], Callable[P, R]],
-        Callable[[flask.Blueprint], flask.Blueprint],
-    ]: ...
+    ) -> (
+        Callable[[Callable[P, R]], Callable[P, R]]
+        | Callable[[flask.Blueprint], flask.Blueprint]
+    ): ...
 
     def exempt(
         self,
-        obj: Optional[Union[Callable[..., R], flask.Blueprint]] = None,
+        obj: Callable[..., R] | flask.Blueprint | None = None,
         *,
         flags: ExemptionScope = ExemptionScope.APPLICATION
         | ExemptionScope.DEFAULT
         | ExemptionScope.META,
-    ) -> Union[
-        Callable[..., R],
-        flask.Blueprint,
-        Callable[[Callable[P, R]], Callable[P, R]],
-        Callable[[flask.Blueprint], flask.Blueprint],
-    ]:
+    ) -> (
+        Callable[..., R]
+        | flask.Blueprint
+        | Callable[[Callable[P, R]], Callable[P, R]]
+        | Callable[[flask.Blueprint], flask.Blueprint]
+    ):
         """
         Mark a view function or all views in a blueprint as exempt from
         rate limits.
@@ -832,7 +822,7 @@ class Limiter:
         return limiter
 
     @property
-    def current_limit(self) -> Optional[RequestLimit]:
+    def current_limit(self) -> RequestLimit | None:
         """
         Get details for the most relevant rate limit used in this request.
 
@@ -930,7 +920,7 @@ class Limiter:
 
                 if existing_retry_after_header is not None:
                     # might be in http-date format
-                    retry_after: Optional[Union[float, datetime.datetime]] = parse_date(
+                    retry_after: float | datetime.datetime | None = parse_date(
                         existing_retry_after_header
                     )
 
@@ -973,7 +963,7 @@ class Limiter:
 
     def __check_all_limits_exempt(
         self,
-        endpoint: Optional[str],
+        endpoint: str | None,
     ) -> bool:
         return bool(
             not endpoint
@@ -984,9 +974,9 @@ class Limiter:
 
     def __filter_limits(
         self,
-        endpoint: Optional[str],
-        blueprint: Optional[str],
-        callable_name: Optional[str],
+        endpoint: str | None,
+        blueprint: str | None,
+        callable_name: str | None,
         in_middleware: bool = False,
     ) -> list[Limit]:
         if callable_name:
@@ -1037,7 +1027,7 @@ class Limiter:
 
     def __evaluate_limits(self, endpoint: str, limits: list[Limit]) -> None:
         failed_limits: list[tuple[Limit, list[str]]] = []
-        limit_for_header: Optional[RequestLimit] = None
+        limit_for_header: RequestLimit | None = None
         view_limits: list[RequestLimit] = []
         meta_limits = list(itertools.chain(*self._meta_limits))
 
@@ -1161,7 +1151,7 @@ class Limiter:
             )
 
     def _check_request_limit(
-        self, callable_name: Optional[str] = None, in_middleware: bool = True
+        self, callable_name: str | None = None, in_middleware: bool = True
     ) -> None:
         endpoint = self.identify_request()
         try:
@@ -1191,7 +1181,7 @@ class Limiter:
                 else:
                     raise e
 
-    def __release_context(self, _: Optional[BaseException] = None) -> None:
+    def __release_context(self, _: BaseException | None = None) -> None:
         self.context.reset()
 
 
@@ -1205,20 +1195,19 @@ class LimitDecorator:
     def __init__(
         self,
         limiter: Limiter,
-        limit_value: Union[Callable[[], str], str],
-        key_func: Optional[Callable[[], str]] = None,
+        limit_value: Callable[[], str] | str,
+        key_func: Callable[[], str] | None = None,
         shared: bool = False,
-        scope: Optional[Union[Callable[[str], str], str]] = None,
+        scope: Callable[[str], str] | str | None = None,
         per_method: bool = False,
-        methods: Optional[Sequence[str]] = None,
-        error_message: Optional[str] = None,
-        exempt_when: Optional[Callable[[], bool]] = None,
+        methods: Sequence[str] | None = None,
+        error_message: str | None = None,
+        exempt_when: Callable[[], bool] | None = None,
         override_defaults: bool = True,
-        deduct_when: Optional[Callable[[flask.wrappers.Response], bool]] = None,
-        on_breach: Optional[
-            Callable[[RequestLimit], Optional[flask.wrappers.Response]]
-        ] = None,
-        cost: Union[Callable[[], int], int] = 1,
+        deduct_when: Callable[[flask.wrappers.Response], bool] | None = None,
+        on_breach: Callable[[RequestLimit], flask.wrappers.Response | None]
+        | None = None,
+        cost: Callable[[], int] | int = 1,
     ):
         self.limiter: weakref.ProxyType[Limiter] = weakref.proxy(limiter)
         self.limit_value = limit_value
@@ -1273,9 +1262,9 @@ class LimitDecorator:
 
     def __exit__(
         self,
-        exc_type: Optional[type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[TracebackType],
+        exc_type: type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: TracebackType | None,
     ) -> None: ...
 
     @overload
@@ -1284,9 +1273,7 @@ class LimitDecorator:
     @overload
     def __call__(self, obj: flask.Blueprint) -> None: ...
 
-    def __call__(
-        self, obj: Union[Callable[P, R], flask.Blueprint]
-    ) -> Optional[Callable[P, R]]:
+    def __call__(self, obj: Callable[P, R] | flask.Blueprint) -> Callable[P, R] | None:
         if isinstance(obj, flask.Blueprint):
             name = obj.name
         else:

@@ -21,7 +21,7 @@ def test_error_message(extension_factory):
         @app.errorhandler(429)
         def ratelimit_handler(e):
             return make_response(
-                '{"error" : "rate limit %s"}' % str(e.description), 429
+                f'{{"error" : "rate limit {str(e.description)}"}}', 429
             )
 
         cli.get("/")
