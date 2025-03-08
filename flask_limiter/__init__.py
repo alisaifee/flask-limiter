@@ -17,4 +17,4 @@ __all__ = [
 #: Aliased for backward compatibility
 HEADERS = HeaderNames
 
-__version__ = _version.get_versions()["version"]  # type: ignore
+__version__ = _version.get_versions()["version"]

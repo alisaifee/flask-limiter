@@ -1,3 +1,11 @@
+[tool.versioneer]
+VCS = "git"
+style = "pep440-pre"
+versionfile_source = "flask_limiter/_version.py"
+versionfile_build = "flask_limiter/_version.py"
+parentdir_prefix = "flask-limiter-"
+tag_prefix = ""
+
 [tool.ruff]
 line-length=88
 indent-width = 4
