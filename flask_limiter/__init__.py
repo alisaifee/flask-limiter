@@ -1,5 +1,7 @@
 """Flask-Limiter extension for rate limiting."""
 
+from __future__ import annotations
+
 from . import _version
 from .constants import ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded

@@ -1,5 +1,7 @@
 """errors and exceptions."""
 
+from __future__ import annotations
+
 from flask.wrappers import Response
 from werkzeug import exceptions
 

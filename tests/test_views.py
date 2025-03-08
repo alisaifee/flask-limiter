@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import flask_restful
 import hiro
 import pytest

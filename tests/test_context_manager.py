@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import hiro
 
 from flask_limiter import RateLimitExceeded
