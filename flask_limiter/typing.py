@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import (
     Callable,
+    Optional,
     TypeVar,
+    Union,
     cast,
 )
 
@@ -17,6 +19,8 @@ __all__ = [
     "R",
     "P",
     "Callable",
+    "Optional",
+    "Union",
     "cast",
     "Sequence",
     "TypeVar",

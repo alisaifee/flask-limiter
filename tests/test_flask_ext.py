@@ -443,7 +443,7 @@ def test_headers_breach():
             assert resp.headers.get("X-RateLimit-Limit") == "10"
             assert resp.headers.get("X-RateLimit-Remaining") == "0"
             assert resp.headers.get("X-RateLimit-Reset") == str(int(time.time() + 50))
-            assert resp.headers.get("Retry-After") == str(50)
+            assert resp.headers.get("Retry-After") == str(int(50))
 
 
 def test_retry_after():
