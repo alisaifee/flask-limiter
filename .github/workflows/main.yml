@@ -27,9 +27,9 @@ jobs:
         pip install -r requirements/ci.txt
     - name: Lint with ruff
       run: |
-        ruff check --select I
-        ruff format --check flask_limiter tests
-        ruff check flask_limiter tests
+        ruff check --select I flask_limiter tests examples
+        ruff format --check flask_limiter tests examples
+        ruff check flask_limiter tests examples
     - name: Type checking
       run: |
         mypy flask_limiter
