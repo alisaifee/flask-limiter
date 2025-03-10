@@ -120,8 +120,8 @@ jobs:
           path: dist
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository_url: https://test.pypi.org/legacy/
-          skip_existing: true
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
   upload_pypi_release:
     needs: [test, build_wheels, build_sdist]
     runs-on: ubuntu-latest
