@@ -550,15 +550,18 @@ class Limiter:
 
 
         Changes
-          - .. versionadded:: 2.9.0 The returned object can also be used as a context manager
-            for rate limiting a code block inside a view. For example::
+          - .. versionadded:: 2.9.0
 
-                @app.route("/")
-                def route():
+               The returned object can also be used as a context manager
+               for rate limiting a code block inside a view. For example::
+
+                 @app.route("/")
+                 def route():
                    try:
-                       with limiter.limit("10/second"):
-                           # something expensive
+                     with limiter.limit("10/second"):
+                       # something expensive
                    except RateLimitExceeded: pass
+
         """
 
         return LimitDecorator(
