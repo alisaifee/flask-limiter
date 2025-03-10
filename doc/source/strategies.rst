@@ -3,7 +3,14 @@
 Rate limiting strategies
 ========================
 Flask-Limiter delegates the implementation of rate limiting strategies
-to the :doc:`limits:index` library. See :doc:`limits:strategies` for detail.
+to the :doc:`limits:index` library.
+
+The strategy can be selected by setting the :paramref:`flask_limiter.Limiter.strategy`
+constructor argument or the :data:`RATELIMIT_STRATEGY` config.
+
+
+.. note:: For more details about the implementation of each strategy
+   refer to the :pypi:`limits` documentation for :doc:`limits:strategies`.
 
 
 Fixed Window
@@ -18,7 +25,8 @@ the counter resets
 See the :ref:`limits:strategies:fixed window` documentation in the :doc:`limits:index` library
 for more details.
 
-To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` to ``fixed-window``
+To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` or
+:data:`RATELIMIT_STRATEGY` to ``fixed-window``
 
 Moving Window
 -------------
@@ -31,7 +39,8 @@ is the limit) is either not present or is older than the duration of the window 
 See the :ref:`limits:strategies:moving window` documentation in the :doc:`limits:index` library
 for more details.
 
-To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` to ``moving-window``
+To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` or
+:data:`RATELIMIT_STRATEGY` to ``moving-window``
 
 
 Sliding Window
@@ -49,4 +58,5 @@ bucket.
 See the :ref:`limits:strategies:sliding window counter` documentation in the :doc:`limits:index` library
 for more details.
 
-To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` to ``sliding-window-counter``
+To select this strategy, set :paramref:`flask_limiter.Limiter.strategy` or
+:data:`RATELIMIT_STRATEGY` to ``sliding-window-counter``
