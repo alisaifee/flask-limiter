@@ -16,12 +16,12 @@ P = ParamSpec("P")
 
 
 __all__ = [
-    "R",
-    "P",
     "Callable",
     "Optional",
-    "Union",
-    "cast",
+    "P",
+    "R",
     "Sequence",
     "TypeVar",
+    "Union",
+    "cast",
 ]
