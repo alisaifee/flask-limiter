@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v3.11.0
+-------
+Release Date: 2025-03-11
+
+* Documentation
+
+  * Improve documentation about rate limiting strategies
+
+* Typing
+
+  * Use builtin types (list, set, tuple)
+
+
 v3.10.1
 -------
 Release Date: 2025-01-16
@@ -963,6 +976,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
