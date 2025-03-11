@@ -1,5 +1,5 @@
 #!/bin/bash
-last_tag=$(git tag | sort -nr | head -n 1)
+last_tag=$(git tag | sort -Vr | head -n 1)
 echo current version:$(python setup.py --version), current tag: $last_tag
 read -p "new version:" new_version
 last_portion=$(grep -P "^Changelog$" HISTORY.rst -5 | grep -P "^v\d+.\d+")
