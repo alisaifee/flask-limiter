@@ -2,15 +2,8 @@ from __future__ import annotations
 
 import itertools
 import time
-from collections.abc import Generator
 from functools import partial
-from typing import (
-    Any,
-    Callable,
-    Optional,
-    Union,
-    cast,
-)
+from typing import Any
 from urllib.parse import urlparse
 
 import click
@@ -30,6 +23,7 @@ from werkzeug.routing import Rule
 
 from flask_limiter import Limiter
 from flask_limiter.constants import ConfigVars, ExemptionScope, HeaderNames
+from flask_limiter.typing import Callable, Generator, cast
 from flask_limiter.util import get_qualified_name
 from flask_limiter.wrappers import Limit
 
@@ -50,7 +44,7 @@ limiter_theme = Theme(
 )
 
 
-def render_func(func: Any) -> Union[str, Pretty]:
+def render_func(func: Any) -> str | Pretty:
     if callable(func):
         if func.__name__ == "<lambda>":
             return f"[callable]<lambda>({func.__module__})[/callable]"
@@ -110,13 +104,13 @@ def render_limits(
     app: Flask,
     limiter: Limiter,
     limits: tuple[list[Limit], ...],
-    endpoint: Optional[str] = None,
-    blueprint: Optional[str] = None,
-    rule: Optional[Rule] = None,
+    endpoint: str | None = None,
+    blueprint: str | None = None,
+    rule: Rule | None = None,
     exemption_scope: ExemptionScope = ExemptionScope.NONE,
-    test: Optional[str] = None,
+    test: str | None = None,
     method: str = "GET",
-    label: Optional[str] = "",
+    label: str | None = "",
 ) -> Tree:
     _label = None
     if rule and endpoint:
@@ -171,10 +165,10 @@ def render_limits(
 def get_filtered_endpoint(
     app: Flask,
     console: Console,
-    endpoint: Optional[str],
-    path: Optional[str],
-    method: Optional[str] = None,
-) -> Optional[str]:
+    endpoint: str | None,
+    path: str | None,
+    method: str | None = None,
+) -> str | None:
     if not (endpoint or path):
         return None
     if endpoint:
@@ -377,15 +371,15 @@ def config() -> None:
 @click.option("--watch/--no-watch", default=False, help="Create a live dashboard")
 @with_appcontext
 def limits(
-    endpoint: Optional[str] = None,
-    path: Optional[str] = None,
+    endpoint: str | None = None,
+    path: str | None = None,
     method: str = "GET",
-    key: Optional[str] = None,
+    key: str | None = None,
     watch: bool = False,
 ) -> None:
     with current_app.test_request_context():
         limiters: set[Limiter] = current_app.extensions.get("limiter", set())
-        limiter: Optional[Limiter] = list(limiters)[0] if limiters else None
+        limiter: Limiter | None = list(limiters)[0] if limiters else None
         console = Console(theme=limiter_theme)
         if limiter:
             manager = limiter.limit_manager
@@ -500,14 +494,14 @@ def limits(
 @with_appcontext
 def clear(
     key: str,
-    endpoint: Optional[str] = None,
-    path: Optional[str] = None,
+    endpoint: str | None = None,
+    path: str | None = None,
     method: str = "GET",
     y: bool = False,
 ) -> None:
     with current_app.test_request_context():
         limiters = list(current_app.extensions.get("limiter", set()))
-        limiter: Optional[Limiter] = limiters[0] if limiters else None
+        limiter: Limiter | None = limiters[0] if limiters else None
         console = Console(theme=limiter_theme)
         if limiter:
             manager = limiter.limit_manager

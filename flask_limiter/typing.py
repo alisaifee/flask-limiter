@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Generator, Sequence
 from typing import (
-    Callable,
-    Optional,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -17,11 +14,10 @@ P = ParamSpec("P")
 
 __all__ = [
     "Callable",
-    "Optional",
+    "Generator",
     "P",
     "R",
     "Sequence",
     "TypeVar",
-    "Union",
     "cast",
 ]
