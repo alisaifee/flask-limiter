@@ -21,6 +21,8 @@ EXTRA_REQUIREMENTS = {
     "redis": ["limits[redis]"],
     "memcached": ["limits[memcached]"],
     "mongodb": ["limits[mongodb]"],
+    "etcd" : ["limits[etcd]"],
+    "valkey": ["limits[valkey]"]
 }
 
 setup(
