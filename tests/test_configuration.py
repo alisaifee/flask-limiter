@@ -32,7 +32,7 @@ def test_invalid_storage_string():
 
 def test_constructor_arguments_over_config(redis_connection):
     app = Flask(__name__)
-    app.config.setdefault(ConfigVars.STRATEGY, "fixed-window-elastic-expiry")
+    app.config.setdefault(ConfigVars.STRATEGY, "sliding-window-counter")
     limiter = Limiter(get_remote_address, strategy="moving-window")
     limiter.init_app(app)
     app.config.setdefault(ConfigVars.STORAGE_URI, "redis://localhost:46379")
