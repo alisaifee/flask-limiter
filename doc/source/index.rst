@@ -86,12 +86,6 @@ specific backend name via the ``extras`` notation. For example:
 
       $ pip install Flask-Limiter[mongodb]
 
-.. tab:: Etcd
-
-   .. code:: console
-
-      $ pip install Flask-Limiter[etcd]
-
 .. tab:: Valkey
 
    .. code:: console
