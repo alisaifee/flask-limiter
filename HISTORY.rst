@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v3.12
+-----
+Release Date: 2025-03-14
+
+* Compatibility
+
+  * Drop support for python 3.9
+  * Add install extra for valkey
+
 v3.11.0
 -------
 Release Date: 2025-03-11
@@ -976,6 +985,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
