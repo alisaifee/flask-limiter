@@ -14,6 +14,7 @@ from werkzeug.exceptions import BadRequest
 from flask_limiter.constants import ConfigVars
 from flask_limiter.extension import Limiter
 from flask_limiter.util import get_remote_address
+from flask_limiter.wrappers import LimitGroup
 
 
 def test_reset(extension_factory):
@@ -84,6 +85,44 @@ def test_combined_rate_limits(extension_factory):
             assert 200 == cli.get("/t1").status_code
             assert 200 == cli.get("/t2").status_code
             assert 429 == cli.get("/t2").status_code
+
+
+def test_defaults_with_limit_group(extension_factory):
+    def ip_func():
+        return "192.168.1.1"
+
+    def username_func():
+        return request.headers.get("username")
+
+    app, limiter = extension_factory(
+        {},
+        default_limits=[
+            LimitGroup(
+                limit_provider="3 per minute",
+                key_function=ip_func,
+            ),
+            LimitGroup(
+                limit_provider="1 per hour",
+                key_function=username_func,
+            ),
+        ],
+    )
+
+    @app.route("/t1")
+    def t1():
+        return "t1"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert 200 == cli.get("/t1", headers={"username": "john"}).status_code
+            assert 200 == cli.get("/t1", headers={"username": "paul"}).status_code
+            assert 200 == cli.get("/t1", headers={"username": "george"}).status_code
+            assert 429 == cli.get("/t1", headers={"username": "ringo"}).status_code
+            timeline.forward(60)
+            assert 200 == cli.get("/t1", headers={"username": "ringo"}).status_code
+            assert 429 == cli.get("/t1", headers={"username": "john"}).status_code
+            assert 429 == cli.get("/t1", headers={"username": "paul"}).status_code
+            assert 429 == cli.get("/t1", headers={"username": "george"}).status_code
 
 
 def test_defaults_per_method(extension_factory):

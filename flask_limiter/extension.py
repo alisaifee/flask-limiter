@@ -138,7 +138,7 @@ class Limiter:
         key_func: Callable[[], str],
         *,
         app: flask.Flask | None = None,
-        default_limits: list[str | Callable[[], str]] | None = None,
+        default_limits: list[str | Callable[[], str] | LimitGroup] | None = None,
         default_limits_per_method: bool | None = None,
         default_limits_exempt_when: Callable[[], bool] | None = None,
         default_limits_deduct_when: None
@@ -213,6 +213,8 @@ class Limiter:
                     limit_provider=limit,
                     key_function=self._key_func,
                 )
+                if not isinstance(limit, LimitGroup)
+                else limit
                 for limit in default_limits
             ]
             if default_limits
