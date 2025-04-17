@@ -82,7 +82,9 @@ def app():
     #: Exempt from default, application and ancestor rate limits (effectively all)
     limiter.exempt(
         health_blueprint,
-        flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.ANCESTORS,
+        flags=ExemptionScope.DEFAULT
+        | ExemptionScope.APPLICATION
+        | ExemptionScope.ANCESTORS,
     )
 
     class ResourceView(View):

@@ -5,13 +5,13 @@ from __future__ import annotations
 from flask.wrappers import Response
 from werkzeug import exceptions
 
-from .wrappers import Limit
+from .limits import RuntimeLimit
 
 
 class RateLimitExceeded(exceptions.TooManyRequests):
     """Exception raised when a rate limit is hit."""
 
-    def __init__(self, limit: Limit, response: Response | None = None) -> None:
+    def __init__(self, limit: RuntimeLimit, response: Response | None = None) -> None:
         """
         :param limit: The actual rate limit that was hit.
          Used to construct the default response message

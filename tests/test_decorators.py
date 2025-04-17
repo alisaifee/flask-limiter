@@ -9,7 +9,7 @@ import hiro
 from flask import Blueprint, Flask, current_app, g, make_response, request
 from werkzeug.exceptions import BadRequest
 
-from flask_limiter import ExemptionScope, Limiter
+from flask_limiter import ExemptionScope, Limiter, RouteLimit
 from flask_limiter.util import get_remote_address
 
 
@@ -367,6 +367,45 @@ def test_invalid_decorated_static_limits(caplog):
             assert cli.get("/t1").status_code == 429
     assert "failed to load" in caplog.records[0].msg
     assert "exceeded at endpoint" in caplog.records[-1].msg
+
+
+def test_decorated_limit_with_meta_limit(extension_factory):
+    app, limiter = extension_factory()
+
+    @app.route("/t1")
+    @limiter.limit("1/second", meta_limits=["2/day"])
+    def t1():
+        return "t1"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            timeline.forward(1)
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            timeline.forward(1)
+            assert cli.get("/t1").status_code == 429
+
+
+def test_manually_constructed_decorated_limit(extension_factory):
+    app, limiter = extension_factory()
+
+    @app.route("/t1")
+    @RouteLimit("1/second", limiter=limiter)
+    @RouteLimit("2/minute", limiter=limiter)
+    def t1():
+        return "t1"
+
+    with hiro.Timeline().freeze() as timeline:
+        with app.test_client() as cli:
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            timeline.forward(1)
+            assert cli.get("/t1").status_code == 200
+            assert cli.get("/t1").status_code == 429
+            timeline.forward(1)
+            assert cli.get("/t1").status_code == 429
 
 
 def test_named_shared_limit(extension_factory):
