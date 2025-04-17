@@ -5,8 +5,7 @@ from __future__ import annotations
 from . import _version
 from .constants import ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded
-from .extension import Limiter
-from .wrappers import RequestLimit
+from .extension import Limiter, RequestLimit
 
 __all__ = [
     "ExemptionScope",

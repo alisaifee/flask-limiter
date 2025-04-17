@@ -20,6 +20,7 @@ from typing import overload
 
 import flask
 import flask.wrappers
+from limits import RateLimitItem, WindowStats
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
@@ -38,7 +39,7 @@ from .typing import (
     cast,
 )
 from .util import get_qualified_name
-from .wrappers import Limit, LimitGroup, RequestLimit
+from .wrappers import Limit, LimitGroup
 
 
 @dataclasses.dataclass
@@ -1322,3 +1323,60 @@ class LimitDecorator:
             setattr(__inner, "__wrapper-limiter-instance", self.limiter)
 
             return __inner
+
+
+class RequestLimit:
+    """
+    Provides details of a rate limit within the context of a request
+    """
+
+    #: The instance of the rate limit
+    limit: RateLimitItem
+
+    #: The full key for the request against which the rate limit is tested
+    key: str
+
+    #: Whether the limit was breached within the context of this request
+    breached: bool
+
+    #: Whether the limit is a shared limit
+    shared: bool
+
+    def __init__(
+        self,
+        extension: Limiter,
+        limit: RateLimitItem,
+        request_args: list[str],
+        breached: bool,
+        shared: bool,
+    ) -> None:
+        self.extension: weakref.ProxyType[Limiter] = weakref.proxy(extension)
+        self.limit = limit
+        self.request_args = request_args
+        self.key = limit.key_for(*request_args)
+        self.breached = breached
+        self.shared = shared
+        self._window: WindowStats | None = None
+
+    @property
+    def limiter(self) -> RateLimiter:
+        return cast(RateLimiter, self.extension.limiter)
+
+    @property
+    def window(self) -> WindowStats:
+        if not self._window:
+            self._window = self.limiter.get_window_stats(self.limit, *self.request_args)
+
+        return self._window
+
+    @property
+    def reset_at(self) -> int:
+        """Timestamp at which the rate limit will be reset"""
+
+        return int(self.window[0] + 1)
+
+    @property
+    def remaining(self) -> int:
+        """Quantity remaining for this rate limit"""
+
+        return self.window[1]

@@ -1,77 +1,14 @@
 from __future__ import annotations
 
 import dataclasses
-import typing
-import weakref
 from collections.abc import Iterator
 
 from flask import request
 from flask.wrappers import Response
 from limits import RateLimitItem, parse_many
-from limits.strategies import RateLimiter
-from limits.util import WindowStats
 
+from . import RequestLimit
 from .typing import Callable
-
-if typing.TYPE_CHECKING:
-    from .extension import Limiter
-
-
-class RequestLimit:
-    """
-    Provides details of a rate limit within the context of a request
-    """
-
-    #: The instance of the rate limit
-    limit: RateLimitItem
-
-    #: The full key for the request against which the rate limit is tested
-    key: str
-
-    #: Whether the limit was breached within the context of this request
-    breached: bool
-
-    #: Whether the limit is a shared limit
-    shared: bool
-
-    def __init__(
-        self,
-        extension: Limiter,
-        limit: RateLimitItem,
-        request_args: list[str],
-        breached: bool,
-        shared: bool,
-    ) -> None:
-        self.extension: weakref.ProxyType[Limiter] = weakref.proxy(extension)
-        self.limit = limit
-        self.request_args = request_args
-        self.key = limit.key_for(*request_args)
-        self.breached = breached
-        self.shared = shared
-        self._window: WindowStats | None = None
-
-    @property
-    def limiter(self) -> RateLimiter:
-        return typing.cast(RateLimiter, self.extension.limiter)
-
-    @property
-    def window(self) -> WindowStats:
-        if not self._window:
-            self._window = self.limiter.get_window_stats(self.limit, *self.request_args)
-
-        return self._window
-
-    @property
-    def reset_at(self) -> int:
-        """Timestamp at which the rate limit will be reset"""
-
-        return int(self.window[0] + 1)
-
-    @property
-    def remaining(self) -> int:
-        """Quantity remaining for this rate limit"""
-
-        return self.window[1]
 
 
 @dataclasses.dataclass(eq=True, unsafe_hash=True)
