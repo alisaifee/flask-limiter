@@ -25,7 +25,7 @@ class Limit:
     _scope: str | Callable[[str], str] | None
     per_method: bool = False
     methods: tuple[str, ...] | None = None
-    error_message: str | None = None
+    error_message: str | Callable[[], str] | None = None
     exempt_when: Callable[[], bool] | None = None
     override_defaults: bool | None = False
     deduct_when: Callable[[Response], bool] | None = None
@@ -101,7 +101,7 @@ class LimitGroup:
     key_function: Callable[[], str]
     scope: str | Callable[[str], str] | None = None
     methods: tuple[str, ...] | None = None
-    error_message: str | None = None
+    error_message: str | Callable[[], str] | None = None
     exempt_when: Callable[[], bool] | None = None
     override_defaults: bool | None = False
     deduct_when: Callable[[Response], bool] | None = None
