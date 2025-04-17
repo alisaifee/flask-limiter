@@ -3,22 +3,26 @@ from __future__ import annotations
 import itertools
 import logging
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 import flask
 from ordered_set import OrderedSet
 
 from .constants import ExemptionScope
 from .util import get_qualified_name
-from .wrappers import Limit, LimitGroup
+from .wrappers import Limit
+
+if TYPE_CHECKING:
+    from .extension import LimitDefinition
 
 
 class LimitManager:
     def __init__(
         self,
-        application_limits: list[LimitGroup],
-        default_limits: list[LimitGroup],
-        decorated_limits: dict[str, OrderedSet[LimitGroup]],
-        blueprint_limits: dict[str, OrderedSet[LimitGroup]],
+        application_limits: list[LimitDefinition],
+        default_limits: list[LimitDefinition],
+        decorated_limits: dict[str, OrderedSet[LimitDefinition]],
+        blueprint_limits: dict[str, OrderedSet[LimitDefinition]],
         route_exemptions: dict[str, ExemptionScope],
         blueprint_exemptions: dict[str, ExemptionScope],
     ) -> None:
@@ -39,14 +43,14 @@ class LimitManager:
     def default_limits(self) -> list[Limit]:
         return list(itertools.chain(*self._default_limits))
 
-    def set_application_limits(self, limits: list[LimitGroup]) -> None:
+    def set_application_limits(self, limits: list[LimitDefinition]) -> None:
         self._application_limits = limits
 
-    def set_default_limits(self, limits: list[LimitGroup]) -> None:
+    def set_default_limits(self, limits: list[LimitDefinition]) -> None:
         self._default_limits = limits
 
     def add_decorated_limit(
-        self, route: str, limit: LimitGroup | None, override: bool = False
+        self, route: str, limit: LimitDefinition | None, override: bool = False
     ) -> None:
         if limit:
             if not override:
@@ -54,7 +58,9 @@ class LimitManager:
             else:
                 self._decorated_limits[route] = OrderedSet([limit])
 
-    def add_blueprint_limit(self, blueprint: str, limit: LimitGroup | None) -> None:
+    def add_blueprint_limit(
+        self, blueprint: str, limit: LimitDefinition | None
+    ) -> None:
         if limit:
             self._blueprint_limits.setdefault(blueprint, OrderedSet()).add(limit)
 
@@ -191,7 +197,7 @@ class LimitManager:
                 blueprint_self_limits = self._blueprint_limits.get(
                     blueprint_name, OrderedSet()
                 )
-                blueprint_limits: Iterable[LimitGroup] = (
+                blueprint_limits: Iterable[LimitDefinition] = (
                     itertools.chain(
                         *(
                             self._blueprint_limits.get(member, [])

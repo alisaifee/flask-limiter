@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import dataclasses
-from collections.abc import Iterator
 from typing import TYPE_CHECKING
 
 from flask import request
 from flask.wrappers import Response
-from limits import RateLimitItem, parse_many
+from limits import RateLimitItem
 
-from .typing import Callable
+from .typing import Callable, Sequence
 
 if TYPE_CHECKING:
     from .extension import RequestLimit
@@ -24,7 +23,7 @@ class Limit:
     key_func: Callable[[], str]
     _scope: str | Callable[[str], str] | None
     per_method: bool = False
-    methods: tuple[str, ...] | None = None
+    methods: Sequence[str] | None = None
     error_message: str | Callable[[], str] | None = None
     exempt_when: Callable[[], bool] | None = None
     override_defaults: bool | None = False
@@ -88,48 +87,3 @@ class Limit:
             scope += f":{method.upper()}"
 
         return scope
-
-
-@dataclasses.dataclass(eq=True, unsafe_hash=True)
-class LimitGroup:
-    """
-    represents a group of related limits either from a string or a callable
-    that returns one
-    """
-
-    limit_provider: Callable[[], str] | str
-    key_function: Callable[[], str]
-    scope: str | Callable[[str], str] | None = None
-    methods: tuple[str, ...] | None = None
-    error_message: str | Callable[[], str] | None = None
-    exempt_when: Callable[[], bool] | None = None
-    override_defaults: bool | None = False
-    deduct_when: Callable[[Response], bool] | None = None
-    on_breach: Callable[[RequestLimit], Response | None] | None = None
-    per_method: bool = False
-    cost: Callable[[], int] | int | None = None
-    shared: bool = False
-
-    def __iter__(self) -> Iterator[Limit]:
-        limit_str = (
-            self.limit_provider()
-            if callable(self.limit_provider)
-            else self.limit_provider
-        )
-        limit_items = parse_many(limit_str) if limit_str else []
-
-        for limit in limit_items:
-            yield Limit(
-                limit,
-                self.key_function,
-                self.scope,
-                self.per_method,
-                self.methods,
-                self.error_message,
-                self.exempt_when,
-                self.override_defaults,
-                self.deduct_when,
-                self.on_breach,
-                self.cost or 1,
-                self.shared,
-            )

@@ -5,12 +5,14 @@ from __future__ import annotations
 from . import _version
 from .constants import ExemptionScope, HeaderNames
 from .errors import RateLimitExceeded
-from .extension import Limiter, RequestLimit
+from .extension import BoundLimitDefinition, LimitDefinition, Limiter, RequestLimit
 
 __all__ = [
     "ExemptionScope",
     "HeaderNames",
     "Limiter",
+    "BoundLimitDefinition",
+    "LimitDefinition",
     "RateLimitExceeded",
     "RequestLimit",
 ]

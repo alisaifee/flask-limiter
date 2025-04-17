@@ -20,7 +20,8 @@ from typing import overload
 
 import flask
 import flask.wrappers
-from limits import RateLimitItem, WindowStats
+from flask import Response
+from limits import RateLimitItem, WindowStats, parse_many
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
@@ -33,13 +34,71 @@ from .errors import RateLimitExceeded
 from .manager import LimitManager
 from .typing import (
     Callable,
+    Iterator,
     P,
     R,
     Sequence,
     cast,
 )
 from .util import get_qualified_name
-from .wrappers import Limit, LimitGroup
+from .wrappers import Limit
+
+
+class RequestLimit:
+    """
+    Provides details of a rate limit within the context of a request
+    """
+
+    #: The instance of the rate limit
+    limit: RateLimitItem
+
+    #: The full key for the request against which the rate limit is tested
+    key: str
+
+    #: Whether the limit was breached within the context of this request
+    breached: bool
+
+    #: Whether the limit is a shared limit
+    shared: bool
+
+    def __init__(
+        self,
+        extension: Limiter,
+        limit: RateLimitItem,
+        request_args: list[str],
+        breached: bool,
+        shared: bool,
+    ) -> None:
+        self.extension: weakref.ProxyType[Limiter] = weakref.proxy(extension)
+        self.limit = limit
+        self.request_args = request_args
+        self.key = limit.key_for(*request_args)
+        self.breached = breached
+        self.shared = shared
+        self._window: WindowStats | None = None
+
+    @property
+    def limiter(self) -> RateLimiter:
+        return cast(RateLimiter, self.extension.limiter)
+
+    @property
+    def window(self) -> WindowStats:
+        if not self._window:
+            self._window = self.limiter.get_window_stats(self.limit, *self.request_args)
+
+        return self._window
+
+    @property
+    def reset_at(self) -> int:
+        """Timestamp at which the rate limit will be reset"""
+
+        return int(self.window[0] + 1)
+
+    @property
+    def remaining(self) -> int:
+        """Quantity remaining for this rate limit"""
+
+        return self.window[1]
 
 
 @dataclasses.dataclass
@@ -139,13 +198,14 @@ class Limiter:
         key_func: Callable[[], str],
         *,
         app: flask.Flask | None = None,
-        default_limits: list[str | Callable[[], str]] | None = None,
+        default_limits: list[str | Callable[[], str] | LimitDefinition] | None = None,
         default_limits_per_method: bool | None = None,
         default_limits_exempt_when: Callable[[], bool] | None = None,
         default_limits_deduct_when: None
         | (Callable[[flask.wrappers.Response], bool]) = None,
         default_limits_cost: int | Callable[[], int] | None = None,
-        application_limits: list[str | Callable[[], str]] | None = None,
+        application_limits: list[str | Callable[[], str] | LimitDefinition]
+        | None = None,
         application_limits_per_method: bool | None = None,
         application_limits_exempt_when: Callable[[], bool] | None = None,
         application_limits_deduct_when: None
@@ -161,7 +221,7 @@ class Limiter:
         fail_on_first_breach: bool | None = None,
         on_breach: None
         | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
-        meta_limits: list[str | Callable[[], str]] | None = None,
+        meta_limits: list[str | Callable[[], str] | LimitDefinition] | None = None,
         on_meta_breach: None
         | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
         in_memory_fallback: list[str] | None = None,
@@ -210,10 +270,12 @@ class Limiter:
 
         _default_limits = (
             [
-                LimitGroup(
+                LimitDefinition(
                     limit_provider=limit,
                     key_function=self._key_func,
                 )
+                if not isinstance(limit, LimitDefinition)
+                else limit
                 for limit in default_limits
             ]
             if default_limits
@@ -222,12 +284,14 @@ class Limiter:
 
         _application_limits = (
             [
-                LimitGroup(
+                LimitDefinition(
                     limit_provider=limit,
                     key_function=self._key_func,
                     scope="global",
                     shared=True,
                 )
+                if not isinstance(limit, LimitDefinition)
+                else limit
                 for limit in application_limits
             ]
             if application_limits
@@ -236,12 +300,14 @@ class Limiter:
 
         self._meta_limits = (
             [
-                LimitGroup(
+                LimitDefinition(
                     limit_provider=limit,
                     key_function=self._key_func,
                     scope="meta",
                     shared=True,
                 )
+                if not isinstance(limit, LimitDefinition)
+                else limit
                 for limit in meta_limits
             ]
             if meta_limits
@@ -251,10 +317,12 @@ class Limiter:
         if in_memory_fallback:
             for limit in in_memory_fallback:
                 self._in_memory_fallback.append(
-                    LimitGroup(
+                    LimitDefinition(
                         limit_provider=limit,
                         key_function=self._key_func,
                     )
+                    if not isinstance(limit, LimitDefinition)
+                    else limit
                 )
 
         self._storage: Storage | None = None
@@ -394,7 +462,7 @@ class Limiter:
         if not self.limit_manager._application_limits and app_limits:
             self.limit_manager.set_application_limits(
                 [
-                    LimitGroup(
+                    LimitDefinition(
                         limit_provider=app_limits,
                         key_function=self._key_func,
                         scope="global",
@@ -421,7 +489,7 @@ class Limiter:
         if not self.limit_manager._default_limits and conf_limits:
             self.limit_manager.set_default_limits(
                 [
-                    LimitGroup(
+                    LimitDefinition(
                         limit_provider=conf_limits,
                         key_function=self._key_func,
                         per_method=self._default_limits_per_method,
@@ -445,12 +513,14 @@ class Limiter:
 
         if not self._meta_limits and meta_limits:
             self._meta_limits = [
-                LimitGroup(
+                LimitDefinition(
                     limit_provider=meta_limits,
                     key_function=self._key_func,
                     scope="meta",
                     shared=True,
                 )
+                if not isinstance(meta_limits, LimitDefinition)
+                else meta_limits
             ]
 
         self._on_breach = self._on_breach or config.get(ConfigVars.ON_BREACH, None)
@@ -505,7 +575,7 @@ class Limiter:
         | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
         cost: int | Callable[[], int] = 1,
         scope: str | Callable[[str], str] | None = None,
-    ) -> LimitDecorator:
+    ) -> BoundLimitDefinition:
         """
         Decorator to be used for rate limiting individual routes or blueprints.
 
@@ -558,12 +628,11 @@ class Limiter:
 
         """
 
-        return LimitDecorator(
-            self,
-            limit_value,
-            key_func,
-            False,
-            scope,
+        return LimitDefinition(
+            limit_provider=limit_value,
+            key_function=key_func or self._key_func,
+            shared=False,
+            scope=scope,
             per_method=per_method,
             methods=methods,
             error_message=error_message,
@@ -572,7 +641,7 @@ class Limiter:
             deduct_when=deduct_when,
             on_breach=on_breach,
             cost=cost,
-        )
+        ).bind(self)
 
     def shared_limit(
         self,
@@ -589,7 +658,7 @@ class Limiter:
         on_breach: None
         | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
         cost: int | Callable[[], int] = 1,
-    ) -> LimitDecorator:
+    ) -> BoundLimitDefinition:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
 
@@ -625,12 +694,11 @@ class Limiter:
          takes no parameters and returns the cost as an integer (default: ``1``).
         """
 
-        return LimitDecorator(
-            self,
-            limit_value,
-            key_func,
-            True,
-            scope,
+        return LimitDefinition(
+            limit_provider=limit_value,
+            key_function=key_func or self._key_func,
+            shared=True,
+            scope=scope,
             per_method=per_method,
             methods=methods,
             error_message=error_message,
@@ -639,7 +707,7 @@ class Limiter:
             deduct_when=deduct_when,
             on_breach=on_breach,
             cost=cost,
-        )
+        ).bind(self)
 
     @overload
     def exempt(
@@ -752,7 +820,7 @@ class Limiter:
 
         if not self._in_memory_fallback and fallback_limits:
             self._in_memory_fallback = [
-                LimitGroup(
+                LimitDefinition(
                     limit_provider=fallback_limits,
                     key_function=self._key_func,
                     scope=None,
@@ -1191,61 +1259,135 @@ class Limiter:
         self.context.reset()
 
 
-class LimitDecorator:
+@dataclasses.dataclass(eq=True, unsafe_hash=True)
+class LimitDefinition:
     """
-    Wrapper used by :meth:`~flask_limiter.Limiter.limit`
-    and :meth:`~flask_limiter.Limiter.shared_limit`
-    when wrapping view functions or blueprints.
+    The definition of a rate limit to be used by the extension.
     """
 
-    def __init__(
-        self,
-        limiter: Limiter,
-        limit_value: Callable[[], str] | str,
-        key_func: Callable[[], str] | None = None,
-        shared: bool = False,
-        scope: Callable[[str], str] | str | None = None,
-        per_method: bool = False,
-        methods: Sequence[str] | None = None,
-        error_message: str | Callable[[], str] | None = None,
-        exempt_when: Callable[[], bool] | None = None,
-        override_defaults: bool = True,
-        deduct_when: Callable[[flask.wrappers.Response], bool] | None = None,
-        on_breach: None
-        | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
-        cost: Callable[[], int] | int = 1,
-    ):
-        self.limiter: weakref.ProxyType[Limiter] = weakref.proxy(limiter)
-        self.limit_value = limit_value
-        self.key_func = key_func or self.limiter._key_func
-        self.scope = scope
-        self.per_method = per_method
-        self.methods = tuple(methods) if methods else None
-        self.error_message = error_message
-        self.exempt_when = exempt_when
-        self.override_defaults = override_defaults
-        self.deduct_when = deduct_when
-        self.on_breach = on_breach
-        self.cost = cost
-        self.is_static = not callable(self.limit_value)
-        self.shared = shared
+    #: Rate limit string or a callable that returns a string.
+    #:  :ref:`ratelimit-string` for more details.
+    limit_provider: Callable[[], str] | str
+    #: Callable to extract the unique
+    #: identifier for the rate limit. defaults to remote address of the
+    #: request.
+    key_function: Callable[[], str]
+    #: A string or callable that returns a unique scope for the rate limit.
+    #: The scope is combined with current endpoint of the request if
+    #: :paramref:`shared` is ``False``
+    scope: str | Callable[[str], str] | None = None
+    #: If specified, only the methods in this list will
+    #: be rate limited.
+    methods: Sequence[str] | None = None
+    #: String (or callable that returns one) to override
+    #: the error message used in the response.
+    error_message: str | Callable[[], str] | None = None
+    #: Callable used to decide if the rate
+    #: limit should skipped.
+    exempt_when: Callable[[], bool] | None = None
+    #: Whether the decorated limit overrides
+    #: the default limits (Default: ``True``).
+    #:
+    #   #: .. note:: When used with a :class:`~flask.Blueprint` the meaning
+    #:    of the parameter extends to any parents the blueprint instance is
+    #:    registered under. For more details see :ref:`recipes:nested blueprints`
+    override_defaults: bool | None = False
+    #: A function that receives the current
+    #: :class:`flask.Response` object and returns True/False to decide if a
+    #: deduction should be done from the rate limit
+    deduct_when: Callable[[Response], bool] | None = None
+    #: A function that will be called when this limit
+    #: is breached. If the function returns an instance of :class:`flask.Response`
+    #: that will be the response embedded into the :exc:`RateLimitExceeded` exception
+    #: raised.
+    on_breach: Callable[[RequestLimit], Response | None] | None = None
+    #: Whether the limit is sub categorized into the
+    #: http method of the request.
+    per_method: bool = False
+    #: The cost of a hit or a function that
+    #: takes no parameters and returns the cost as an integer (Default: ``1``).
+    cost: Callable[[], int] | int | None = None
+    #: If this a shared limit (i.e. to be used by different endpoints)
+    shared: bool = False
 
-    @property
-    def limit_group(self) -> LimitGroup:
-        return LimitGroup(
-            limit_provider=self.limit_value,
-            key_function=self.key_func,
-            scope=self.scope,
-            per_method=self.per_method,
-            methods=self.methods,
-            error_message=self.error_message,
-            exempt_when=self.exempt_when,
-            override_defaults=self.override_defaults,
-            deduct_when=self.deduct_when,
-            on_breach=self.on_breach,
-            cost=self.cost,
-            shared=self.shared,
+    def __post_init__(self) -> None:
+        if self.methods:
+            self.methods = tuple([k.lower() for k in self.methods])
+
+    def __iter__(self) -> Iterator[Limit]:
+        limit_str = (
+            self.limit_provider()
+            if callable(self.limit_provider)
+            else self.limit_provider
         )
+        limit_items = parse_many(limit_str) if limit_str else []
+
+        for limit in limit_items:
+            yield Limit(
+                limit,
+                self.key_function,
+                self.scope,
+                self.per_method,
+                self.methods,
+                self.error_message,
+                self.exempt_when,
+                self.override_defaults,
+                self.deduct_when,
+                self.on_breach,
+                self.cost or 1,
+                self.shared,
+            )
+
+    def bind(self, limiter: Limiter) -> BoundLimitDefinition:
+        """
+        Returns an instance of the limit definition that is bound to
+        a specific instance of the :class:`Limiter`. This can be used
+        to decorate view functions or blueprints directly instead of calling
+        methods like :meth:`Limiter.limit` or :meth:`Limiter.shared_limit`
+        """
+        return BoundLimitDefinition(limiter=weakref.proxy(limiter), **self.__dict__)
+
+
+@dataclasses.dataclass(unsafe_hash=True)
+class BoundLimitDefinition(LimitDefinition):
+    """
+    An extension to :class:`LimitDefinition` that is bound to
+    a specific instance of the :class:`Limiter` through :paramref:`limiter`.
+
+    This instance can be used to decorate view functions or blueprints directly instead of calling
+    methods like :meth:`Limiter.limit` or :meth:`Limiter.shared_limit`
+
+    As an example, instead of doing this::
+
+        limiter = flask_limiter.Limiter(.....)
+
+        @app.route("/")
+        @limiter.limit("1/second")
+        def endpoint():
+           ...
+
+    You could directly do::
+
+        def default_key_func():
+            return "...."
+
+        limiter = flask_limiter.Limiter(key_func=default_key_func)
+
+        1_per_second = flask_limiter.BoundLimitDefinition("1/second", default_key_func)
+
+        @app.route("/")
+        @1_per_second
+        def endpoint():
+           ...
+
+        @app.route("/other")
+        @1_per_second
+        def other_endpoint():
+           ...
+    """
+
+    #: The instance of :class:`Limiter` that this limit definition is bound to
+    limiter: weakref.ProxyType[Limiter] = dataclasses.field(hash=False, kw_only=True)
 
     def __enter__(self) -> None:
         tb = traceback.extract_stack(limit=2)
@@ -1255,7 +1397,7 @@ class LimitDecorator:
         #  a less hacky approach than using the traceback and piggy backing
         #  on the limit manager's knowledge of decorated limits might be worth it.
         self.limiter.limit_manager.add_decorated_limit(
-            qualified_location, self.limit_group, override=True
+            qualified_location, self, override=True
         )
 
         self.limiter.limit_manager.add_endpoint_hint(
@@ -1286,12 +1428,12 @@ class LimitDecorator:
             name = get_qualified_name(obj)
 
         if isinstance(obj, flask.Blueprint):
-            self.limiter.limit_manager.add_blueprint_limit(name, self.limit_group)
+            self.limiter.limit_manager.add_blueprint_limit(name, self)
 
             return None
         else:
             self.limiter._marked_for_limiting.add(name)
-            self.limiter.limit_manager.add_decorated_limit(name, self.limit_group)
+            self.limiter.limit_manager.add_decorated_limit(name, self)
 
             @wraps(obj)
             def __inner(*a: P.args, **k: P.kwargs) -> R:
@@ -1323,60 +1465,3 @@ class LimitDecorator:
             setattr(__inner, "__wrapper-limiter-instance", self.limiter)
 
             return __inner
-
-
-class RequestLimit:
-    """
-    Provides details of a rate limit within the context of a request
-    """
-
-    #: The instance of the rate limit
-    limit: RateLimitItem
-
-    #: The full key for the request against which the rate limit is tested
-    key: str
-
-    #: Whether the limit was breached within the context of this request
-    breached: bool
-
-    #: Whether the limit is a shared limit
-    shared: bool
-
-    def __init__(
-        self,
-        extension: Limiter,
-        limit: RateLimitItem,
-        request_args: list[str],
-        breached: bool,
-        shared: bool,
-    ) -> None:
-        self.extension: weakref.ProxyType[Limiter] = weakref.proxy(extension)
-        self.limit = limit
-        self.request_args = request_args
-        self.key = limit.key_for(*request_args)
-        self.breached = breached
-        self.shared = shared
-        self._window: WindowStats | None = None
-
-    @property
-    def limiter(self) -> RateLimiter:
-        return cast(RateLimiter, self.extension.limiter)
-
-    @property
-    def window(self) -> WindowStats:
-        if not self._window:
-            self._window = self.limiter.get_window_stats(self.limit, *self.request_args)
-
-        return self._window
-
-    @property
-    def reset_at(self) -> int:
-        """Timestamp at which the rate limit will be reset"""
-
-        return int(self.window[0] + 1)
-
-    @property
-    def remaining(self) -> int:
-        """Quantity remaining for this rate limit"""
-
-        return self.window[1]

@@ -6,6 +6,8 @@ API
 Extension
 ---------
 .. autoclass:: Limiter
+.. autoclass:: LimitDefinition
+.. autoclass:: BoundLimitDefinition
 
 Utilities
 ---------
