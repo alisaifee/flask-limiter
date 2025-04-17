@@ -12,5 +12,6 @@ exclude_lines =
     noqa
     raise NotImplementedError
     if typing.TYPE_CHECKING
+    if TYPE_CHECKING
     @overload
     @abstractmethod
