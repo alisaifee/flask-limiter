@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import dataclasses
 from collections.abc import Iterator
+from typing import TYPE_CHECKING
 
 from flask import request
 from flask.wrappers import Response
 from limits import RateLimitItem, parse_many
 
-from . import RequestLimit
 from .typing import Callable
+
+if TYPE_CHECKING:
+    from .extension import RequestLimit
 
 
 @dataclasses.dataclass(eq=True, unsafe_hash=True)
