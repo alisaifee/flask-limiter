@@ -65,7 +65,7 @@ class Limiter:
     :param key_func: a callable that returns the domain to rate limit
       by.
     :param app: :class:`flask.Flask` instance to initialize the extension with.
-    :param default_limits: a variable list of strings or callables
+    :param default_limits: a list of strings or callables
      returning strings denoting default limits to apply to all routes that are
      not explicitely decorated with a limit. :ref:`ratelimit-string` for  more details.
     :param default_limits_per_method: whether default limits are applied
@@ -78,7 +78,7 @@ class Limiter:
     :param default_limits_cost: The cost of a hit to the default limits as an
      integer or a function that takes no parameters and returns an integer
      (Default: ``1``).
-    :param application_limits: a variable list of strings or callables
+    :param application_limits: a list of strings or callables
      returning strings for limits that are applied to the entire application
      (i.e a shared limit for all routes)
     :param application_limits_per_method: whether application limits are applied
@@ -111,7 +111,7 @@ class Limiter:
      extension is breached. If the function returns an instance of :class:`flask.Response`
      that will be the response embedded into the :exc:`RateLimitExceeded` exception
      raised.
-    :param meta_limits: a variable list of strings or callables
+    :param meta_limits: a list of strings or callables
      returning strings for limits that are used to control the upper limit of
      a requesting client hitting any configured rate limit. Once a meta limit is
      exceeded all subsequent requests will raise a :class:`~flask_limiter.RateLimitExceeded`
@@ -120,7 +120,7 @@ class Limiter:
      extension is breached. If the function returns an instance of :class:`flask.Response`
      that will be the response embedded into the :exc:`RateLimitExceeded` exception
      raised.
-    :param in_memory_fallback: a variable list of strings or callables
+    :param in_memory_fallback: a list of strings or callables
      returning strings denoting fallback limits to apply when the storage is
      down.
     :param in_memory_fallback_enabled: fall back to in memory
