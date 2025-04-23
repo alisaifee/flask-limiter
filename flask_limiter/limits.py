@@ -253,7 +253,7 @@ class RouteLimit(Limit):
     Decorating individual routes::
 
         limiter = flask_limiter.Limiter(.....)
-        limit.init_app(app)
+        limiter.init_app(app)
 
         @app.route("/")
         @flask_limiter.RouteLimit("2/second", limiter=limiter)
