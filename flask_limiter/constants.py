@@ -62,9 +62,9 @@ class ExemptionScope(enum.Flag):
 
     #: Exempt from application wide "global" limits
     APPLICATION = enum.auto()
-    #: Exempt from default limits configured on the extension
-    META = enum.auto()
     #: Exempts from meta limits
+    META = enum.auto()
+    #: Exempt from default limits configured on the extension
     DEFAULT = enum.auto()
     #: Exempts any nested blueprints. See :ref:`recipes:nested blueprints`
     DESCENDENTS = enum.auto()
