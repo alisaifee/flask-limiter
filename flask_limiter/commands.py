@@ -23,9 +23,9 @@ from werkzeug.routing import Rule
 
 from flask_limiter import Limiter
 from flask_limiter.constants import ConfigVars, ExemptionScope, HeaderNames
+from flask_limiter.limits import RuntimeLimit
 from flask_limiter.typing import Callable, Generator, cast
 from flask_limiter.util import get_qualified_name
-from flask_limiter.wrappers import Limit
 
 limiter_theme = Theme(
     {
@@ -71,7 +71,7 @@ def render_strategy(strategy: RateLimiter) -> str:
 
 
 def render_limit_state(
-    limiter: Limiter, endpoint: str, limit: Limit, key: str, method: str
+    limiter: Limiter, endpoint: str, limit: RuntimeLimit, key: str, method: str
 ) -> str:
     args = [key, limit.scope_for(endpoint, method)]
     if not limiter.storage or (limiter.storage and not limiter.storage.check()):
@@ -86,7 +86,7 @@ def render_limit_state(
         return f": [success]Pass[/success] ({stats[1]} out of {limit.limit.amount} remaining)"
 
 
-def render_limit(limit: Limit, simple: bool = True) -> str:
+def render_limit(limit: RuntimeLimit, simple: bool = True) -> str:
     render = str(limit.limit)
     if simple:
         return render
@@ -103,7 +103,7 @@ def render_limit(limit: Limit, simple: bool = True) -> str:
 def render_limits(
     app: Flask,
     limiter: Limiter,
-    limits: tuple[list[Limit], ...],
+    limits: tuple[list[RuntimeLimit], ...],
     endpoint: str | None = None,
     blueprint: str | None = None,
     rule: Rule | None = None,
@@ -511,7 +511,7 @@ def clear(
 
             class Details(TypedDict):
                 rule: Rule
-                limits: tuple[list[Limit], ...]
+                limits: tuple[list[RuntimeLimit], ...]
 
             rule_limits: dict[str, Details] = {}
             for rule in sorted(

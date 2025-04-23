@@ -15,5 +15,6 @@ coverage<8
 hiro>0.1.6
 pytest
 pytest-cov
+pytest-check
 pytest-mock
 lovely-pytest-docker
