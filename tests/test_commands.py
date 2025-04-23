@@ -42,9 +42,7 @@ def test_limits(kitchensink_factory):
     runner = app.test_cli_runner()
     result = runner.invoke(cli, ["limits"])
     assert "5000 per 1 hour" in result.output
-    assert re.compile(r"health.health: /health/\n\s*└── Exempt", re.MULTILINE).search(
-        result.output
-    )
+    assert re.compile(r"health.health: /health/\n\s*└── Exempt", re.MULTILINE).search(result.output)
 
 
 def test_limits_filter_endpoint(kitchensink_factory):
@@ -78,9 +76,7 @@ def test_limits_with_test(kitchensink_factory, mocker):
     mw.side_effect = lambda *a: (0, 0)
     result = runner.invoke(cli, ["limits", "--key=127.0.0.1"])
     assert "5000 per 1 hour: Fail (0 out of 5000 remaining)" in result.output
-    assert re.compile(r"health.health: /health/\n\s*└── Exempt", re.MULTILINE).search(
-        result.output
-    )
+    assert re.compile(r"health.health: /health/\n\s*└── Exempt", re.MULTILINE).search(result.output)
 
 
 def test_limits_with_test_storage_down(kitchensink_factory, mocker):

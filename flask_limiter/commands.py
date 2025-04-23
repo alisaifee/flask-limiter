@@ -79,9 +79,7 @@ def render_limit_state(
     test = limiter.limiter.test(limit.limit, *args)
     stats = limiter.limiter.get_window_stats(limit.limit, *args)
     if not test:
-        return (
-            f": [error]Fail[/error] ({stats[1]} out of {limit.limit.amount} remaining)"
-        )
+        return f": [error]Fail[/error] ({stats[1]} out of {limit.limit.amount} remaining)"
     else:
         return f": [success]Pass[/success] ({stats[1]} out of {limit.limit.amount} remaining)"
 
@@ -125,8 +123,7 @@ def render_limits(
             view_func = app.view_functions.get(endpoint, None)
             source = (
                 "blueprint"
-                if blueprint
-                and limit in limiter.limit_manager.blueprint_limits(app, blueprint)
+                if blueprint and limit in limiter.limit_manager.blueprint_limits(app, blueprint)
                 else (
                     "route"
                     if limit
@@ -143,17 +140,13 @@ def render_limits(
                 rendered = render_limit(limit, False)
                 entry = f"[{source}]{rendered} [http]({method})[/http][/{source}]"
                 if test:
-                    entry += render_limit_state(
-                        limiter, endpoint or "", limit, test, method
-                    )
+                    entry += render_limit_state(limiter, endpoint or "", limit, test, method)
                 entries.append(entry)
         else:
             rendered = render_limit(limit, False)
             entry = f"[{source}]{rendered}[/{source}]"
             if test:
-                entry += render_limit_state(
-                    limiter, endpoint or "", limit, test, method
-                )
+                entry += render_limit_state(limiter, endpoint or "", limit, test, method)
             entries.append(entry)
     if not entries and exemption_scope:
         renderable.add("[exempt]Exempt[/exempt]")
@@ -180,14 +173,10 @@ def get_filtered_endpoint(
         adapter = app.url_map.bind("dev.null")
         parsed = urlparse(path)
         try:
-            filter_endpoint, _ = adapter.match(
-                parsed.path, method=method, query_args=parsed.query
-            )
+            filter_endpoint, _ = adapter.match(parsed.path, method=method, query_args=parsed.query)
             return cast(str, filter_endpoint)
         except NotFound:
-            console.print(
-                f"[error]Error: {path} could not be matched to an endpoint[/error]"
-            )
+            console.print(f"[error]Error: {path} could not be matched to an endpoint[/error]")
         except MethodNotAllowed:
             assert method
             console.print(
@@ -214,9 +203,7 @@ def config() -> None:
             extension_details.add_column("Notes")
             extension_details.add_column("Configuration")
             extension_details.add_column("Value")
-            extension_details.add_row(
-                "Enabled", ConfigVars.ENABLED, Pretty(limiter.enabled)
-            )
+            extension_details.add_row("Enabled", ConfigVars.ENABLED, Pretty(limiter.enabled))
             extension_details.add_row(
                 "Key Function", ConfigVars.KEY_FUNC, render_func(limiter._key_func)
             )
@@ -231,18 +218,13 @@ def config() -> None:
             limiter_config.add(ConfigVars.STORAGE_OPTIONS)
             limiter_config.add("Status")
             limiter_config_values.add(render_storage(limiter))
-            extension_details.add_row(
-                "Rate Limiting Config", limiter_config, limiter_config_values
-            )
+            extension_details.add_row("Rate Limiting Config", limiter_config, limiter_config_values)
             if limiter.limit_manager.application_limits:
                 extension_details.add_row(
                     "Application Limits",
                     ConfigVars.APPLICATION_LIMITS,
                     Pretty(
-                        [
-                            render_limit(limit)
-                            for limit in limiter.limit_manager.application_limits
-                        ]
+                        [render_limit(limit) for limit in limiter.limit_manager.application_limits]
                     ),
                 )
                 extension_details.add_row(
@@ -275,12 +257,7 @@ def config() -> None:
                 extension_details.add_row(
                     "Default Limits",
                     ConfigVars.DEFAULT_LIMITS,
-                    Pretty(
-                        [
-                            render_limit(limit)
-                            for limit in limiter.limit_manager.default_limits
-                        ]
-                    ),
+                    Pretty([render_limit(limit) for limit in limiter.limit_manager.default_limits]),
                 )
                 extension_details.add_row(
                     None,
@@ -303,19 +280,14 @@ def config() -> None:
                     render_func(limiter._default_limits_cost),
                 )
             else:
-                extension_details.add_row(
-                    "Default Limits", ConfigVars.DEFAULT_LIMITS, Pretty([])
-                )
+                extension_details.add_row("Default Limits", ConfigVars.DEFAULT_LIMITS, Pretty([]))
 
             if limiter._meta_limits:
                 extension_details.add_row(
                     "Meta Limits",
                     ConfigVars.META_LIMITS,
                     Pretty(
-                        [
-                            render_limit(limit)
-                            for limit in itertools.chain(*limiter._meta_limits)
-                        ]
+                        [render_limit(limit) for limit in itertools.chain(*limiter._meta_limits)]
                     ),
                 )
             if limiter._headers_enabled:
@@ -327,12 +299,8 @@ def config() -> None:
 
                 header_values = Tree(Pretty(limiter._headers_enabled))
                 header_values.add(Pretty(limiter._header_mapping[HeaderNames.RESET]))
-                header_values.add(
-                    Pretty(limiter._header_mapping[HeaderNames.REMAINING])
-                )
-                header_values.add(
-                    Pretty(limiter._header_mapping[HeaderNames.RETRY_AFTER])
-                )
+                header_values.add(Pretty(limiter._header_mapping[HeaderNames.REMAINING]))
+                header_values.add(Pretty(limiter._header_mapping[HeaderNames.RETRY_AFTER]))
                 header_values.add(Pretty(limiter._retry_after))
                 extension_details.add_row(
                     "Header configuration",
@@ -385,9 +353,7 @@ def limits(
             manager = limiter.limit_manager
             groups: dict[str, list[Callable[..., Tree]]] = {}
 
-            filter_endpoint = get_filtered_endpoint(
-                current_app, console, endpoint, path, method
-            )
+            filter_endpoint = get_filtered_endpoint(current_app, console, endpoint, path, method)
             for rule in sorted(
                 current_app.url_map.iter_rules(filter_endpoint), key=lambda r: str(r)
             ):
@@ -401,9 +367,7 @@ def limits(
                             render_limits,
                             current_app,
                             limiter,
-                            manager.resolve_limits(
-                                current_app, rule_endpoint, bp_fullname
-                            ),
+                            manager.resolve_limits(current_app, rule_endpoint, bp_fullname),
                             rule_endpoint,
                             bp_fullname,
                             rule,
@@ -434,11 +398,7 @@ def limits(
 
             @group()
             def console_renderable() -> Generator:  # type: ignore
-                if (
-                    limiter
-                    and limiter.limit_manager.application_limits
-                    and not (endpoint or path)
-                ):
+                if limiter and limiter.limit_manager.application_limits and not (endpoint or path):
                     yield render_limits(
                         current_app,
                         limiter,
@@ -505,9 +465,7 @@ def clear(
         console = Console(theme=limiter_theme)
         if limiter:
             manager = limiter.limit_manager
-            filter_endpoint = get_filtered_endpoint(
-                current_app, console, endpoint, path, method
-            )
+            filter_endpoint = get_filtered_endpoint(current_app, console, endpoint, path, method)
 
             class Details(TypedDict):
                 rule: Rule
@@ -524,9 +482,7 @@ def clear(
                     bp_fullname = ".".join(rule_endpoint.split(".")[:-1])
                     rule_limits[rule_endpoint] = Details(
                         rule=rule,
-                        limits=manager.resolve_limits(
-                            current_app, rule_endpoint, bp_fullname
-                        ),
+                        limits=manager.resolve_limits(current_app, rule_endpoint, bp_fullname),
                     )
                 else:
                     rule_limits[rule_endpoint] = Details(
@@ -560,9 +516,7 @@ def clear(
                                 test=key,
                             )
                         )
-            if y or Confirm.ask(
-                f"Proceed with resetting limits for key: [danger]{key}[/danger]?"
-            ):
+            if y or Confirm.ask(f"Proceed with resetting limits for key: [danger]{key}[/danger]?"):
                 if application_limits:
                     node = Tree("Application Limits")
                     for limit in application_limits:
@@ -596,9 +550,7 @@ def clear(
                                     key,
                                     limit.scope_for(endpoint, method),
                                 )
-                            node.add(
-                                f"{render_limit(limit)}: [success]Cleared[/success]"
-                            )
+                            node.add(f"{render_limit(limit)}: [success]Cleared[/success]")
                         console.print(node)
         else:
             console.print(

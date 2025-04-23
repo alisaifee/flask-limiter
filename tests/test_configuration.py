@@ -60,9 +60,7 @@ def test_header_names_config():
     app.config.setdefault(ConfigVars.HEADER_LIMIT, "XX-Limit")
     app.config.setdefault(ConfigVars.HEADER_REMAINING, "XX-Remaining")
     app.config.setdefault(ConfigVars.HEADER_RESET, "XX-Reset")
-    limiter = Limiter(
-        get_remote_address, headers_enabled=True, default_limits=["1/second"]
-    )
+    limiter = Limiter(get_remote_address, headers_enabled=True, default_limits=["1/second"])
     limiter.init_app(app)
 
     @app.route("/")

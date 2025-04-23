@@ -13,19 +13,16 @@ class RateLimitExceeded(exceptions.TooManyRequests):
 
     def __init__(self, limit: RuntimeLimit, response: Response | None = None) -> None:
         """
-        :param limit: The actual rate limit that was hit.
-         Used to construct the default response message
-        :param response: Optional pre constructed response. If provided
-         it will be rendered by flask instead of the default error response
-         of :class:`~werkzeug.exceptions.HTTPException`
+        :param limit: The actual rate limit that was hit. This is used to construct the default
+         response message
+        :param response: Optional pre constructed response. If provided it will be rendered by
+         flask instead of the default error response of :class:`~werkzeug.exceptions.HTTPException`
         """
         self.limit = limit
         self.response = response
         if limit.error_message:
             description = (
-                limit.error_message
-                if not callable(limit.error_message)
-                else limit.error_message()
+                limit.error_message if not callable(limit.error_message) else limit.error_message()
             )
         else:
             description = str(limit.limit)

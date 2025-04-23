@@ -20,16 +20,12 @@ def test_error_message(extension_factory):
 
         @app.errorhandler(429)
         def ratelimit_handler(e):
-            return make_response(
-                '{"error" : "rate limit %s"}' % str(e.description), 429
-            )
+            return make_response('{"error" : "rate limit %s"}' % str(e.description), 429)
 
         cli.get("/")
         assert "1 per 1 day" in cli.get("/").data.decode()
 
-        assert {"error": "rate limit 1 per 1 day"} == json.loads(
-            cli.get("/").data.decode()
-        )
+        assert {"error": "rate limit 1 per 1 day"} == json.loads(cli.get("/").data.decode())
 
 
 def test_custom_error_message(extension_factory):
@@ -99,9 +95,7 @@ def test_swallow_error(extension_factory):
 
             hit.side_effect = raiser
             assert "ok" in cli.get("/").data.decode()
-        with patch(
-            "limits.strategies.FixedWindowRateLimiter.get_window_stats"
-        ) as get_window_stats:
+        with patch("limits.strategies.FixedWindowRateLimiter.get_window_stats") as get_window_stats:
 
             def raiser(*a, **k):
                 raise Exception
@@ -157,9 +151,7 @@ def test_no_swallow_error(extension_factory):
             hit.side_effect = raiser
             assert 500 == cli.get("/").status_code
             assert "underlying" == cli.get("/").data.decode()
-        with patch(
-            "limits.strategies.FixedWindowRateLimiter.get_window_stats"
-        ) as get_window_stats:
+        with patch("limits.strategies.FixedWindowRateLimiter.get_window_stats") as get_window_stats:
             get_window_stats.side_effect = raiser
             assert 500 == cli.get("/").status_code
             assert "underlying" == cli.get("/").data.decode()

@@ -7,7 +7,7 @@ parentdir_prefix = "flask-limiter-"
 tag_prefix = ""
 
 [tool.ruff]
-line-length=88
+line-length=100
 indent-width = 4
 exclude = ["_version.py"]
 

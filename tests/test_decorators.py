@@ -42,9 +42,7 @@ def test_multiple_decorators(extension_factory):
 
 
 def test_exempt_routes(extension_factory):
-    app, limiter = extension_factory(
-        default_limits=["1/minute"], application_limits=["2/minute"]
-    )
+    app, limiter = extension_factory(default_limits=["1/minute"], application_limits=["2/minute"])
 
     @app.route("/t1")
     def t1():
@@ -242,9 +240,7 @@ def test_decorated_limits_with_combined_defaults(extension_factory):
 
 
 def test_decorated_limit_with_combined_defaults_per_method(extension_factory):
-    app, limiter = extension_factory(
-        default_limits=["2/minute"], default_limits_per_method=True
-    )
+    app, limiter = extension_factory(default_limits=["2/minute"], default_limits_per_method=True)
 
     @app.route("/", methods=["GET", "PUT"])
     @limiter.limit("1/second", override_defaults=False, methods=["GET"])
@@ -737,14 +733,10 @@ def test_on_breach_callback_custom_response(extension_factory):
         pass
 
     def on_breach_with_response(request_limit):
-        return make_response(
-            f"custom response {request_limit.limit} @ {request.path}", 429
-        )
+        return make_response(f"custom response {request_limit.limit} @ {request.path}", 429)
 
     def default_on_breach_with_response(request_limit):
-        return make_response(
-            f"default custom response {request_limit.limit} @ {request.path}", 429
-        )
+        return make_response(f"default custom response {request_limit.limit} @ {request.path}", 429)
 
     def on_breach_invalid(): ...
 

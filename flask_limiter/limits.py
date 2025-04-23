@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 @dataclasses.dataclass(eq=True, unsafe_hash=True)
 class RuntimeLimit:
     """
-    simple wrapper to encapsulate limits and their context
+    Final representation of a rate limit before it is triggered during a request
     """
 
     limit: RateLimitItem
@@ -67,13 +67,10 @@ class RuntimeLimit:
 
     def scope_for(self, endpoint: str, method: str | None) -> str:
         """
-        Derive final bucket (scope) for this limit given the endpoint
-        and request method. If the limit is shared between multiple
-        routes, the scope does not include the endpoint.
+        Derive final bucket (scope) for this limit given the endpoint and request method.
+        If the limit is shared between multiple routes, the scope does not include the endpoint.
         """
-        limit_scope = (
-            self.scope(request.endpoint or "") if callable(self.scope) else self.scope
-        )
+        limit_scope = self.scope(request.endpoint or "") if callable(self.scope) else self.scope
 
         if limit_scope:
             if self.shared:
@@ -93,8 +90,7 @@ class RuntimeLimit:
 @dataclasses.dataclass(eq=True, unsafe_hash=True)
 class Limit:
     """
-    The definition of a rate limit to be used by the extension as
-    a default limit::
+    The definition of a rate limit to be used by the extension as a default limit::
 
 
         def default_key_function():
@@ -182,11 +178,7 @@ class Limit:
             self.meta_limits = tuple(self.meta_limits)
 
     def __iter__(self) -> Iterator[RuntimeLimit]:
-        limit_str = (
-            self.limit_provider()
-            if callable(self.limit_provider)
-            else self.limit_provider
-        )
+        limit_str = self.limit_provider() if callable(self.limit_provider) else self.limit_provider
         limit_items = parse_many(limit_str) if limit_str else []
         meta_limits: tuple[RuntimeLimit, ...] = ()
 
@@ -227,8 +219,8 @@ class Limit:
 
     def bind(self: Self, limiter: Limiter) -> Self:
         """
-        Returns an instance of the limit definition that binds to a
-        weak reference of an instance of :class:`Limiter`.
+        Returns an instance of the limit definition that binds to a weak reference of an instance
+        of :class:`Limiter`.
 
         :meta private:
         """
@@ -245,10 +237,8 @@ class Limit:
 @dataclasses.dataclass(unsafe_hash=True, kw_only=True)
 class RouteLimit(Limit):
     """
-    A variant of :class:`Limit` that can be used to
-    to decorate a flask route or blueprint directly
-    instead of by using :meth:`Limiter.limit` or
-    :meth:`Limiter.shared_limit`.
+    A variant of :class:`Limit` that can be used to to decorate a flask route or blueprint directly
+    instead of by using :meth:`Limiter.limit` or :meth:`Limiter.shared_limit`.
 
     Decorating individual routes::
 
@@ -283,17 +273,13 @@ class RouteLimit(Limit):
         # TODO: if use as a context manager becomes interesting/valuable
         #  a less hacky approach than using the traceback and piggy backing
         #  on the limit manager's knowledge of decorated limits might be worth it.
-        self.limiter.limit_manager.add_decorated_limit(
-            qualified_location, self, override=True
-        )
+        self.limiter.limit_manager.add_decorated_limit(qualified_location, self, override=True)
 
         self.limiter.limit_manager.add_endpoint_hint(
             self.limiter.identify_request(), qualified_location
         )
 
-        self.limiter._check_request_limit(
-            in_middleware=False, callable_name=qualified_location
-        )
+        self.limiter._check_request_limit(in_middleware=False, callable_name=qualified_location)
 
     def __exit__(
         self,
@@ -326,8 +312,7 @@ class RouteLimit(Limit):
             def __inner(*a: P.args, **k: P.kwargs) -> R:
                 if (
                     self.limiter._auto_check
-                    and not getattr(obj, "__wrapper-limiter-instance", None)
-                    == self.limiter
+                    and not getattr(obj, "__wrapper-limiter-instance", None) == self.limiter
                 ):
                     identity = self.limiter.identify_request()
 
@@ -337,9 +322,7 @@ class RouteLimit(Limit):
                         if view_func and not get_qualified_name(view_func) == name:
                             self.limiter.limit_manager.add_endpoint_hint(identity, name)
 
-                    self.limiter._check_request_limit(
-                        in_middleware=False, callable_name=name
-                    )
+                    self.limiter._check_request_limit(in_middleware=False, callable_name=name)
 
                 return cast(R, flask.current_app.ensure_sync(obj)(*a, **k))
 
@@ -357,9 +340,8 @@ class RouteLimit(Limit):
 @dataclasses.dataclass(kw_only=True, unsafe_hash=True)
 class ApplicationLimit(Limit):
     """
-    Variant of :class:`Limit` to be used for declaring an application wide
-    limit that can be passed to :class:`Limiter` as one of the
-    members of :paramref:`Limiter.application_limits`
+    Variant of :class:`Limit` to be used for declaring an application wide limit that can be passed
+    to :class:`Limiter` as one of the members of :paramref:`Limiter.application_limits`
     """
 
     #: The scope to use for the application wide limit
@@ -373,10 +355,9 @@ class ApplicationLimit(Limit):
 @dataclasses.dataclass(kw_only=True, unsafe_hash=True)
 class MetaLimit(Limit):
     """
-    Variant of :class:`Limit` to be used for declaring a meta
-    limit that can be passed to either :class:`Limiter` as one of the
-    members of :paramref:`Limiter.meta_limits` or to another instance
-    of :class:`Limit` as a member of :paramref:`Limit.meta_limits`
+    Variant of :class:`Limit` to be used for declaring a meta limit that can be passed to
+    either :class:`Limiter` as one of the  members of :paramref:`Limiter.meta_limits` or to another
+    instance of :class:`Limit` as a member of :paramref:`Limit.meta_limits`
     """
 
     #: The scope to use for the meta limit
@@ -384,8 +365,8 @@ class MetaLimit(Limit):
     #: meta limits can't have meta limits - at least here :)
     #:
     #: :meta private:
-    meta_limits: Sequence[Callable[[], str] | str | MetaLimit] | None = (
-        dataclasses.field(init=False, default=None)
+    meta_limits: Sequence[Callable[[], str] | str | MetaLimit] | None = dataclasses.field(
+        init=False, default=None
     )
     #: The rate limit this meta limit is limiting.
     #:
@@ -398,9 +379,7 @@ class MetaLimit(Limit):
     #: Meta limits can't have conditional deductions
     #:
     #: :meta private:
-    deduct_when: Callable[[Response], bool] | None = dataclasses.field(
-        init=False, default=None
-    )
+    deduct_when: Callable[[Response], bool] | None = dataclasses.field(init=False, default=None)
     #: Callable to extract the unique identifier for the rate limit.
     #: If not provided the key_function will fallback to:
     #:
@@ -420,8 +399,7 @@ class MetaLimit(Limit):
 
     def bind_parent(self: Self, parent: Limit) -> Self:
         """
-        Binds this meta limit to be associated as a child of the
-        ``parent`` limit.
+        Binds this meta limit to be associated as a child of the ``parent`` limit.
 
         :meta private:
         """

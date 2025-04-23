@@ -188,9 +188,7 @@ def test_nested_blueprint_exemption_nested(extension_factory):
 
 
 def test_nested_blueprint_exemption_ridiculous(extension_factory):
-    app, limiter = extension_factory(
-        default_limits=["1/minute"], application_limits=["5/day"]
-    )
+    app, limiter = extension_factory(default_limits=["1/minute"], application_limits=["5/day"])
     n1 = Blueprint("n1", __name__, url_prefix="/n1")
     n2 = Blueprint("n2", __name__, url_prefix="/n2")
     n1_1 = Blueprint("n1_1", __name__, url_prefix="/n1_1")
@@ -234,9 +232,7 @@ def test_nested_blueprint_exemption_ridiculous(extension_factory):
     # All routes under n1, and it's descendents are exempt for default/application limits
     limiter.exempt(
         n1,
-        flags=ExemptionScope.DEFAULT
-        | ExemptionScope.APPLICATION
-        | ExemptionScope.DESCENDENTS,
+        flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.DESCENDENTS,
     )
     # n1 descendents are exempt from application & defaults so need their own limits
     limiter.limit("2/minute")(n1_1)

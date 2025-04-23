@@ -25,7 +25,4 @@ __all__ = [
     "RequestLimit",
 ]
 
-#: Aliased for backward compatibility
-HEADERS = HeaderNames
-
 __version__ = _version.get_versions()["version"]

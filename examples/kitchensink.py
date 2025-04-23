@@ -82,9 +82,7 @@ def app():
     #: Exempt from default, application and ancestor rate limits (effectively all)
     limiter.exempt(
         health_blueprint,
-        flags=ExemptionScope.DEFAULT
-        | ExemptionScope.APPLICATION
-        | ExemptionScope.ANCESTORS,
+        flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.ANCESTORS,
     )
 
     class ResourceView(View):
@@ -97,9 +95,7 @@ def app():
         #: Custom rate limit of 5/second by http method type for all routes under this
         #: resource view. The error response is also customized by using the `on_breach`
         #: callback to return a json error response
-        decorators = [
-            limiter.limit("5/second", per_method=True, on_breach=json_error_responder)
-        ]
+        decorators = [limiter.limit("5/second", per_method=True, on_breach=json_error_responder)]
 
         def dispatch_request(self):
             return request.method.lower()

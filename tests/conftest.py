@@ -109,9 +109,7 @@ def kitchensink_factory(extension_factory):
 
         limiter.exempt(
             health_blueprint,
-            flags=ExemptionScope.DEFAULT
-            | ExemptionScope.APPLICATION
-            | ExemptionScope.ANCESTORS,
+            flags=ExemptionScope.DEFAULT | ExemptionScope.APPLICATION | ExemptionScope.ANCESTORS,
         )
 
         return app, limiter

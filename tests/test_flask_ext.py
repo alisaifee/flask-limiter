@@ -68,9 +68,7 @@ def test_static_exempt(extension_factory):
 
 
 def test_combined_rate_limits(extension_factory):
-    app, limiter = extension_factory(
-        {ConfigVars.DEFAULT_LIMITS: "1 per hour; 10 per day"}
-    )
+    app, limiter = extension_factory({ConfigVars.DEFAULT_LIMITS: "1 per hour; 10 per day"})
 
     @app.route("/t1")
     @limiter.limit("100 per hour;10/minute")
@@ -228,12 +226,7 @@ def test_key_func(extension_factory):
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
             for i in range(0, 100):
-                assert (
-                    200
-                    == cli.get(
-                        "/t1", headers={"X_FORWARDED_FOR": "127.0.0.2"}
-                    ).status_code
-                )
+                assert 200 == cli.get("/t1", headers={"X_FORWARDED_FOR": "127.0.0.2"}).status_code
             assert 429 == cli.get("/t1").status_code
 
 
@@ -616,9 +609,7 @@ def test_application_limit_per_method(extension_factory):
 
 def test_callable_default_limit(extension_factory):
     app, limiter = extension_factory(
-        default_limits=[
-            lambda: request.headers.get("suspect", 0) and "1/minute" or "2/minute"
-        ]
+        default_limits=[lambda: request.headers.get("suspect", 0) and "1/minute" or "2/minute"]
     )
 
     @app.route("/t1")
@@ -640,9 +631,7 @@ def test_callable_default_limit(extension_factory):
 
 def test_callable_application_limit(extension_factory):
     app, limiter = extension_factory(
-        application_limits=[
-            lambda: request.headers.get("suspect", 0) and "1/minute" or "2/minute"
-        ]
+        application_limits=[lambda: request.headers.get("suspect", 0) and "1/minute" or "2/minute"]
     )
 
     @app.route("/t1")
@@ -769,9 +758,7 @@ def test_default_on_breach_callback(extension_factory):
 
 
 def test_custom_key_prefix(redis_connection, extension_factory):
-    app1, limiter1 = extension_factory(
-        key_prefix="moo", storage_uri="redis://localhost:46379"
-    )
+    app1, limiter1 = extension_factory(key_prefix="moo", storage_uri="redis://localhost:46379")
     app2, limiter2 = extension_factory(
         {ConfigVars.KEY_PREFIX: "cow"}, storage_uri="redis://localhost:46379"
     )
@@ -1000,9 +987,7 @@ def test_custom_meta_limits(extension_factory, check):
                 meta_limits=[
                     MetaLimit(
                         "2/minute",
-                        on_breach=functools.partial(
-                            meta_breach_callback, message="default"
-                        ),
+                        on_breach=functools.partial(meta_breach_callback, message="default"),
                     )
                 ],
             ),
@@ -1049,9 +1034,7 @@ def test_custom_meta_limits(extension_factory, check):
         return "combined"
 
     @check.check_func
-    def check_request(
-        *, endpoint_path, expected_status, expected_body=None, username="alice"
-    ):
+    def check_request(*, endpoint_path, expected_status, expected_body=None, username="alice"):
         response = test_client.get(endpoint_path, headers={"username": username})
         assert response.status_code == expected_status
         if expected_body is not None:
@@ -1088,9 +1071,7 @@ def test_custom_meta_limits(extension_factory, check):
                 username="alice",
             )
 
-            check_request(
-                endpoint_path="/combined", expected_status=200, username="bob"
-            )
+            check_request(endpoint_path="/combined", expected_status=200, username="bob")
             check_request(
                 endpoint_path="/combined",
                 expected_status=429,
@@ -1108,9 +1089,7 @@ def test_custom_meta_limits(extension_factory, check):
 
             timeline.forward(3600)
             check_request(endpoint_path="/custom", expected_status=200)
-            check_request(
-                endpoint_path="/custom", expected_status=429, expected_body=b"limit"
-            )
+            check_request(endpoint_path="/custom", expected_status=429, expected_body=b"limit")
 
             timeline.forward(1)
             check_request(
