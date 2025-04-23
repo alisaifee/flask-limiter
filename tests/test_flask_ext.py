@@ -651,38 +651,6 @@ def test_callable_application_limit(extension_factory):
             assert cli.get("/t2", headers={"suspect": 1}).status_code == 429
 
 
-def test_no_auto_check(extension_factory):
-    app, limiter = extension_factory(auto_check=False)
-
-    @app.route("/", methods=["GET", "POST"])
-    @limiter.limit("1/second", per_method=True)
-    def root():
-        return "root"
-
-    with hiro.Timeline().freeze():
-        with app.test_client() as cli:
-            assert 200 == cli.get("/").status_code
-            assert 200 == cli.get("/").status_code
-
-
-def test_no_auto_check_custom_before_request(extension_factory):
-    app, limiter = extension_factory(auto_check=False)
-
-    @app.route("/", methods=["GET", "POST"])
-    @limiter.limit("1/second", per_method=True)
-    def root():
-        return "root"
-
-    @app.before_request
-    def _():
-        limiter.check()
-
-    with hiro.Timeline().freeze():
-        with app.test_client() as cli:
-            assert 200 == cli.get("/").status_code
-            assert 429 == cli.get("/").status_code
-
-
 def test_fail_on_first_breach(extension_factory):
     app, limiter = extension_factory(fail_on_first_breach=True)
     current_limits = []

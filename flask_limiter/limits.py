@@ -310,10 +310,7 @@ class RouteLimit(Limit):
 
             @wraps(obj)
             def __inner(*a: P.args, **k: P.kwargs) -> R:
-                if (
-                    self.limiter._auto_check
-                    and not getattr(obj, "__wrapper-limiter-instance", None) == self.limiter
-                ):
+                if not getattr(obj, "__wrapper-limiter-instance", None) == self.limiter:
                     identity = self.limiter.identify_request()
 
                     if identity:

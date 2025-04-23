@@ -153,8 +153,6 @@ class Limiter:
     :param strategy: the strategy to use. Refer to :ref:`ratelimit-strategy`
     :param storage_uri: the storage location. Refer to :data:`RATELIMIT_STORAGE_URI`
     :param storage_options: kwargs to pass to the storage implementation upon instantiation.
-    :param auto_check: whether to automatically check the rate limit in the before_request chain
-     of the application. default ``True``
     :param swallow_errors: whether to swallow any errors when hitting a rate limit. An exception
      will still be logged. default ``False``
     :param fail_on_first_breach: whether to stop processing remaining limits after the first breach.
@@ -201,7 +199,6 @@ class Limiter:
         strategy: str | None = None,
         storage_uri: str | None = None,
         storage_options: dict[str, str | int] | None = None,
-        auto_check: bool = True,
         swallow_errors: bool | None = None,
         fail_on_first_breach: bool | None = None,
         on_breach: Callable[[RequestLimit], flask.wrappers.Response | None] | None = None,
@@ -241,7 +238,6 @@ class Limiter:
         self._strategy = strategy
         self._storage_uri = storage_uri
         self._storage_options = storage_options or {}
-        self._auto_check = auto_check
         self._swallow_errors = swallow_errors
         self._fail_on_first_breach = fail_on_first_breach
         self._on_breach = on_breach
@@ -487,9 +483,7 @@ class Limiter:
         self.__configure_fallbacks(app, self._strategy)
 
         if self not in app.extensions.setdefault("limiter", set()):
-            if self._auto_check:
-                app.before_request(self._check_request_limit)
-
+            app.before_request(self._check_request_limit)
             app.after_request(partial(Limiter.__inject_headers, self))
             app.teardown_request(self.__release_context)
         app.extensions["limiter"].add(self)
@@ -789,17 +783,6 @@ class Limiter:
             return True
 
         return False
-
-    def check(self) -> None:
-        """
-        Explicitly check the limits for the current request. This is only relevant
-        if the extension was initialized with :paramref:`~flask_limiter.Limiter.auto_check`
-        set to ``False``
-
-
-        :raises: RateLimitExceeded
-        """
-        self._check_request_limit(in_middleware=False)
 
     def reset(self) -> None:
         """
