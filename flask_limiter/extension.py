@@ -142,14 +142,14 @@ class Limiter:
         default_limits: list[str | Callable[[], str]] | None = None,
         default_limits_per_method: bool | None = None,
         default_limits_exempt_when: Callable[[], bool] | None = None,
-        default_limits_deduct_when: None
-        | (Callable[[flask.wrappers.Response], bool]) = None,
+        default_limits_deduct_when: Callable[[flask.wrappers.Response], bool]
+        | None = None,
         default_limits_cost: int | Callable[[], int] | None = None,
         application_limits: list[str | Callable[[], str]] | None = None,
         application_limits_per_method: bool | None = None,
         application_limits_exempt_when: Callable[[], bool] | None = None,
-        application_limits_deduct_when: None
-        | (Callable[[flask.wrappers.Response], bool]) = None,
+        application_limits_deduct_when: Callable[[flask.wrappers.Response], bool]
+        | None = None,
         application_limits_cost: int | Callable[[], int] | None = None,
         headers_enabled: bool | None = None,
         header_name_mapping: dict[HeaderNames, str] | None = None,
@@ -159,11 +159,11 @@ class Limiter:
         auto_check: bool = True,
         swallow_errors: bool | None = None,
         fail_on_first_breach: bool | None = None,
-        on_breach: None
-        | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
+        on_breach: Callable[[RequestLimit], flask.wrappers.Response | None]
+        | None = None,
         meta_limits: list[str | Callable[[], str]] | None = None,
-        on_meta_breach: None
-        | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
+        on_meta_breach: Callable[[RequestLimit], flask.wrappers.Response | None]
+        | None = None,
         in_memory_fallback: list[str] | None = None,
         in_memory_fallback_enabled: bool | None = None,
         retry_after: str | None = None,
