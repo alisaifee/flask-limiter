@@ -458,11 +458,11 @@ class Limiter:
         else:
             default_limit_groups = self.limit_manager._default_limits
 
-            for group in default_limit_groups:
-                group.per_method = self._default_limits_per_method
-                group.exempt_when = self._default_limits_exempt_when
-                group.deduct_when = self._default_limits_deduct_when
-                group.cost = self._default_limits_cost
+            for default_group in default_limit_groups:
+                default_group.per_method = self._default_limits_per_method
+                default_group.exempt_when = self._default_limits_exempt_when
+                default_group.deduct_when = self._default_limits_deduct_when
+                default_group.cost = self._default_limits_cost
             self.limit_manager.set_default_limits(default_limit_groups)
 
         meta_limits = config.get(ConfigVars.META_LIMITS, None)
