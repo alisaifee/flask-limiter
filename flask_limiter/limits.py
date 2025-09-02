@@ -169,6 +169,8 @@ class Limit:
     limiter: weakref.ProxyType[Limiter] = dataclasses.field(
         init=False, hash=False, kw_only=True, repr=False
     )
+    #: :meta private:
+    finalized: bool = dataclasses.field(default=True)
 
     def __post_init__(self) -> None:
         if self.methods:

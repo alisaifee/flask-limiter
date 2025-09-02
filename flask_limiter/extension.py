@@ -252,6 +252,7 @@ class Limiter:
                 Limit(
                     limit_provider=limit,
                     key_function=self._key_func,
+                    finalized=False,
                 ).bind(self)
                 if not isinstance(limit, Limit)
                 else limit.bind(self)
@@ -265,6 +266,7 @@ class Limiter:
             [
                 ApplicationLimit(
                     limit_provider=limit,
+                    finalized=False,
                 ).bind(self)
                 if not isinstance(limit, ApplicationLimit)
                 else limit.bind(self)
@@ -434,10 +436,12 @@ class Limiter:
             app_limits = self.limit_manager._application_limits
 
             for group in app_limits:
-                group.cost = self._application_limits_cost
-                group.per_method = self._application_limits_per_method
-                group.exempt_when = self._application_limits_exempt_when
-                group.deduct_when = self._application_limits_deduct_when
+                if not group.finalized:
+                    group.cost = self._application_limits_cost
+                    group.per_method = self._application_limits_per_method
+                    group.exempt_when = self._application_limits_exempt_when
+                    group.deduct_when = self._application_limits_deduct_when
+                    group.finalized = True
             self.limit_manager.set_application_limits(app_limits)
 
         conf_limits = config.get(ConfigVars.DEFAULT_LIMITS, None)
@@ -459,10 +463,12 @@ class Limiter:
             default_limit_groups = self.limit_manager._default_limits
 
             for default_group in default_limit_groups:
-                default_group.per_method = self._default_limits_per_method
-                default_group.exempt_when = self._default_limits_exempt_when
-                default_group.deduct_when = self._default_limits_deduct_when
-                default_group.cost = self._default_limits_cost
+                if not default_group.finalized:
+                    default_group.cost = self._default_limits_cost
+                    default_group.per_method = self._default_limits_per_method
+                    default_group.exempt_when = self._default_limits_exempt_when
+                    default_group.deduct_when = self._default_limits_deduct_when
+                    default_group.finalized = True
             self.limit_manager.set_default_limits(default_limit_groups)
 
         meta_limits = config.get(ConfigVars.META_LIMITS, None)
