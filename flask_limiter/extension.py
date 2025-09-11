@@ -268,7 +268,7 @@ class Limiter:
                     limit_provider=limit,
                     finalized=False,
                 ).bind(self)
-                if not isinstance(limit, ApplicationLimit)
+                if not isinstance(limit, Limit)
                 else limit.bind(self)
                 for limit in application_limits
             ]
@@ -281,7 +281,7 @@ class Limiter:
                 MetaLimit(
                     limit_provider=limit,
                 ).bind(self)
-                if not isinstance(limit, MetaLimit)
+                if not isinstance(limit, Limit)
                 else limit.bind(self)
                 for limit in meta_limits
             ]
