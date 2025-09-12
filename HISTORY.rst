@@ -3,6 +3,21 @@
 Changelog
 =========
 
+v3.13
+-----
+Release Date: 2025-09-12
+
+* Feature
+
+  * Expose ``flask_limiter.Limit``, ``flask_limiter.RouteLimit``,
+    ``flask_limiter.ApplicationLimit`` & ``flask_limiter.MetaLimit``
+    limit description classes that can be used to pass in default,
+    application & meta limits to the Limiter extension. This allows
+    for a more fine grained control for end users while also
+    simplifying the internal implementation of different types
+    of limits.
+
+
 v3.12
 -----
 Release Date: 2025-03-14
@@ -985,6 +1000,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
