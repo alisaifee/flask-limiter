@@ -69,7 +69,7 @@ version = { attr = "versioneer.get_version" }
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["flask_limiter.*"]
+include = ["flask_limiter*"]
 
 [dependency-groups]
 test = [
