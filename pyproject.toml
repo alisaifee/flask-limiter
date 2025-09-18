@@ -6,6 +6,27 @@ versionfile_build = "flask_limiter/_version.py"
 parentdir_prefix = "flask-limiter-"
 tag_prefix = ""
 
+[tool.mypy]
+strict = true
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_any_unimported = true
+disallow_incomplete_defs = true
+disallow_untyped_defs = true
+disallow_untyped_decorators = true
+show_error_codes = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "werkzeug",
+    "flask_limiter._compat.*",
+    "flask_limiter._version",
+]
+
+ignore_errors = true
+
 [tool.ruff]
 line-length=100
 indent-width = 4
