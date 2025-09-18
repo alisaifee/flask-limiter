@@ -9,7 +9,7 @@ To get started
 
    $ git clone git://github.com/alisaifee/flask-limiter.git
    $ cd flask-limiter
-   $ pip install -r requirements/dev.txt
+   $ uv sync --dev
 
 Tests
 -----
@@ -18,7 +18,7 @@ you will need a working docker installation to run all the tests.
 
 .. code:: console
 
-   $ pytest
+   $ uv run pytest
 
 
 Running the tests will automatically invoke :program:`docker-compose` with the following config (:githubsrc:`docker-compose.yml`)

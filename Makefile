@@ -1,11 +1,11 @@
 lint:
-	ruff check flask_limiter tests examples --select I
-	ruff format --check flask_limiter tests examples
-	ruff check flask_limiter tests examples 
-	mypy flask_limiter
+	uv run ruff check flask_limiter tests examples --select I
+	uv run ruff format --check flask_limiter tests examples
+	uv run ruff check flask_limiter tests examples 
+	uv run mypy flask_limiter
 
 lint-fix:
-	ruff check flask_limiter tests examples --select I --fix
-	ruff format flask_limiter tests examples
-	ruff check --fix flask_limiter tests examples 
-	mypy flask_limiter
+	uv run ruff check flask_limiter tests examples --select I --fix
+	uv run ruff format flask_limiter tests examples
+	uv run ruff check --fix flask_limiter tests examples 
+	uv run mypy flask_limiter
