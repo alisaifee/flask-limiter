@@ -3,7 +3,5 @@ include LICENSE.txt
 include HISTORY.rst
 include CONTRIBUTIONS.rst
 include CLASSIFIERS
-recursive-include requirements *.txt
 recursive-include doc/source *
 recursive-include doc *.py Make*
-include flask_limiter/_version.py

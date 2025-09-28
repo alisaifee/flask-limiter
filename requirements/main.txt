@@ -1,5 +1,0 @@
-limits>=3.13
-Flask>=2
-ordered-set>4,<5
-typing_extensions>=4.3
-rich>=12,<15

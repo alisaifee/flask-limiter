@@ -1,5 +1,0 @@
--r test.txt
--r docs.txt
-ruff
-keyring
-mypy
