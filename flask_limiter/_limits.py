@@ -13,7 +13,7 @@ from flask import request
 from flask.wrappers import Response
 from limits import RateLimitItem, parse_many
 
-from .typing import Callable, Iterable, Iterator, P, R, Self, Sequence
+from ._typing import Callable, Iterable, Iterator, P, R, Self, Sequence
 from .util import get_qualified_name
 
 if TYPE_CHECKING:

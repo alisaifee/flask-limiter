@@ -10,9 +10,8 @@ from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
 
-from flask_limiter import HeaderNames
-from flask_limiter.constants import ConfigVars
-from flask_limiter.extension import Limiter
+from flask_limiter import Limiter
+from flask_limiter.constants import ConfigVars, HeaderNames
 from flask_limiter.util import get_remote_address
 
 

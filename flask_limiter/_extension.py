@@ -26,23 +26,23 @@ from ordered_set import OrderedSet
 from werkzeug.http import http_date, parse_date
 
 from ._compat import request_context
-from .constants import MAX_BACKEND_CHECKS, ConfigVars, ExemptionScope, HeaderNames
-from .errors import RateLimitExceeded
-from .limits import (
+from ._limits import (
     ApplicationLimit,
     Limit,
     MetaLimit,
     RouteLimit,
     RuntimeLimit,
 )
-from .manager import LimitManager
-from .typing import (
+from ._manager import LimitManager
+from ._typing import (
     Callable,
     P,
     R,
     Sequence,
     cast,
 )
+from .constants import MAX_BACKEND_CHECKS, ConfigVars, ExemptionScope, HeaderNames
+from .errors import RateLimitExceeded
 from .util import get_qualified_name
 
 

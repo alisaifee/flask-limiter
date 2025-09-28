@@ -5,7 +5,7 @@ from __future__ import annotations
 from flask.wrappers import Response
 from werkzeug import exceptions
 
-from .limits import RuntimeLimit
+from ._limits import RuntimeLimit
 
 
 class RateLimitExceeded(exceptions.TooManyRequests):

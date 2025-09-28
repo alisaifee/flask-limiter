@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from . import _version
-from .constants import ExemptionScope, HeaderNames
-from .errors import RateLimitExceeded
-from .extension import Limiter, RequestLimit
-from .limits import (
+from ._extension import Limiter, RequestLimit
+from ._limits import (
     ApplicationLimit,
     Limit,
     MetaLimit,
     RouteLimit,
 )
+from .constants import ExemptionScope, HeaderNames
+from .errors import RateLimitExceeded
 
 __all__ = [
     "ExemptionScope",

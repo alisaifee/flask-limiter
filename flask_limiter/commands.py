@@ -21,11 +21,11 @@ from typing_extensions import TypedDict
 from werkzeug.exceptions import MethodNotAllowed, NotFound
 from werkzeug.routing import Rule
 
-from flask_limiter import Limiter
-from flask_limiter.constants import ConfigVars, ExemptionScope, HeaderNames
-from flask_limiter.limits import RuntimeLimit
-from flask_limiter.typing import Callable, Generator, cast
-from flask_limiter.util import get_qualified_name
+from ._extension import Limiter
+from ._limits import RuntimeLimit
+from ._typing import Callable, Generator, cast
+from .constants import ConfigVars, ExemptionScope, HeaderNames
+from .util import get_qualified_name
 
 limiter_theme = Theme(
     {

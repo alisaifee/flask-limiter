@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 import flask
 from ordered_set import OrderedSet
 
+from ._limits import ApplicationLimit, RuntimeLimit
 from .constants import ExemptionScope
-from .limits import ApplicationLimit, RuntimeLimit
 from .util import get_qualified_name
 
 if TYPE_CHECKING:

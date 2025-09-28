@@ -12,9 +12,8 @@ import hiro
 from flask import Flask, abort, make_response, request
 from werkzeug.exceptions import BadRequest
 
-from flask_limiter import Limit, MetaLimit
+from flask_limiter import Limit, Limiter, MetaLimit
 from flask_limiter.constants import ConfigVars
-from flask_limiter.extension import Limiter
 from flask_limiter.util import get_remote_address
 
 
