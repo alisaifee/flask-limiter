@@ -1,2 +1,0 @@
-flask_ratelimits/_version.py export-subst
-flask_limiter/_version.py export-subst
