@@ -1,5 +1,6 @@
 *.pyc
 *.log
+flask_limiter/_version.py
 cover/*
 .coverage*
 .test_env
