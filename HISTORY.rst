@@ -3,6 +3,34 @@
 Changelog
 =========
 
+v4.0.0
+------
+Release Date: 2025-09-30
+
+* Feature
+
+  * Expose ``flask_limiter.Limit``, ``flask_limiter.RouteLimit``,
+    ``flask_limiter.ApplicationLimit`` & ``flask_limiter.MetaLimit``
+    limit description classes that can be used to pass in default,
+    application & meta limits to the ``Limiter`` extension.
+    This allows for a more fine grained control for end users while also
+    simplifying the internal implementation of different types
+    of limits.
+
+* Compatibility
+
+  * Prefix all internal sub modules with underscore.
+    All imports should be from the root `flask_limiter`
+    namespace only.
+
+* Development
+
+  * Migrate all project metadata to pyproject
+  * Remove versioneer
+  * Use uv for development
+  * Use hatch for build
+
+
 v3.13
 -----
 Release Date: 2025-09-12
@@ -1000,6 +1028,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
