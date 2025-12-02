@@ -4,7 +4,14 @@ Command Line Interface
 .. versionadded:: 2.4.0
 
 Flask-Limiter adds a few subcommands to the Flask :doc:`flask:cli` for maintenance & diagnostic purposes.
-These can be accessed under the **limiter** sub-command as follows
+
+Ensure the ``cli`` extras are installed:
+
+.. code-block:: shell
+
+   $ pip install Flask-Limiter[cli]
+
+These can then be accessed under the **limiter** sub-command as follows
 
 .. program-output:: FLASK_APP=../../examples/kitchensink.py:app flask limiter --help
    :shell:

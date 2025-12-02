@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.11'",
@@ -492,11 +492,13 @@ dependencies = [
     { name = "flask" },
     { name = "limits" },
     { name = "ordered-set" },
-    { name = "rich" },
     { name = "typing-extensions" },
 ]
 
 [package.optional-dependencies]
+cli = [
+    { name = "rich" },
+]
 memcached = [
     { name = "limits", extra = ["memcached"] },
 ]
@@ -587,10 +589,10 @@ requires-dist = [
     { name = "limits", extras = ["redis"], marker = "extra == 'redis'" },
     { name = "limits", extras = ["valkey"], marker = "extra == 'valkey'" },
     { name = "ordered-set", specifier = ">4,<5" },
-    { name = "rich", specifier = ">=12,<15" },
+    { name = "rich", marker = "extra == 'cli'", specifier = ">=12,<15" },
     { name = "typing-extensions", specifier = ">=4.3" },
 ]
-provides-extras = ["redis", "memcached", "mongodb", "valkey"]
+provides-extras = ["cli", "memcached", "mongodb", "redis", "valkey"]
 
 [package.metadata.requires-dev]
 ci = [

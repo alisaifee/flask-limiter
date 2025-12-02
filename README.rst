@@ -90,6 +90,11 @@ Add the rate limiter to your flask app
 
 Inspect the limits using the command line interface
 ---------------------------------------------------
+
+.. code-block:: bash
+
+   pip install Flask-Limiter[cli]
+
 .. code-block:: bash
 
    $ FLASK_APP=app:app flask limiter limits

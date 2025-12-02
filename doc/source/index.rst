@@ -122,6 +122,12 @@ a `429 <http://tools.ietf.org/html/rfc6585#section-4>`_ http error will be raise
 The extension adds a ``limiter`` subcommand to the :doc:`Flask CLI <flask:cli>` which can be used to inspect
 the effective configuration and applied rate limits (See :ref:`cli:Command Line Interface` for more details).
 
+Any dependencies of the cli can be installed by using the ``cli`` extra:
+
+.. code-block:: shell
+
+   $ pip install Flask-Limiter[cli]
+
 Given the quick start example above:
 
 
