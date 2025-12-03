@@ -3,6 +3,19 @@
 Changelog
 =========
 
+v4.1.0
+------
+Release Date: 2025-12-02
+
+* Deployment
+
+  * Extract ``cli`` specific requirements to an extra
+
+* Compatibility
+
+  * Add python 3.14 support
+
+
 v4.0.0
 ------
 Release Date: 2025-09-30
@@ -1028,6 +1041,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
