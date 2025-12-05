@@ -6,7 +6,7 @@ build:
   commands:
     - pip install uv
     - cd doc
-    - uv run --group docs python -m sphinx doc/source $READTHEDOCS_OUTPUT/html -b html
+    - uv run --extra cli --group docs python -m sphinx doc/source $READTHEDOCS_OUTPUT/html -b html
 
 sphinx:
    configuration: doc/source/conf.py
