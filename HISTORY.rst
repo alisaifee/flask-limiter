@@ -3,6 +3,15 @@
 Changelog
 =========
 
+v4.1.1
+------
+Release Date: 2025-12-06
+
+* Bug Fix
+
+  * Ensure cli commands fail gracefully when cli dependencies
+    are not installed.
+
 v4.1.0
 ------
 Release Date: 2025-12-02
@@ -1041,6 +1050,7 @@ v0.1.0
 Release Date: 2014-02-13
 
 * first release.
+
 
 
 
