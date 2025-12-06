@@ -530,6 +530,7 @@ ci = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "redis" },
+    { name = "rich" },
     { name = "ruff" },
 ]
 dev = [
@@ -549,6 +550,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "redis" },
+    { name = "rich" },
     { name = "ruff" },
 ]
 docs = [
@@ -612,6 +614,7 @@ ci = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "redis" },
+    { name = "rich", specifier = ">=12,<15" },
     { name = "ruff" },
 ]
 dev = [
@@ -631,6 +634,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "redis" },
+    { name = "rich", specifier = ">=12,<15" },
     { name = "ruff" },
 ]
 docs = [

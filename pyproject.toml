@@ -96,6 +96,7 @@ dev = [
   "ruff",
   "keyring",
   "mypy",
+  "rich>=12,<15",
   {include-group = "test"},
 ]
 
