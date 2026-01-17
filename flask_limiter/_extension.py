@@ -410,7 +410,7 @@ class Limiter:
             ConfigVars.REQUEST_IDENTIFIER, lambda: flask.request.endpoint or ""
         )
         if self._stack_trace_limit is None:
-            self._stack_trace_limit = config.get(ConfigVars.STACK_TRACE_LIMIT, 2)
+            self._stack_trace_limit = config.get(ConfigVars.STACK_TRACE_LIMIT, None)
         app_limits = config.get(ConfigVars.APPLICATION_LIMITS, None)
         self._application_limits_cost = self._application_limits_cost or config.get(
             ConfigVars.APPLICATION_LIMITS_COST, 1
@@ -536,6 +536,7 @@ class Limiter:
         cost: int | Callable[[], int] = 1,
         scope: str | Callable[[str], str] | None = None,
         meta_limits: Sequence[str | Callable[[], str] | MetaLimit] | None = None,
+        stack_trace_limit: int | None = None,
     ) -> RouteLimit:
         """
         Decorator to be used for rate limiting individual routes or blueprints.
@@ -597,6 +598,7 @@ class Limiter:
             on_breach=on_breach,
             cost=cost,
             meta_limits=meta_limits,
+            stack_trace_limit=stack_trace_limit or self._stack_trace_limit,
         )
 
     def shared_limit(
@@ -614,6 +616,7 @@ class Limiter:
         on_breach: None | (Callable[[RequestLimit], flask.wrappers.Response | None]) = None,
         cost: int | Callable[[], int] = 1,
         meta_limits: Sequence[str | Callable[[], str] | MetaLimit] | None = None,
+        stack_trace_limit: int | None = None,
     ) -> RouteLimit:
         """
         decorator to be applied to multiple routes sharing the same rate limit.
@@ -641,6 +644,7 @@ class Limiter:
          embedded into the :exc:`RateLimitExceeded` exception raised.
         :param cost: The cost of a hit or a function that takes no parameters and returns the cost
          as an integer (default: ``1``).
+        :param stack_trace_limit: the index of the stack trace to use for the limit.
         """
 
         return RouteLimit(
@@ -658,6 +662,7 @@ class Limiter:
             on_breach=on_breach,
             cost=cost,
             meta_limits=meta_limits,
+            stack_trace_limit=stack_trace_limit or self._stack_trace_limit,
         )
 
     @overload

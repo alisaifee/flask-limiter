@@ -5,7 +5,7 @@ import time
 
 import hiro
 import pytest
-from flask import Flask
+from flask import Flask, request
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage
 from limits.strategies import MovingWindowRateLimiter
@@ -198,14 +198,17 @@ def test_stack_trace_limit_config():
 def test_stack_trace_limit_custom_decorator():
     """Test stack trace limit with custom decorator that adds stack frames"""
     app = Flask(__name__)
-    limiter = Limiter(get_remote_address, stack_trace_limit=3, default_limits=["1/second"])
+    limiter = Limiter(get_remote_address, stack_trace_limit=4, default_limits=["1/second"])
     limiter.init_app(app)
+
+    def key_func():
+        return f"{get_remote_address()}:{request.endpoint}"
 
     def custom_rate_limit(limit_string):
         """Custom decorator that adds one stack frame"""
 
         def decorator(f):
-            @limiter.limit(limit_string)
+            @limiter.limit(limit_string, key_func=key_func)
             def wrapper(*args, **kwargs):
                 return f(*args, **kwargs)
 
@@ -213,30 +216,40 @@ def test_stack_trace_limit_custom_decorator():
 
         return decorator
 
-    @app.route("/test")
     @custom_rate_limit("2/second")
     def test_route():
         return "ok"
 
+    @custom_rate_limit("1/second")
+    def test_route2():
+        return "ok"
+
+    app.add_url_rule("/test", 'test1', view_func=test_route)
+    app.add_url_rule("/test2", 'test2', view_func=test_route2)
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
-            # Should work with increased stack trace limit to account for custom decorator
             assert cli.get("/test").status_code == 200
             assert cli.get("/test").status_code == 200
             assert cli.get("/test").status_code == 429
+            assert cli.get("/test2").status_code == 200
+            assert cli.get("/test2").status_code == 429
 
 
 def test_stack_trace_limit_custom_decorator_fails_with_default():
     """Test that custom decorator fails with default stack trace limit"""
     app = Flask(__name__)
-    limiter = Limiter(get_remote_address, default_limits=["1/second"])  # Uses default limit=2
+    
+    def key_func():
+        return f"{get_remote_address()}:{request.endpoint}"
+
+    limiter = Limiter(get_remote_address, default_limits=["1/second"])
     limiter.init_app(app)
 
     def custom_rate_limit(limit_string):
         """Custom decorator that adds one stack frame"""
 
         def decorator(f):
-            @limiter.limit(limit_string)
+            @limiter.limit(limit_string, key_func=key_func)
             def wrapper(*args, **kwargs):
                 return f(*args, **kwargs)
 
@@ -244,24 +257,19 @@ def test_stack_trace_limit_custom_decorator_fails_with_default():
 
         return decorator
 
-    @app.route("/test")
     @custom_rate_limit("2/second")
     def test_route():
         return "ok"
 
+    @custom_rate_limit("1/second")
+    def test_route2():
+        return "ok"
+
+    app.add_url_rule("/test", 'test1', view_func=test_route)
+    app.add_url_rule("/test2", 'test2', view_func=test_route2)
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
-            # With default limit=2, this might not work correctly due to extra stack frame
-            # The test documents the problem - in practice, the limit might not be applied correctly
-            # or might be applied to the wrong location
-            response1 = cli.get("/test")
-            response2 = cli.get("/test")
-            response3 = cli.get("/test")
-
-            # This test just documents that with default settings, custom decorators can cause issues
-            # The exact behavior might vary, but the point is it doesn't work as expected
-            # We don't assert specific status codes here since the behavior is problematic
-            assert response1.status_code in [
-                200,
-                429,
-            ]  # Could be either due to incorrect location detection
+            assert cli.get("/test").status_code == 200
+            assert cli.get("/test").status_code == 429
+            assert cli.get("/test2").status_code == 200
+            assert cli.get("/test2").status_code == 429

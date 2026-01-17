@@ -171,6 +171,8 @@ class Limit:
     )
     #: :meta private:
     finalized: bool = dataclasses.field(default=True)
+    #: The index of the stack trace to use for the limit.
+    stack_trace_limit: int | None = None
 
     def __post_init__(self) -> None:
         if self.methods:
@@ -300,7 +302,7 @@ class RouteLimit(Limit):
         if isinstance(obj, flask.Blueprint):
             name = obj.name
         else:
-            name = get_qualified_name(obj)
+            name = get_qualified_name(obj, self.stack_trace_limit)
 
         if isinstance(obj, flask.Blueprint):
             self.limiter.limit_manager.add_blueprint_limit(name, self)

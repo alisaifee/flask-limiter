@@ -14,7 +14,7 @@ def get_remote_address() -> str:
     return request.remote_addr or "127.0.0.1"
 
 
-def get_qualified_name(callable: Callable[..., Any]) -> str:
+def get_qualified_name(callable: Callable[..., Any], stack_trace_limit: int | None = None) -> str:
     """
     Generate the fully qualified name of a callable for use in storing mappings of decorated
     functions to rate limits
@@ -28,4 +28,8 @@ def get_qualified_name(callable: Callable[..., Any]) -> str:
 
     :meta private:
     """
+    if stack_trace_limit is not None:
+        import traceback
+        tb = traceback.extract_stack(limit=stack_trace_limit)
+        return f"{tb[0].filename}:{tb[0].name}:{tb[0].lineno}"
     return f"{callable.__module__}.{callable.__name__}.{callable.__qualname__}"
