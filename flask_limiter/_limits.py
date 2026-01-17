@@ -269,7 +269,7 @@ class RouteLimit(Limit):
         super().__post_init__()
 
     def __enter__(self) -> None:
-        tb = traceback.extract_stack(limit=2)
+        tb = traceback.extract_stack(limit=self.limiter._stack_trace_limit)
         qualified_location = f"{tb[0].filename}:{tb[0].name}:{tb[0].lineno}"
 
         # TODO: if use as a context manager becomes interesting/valuable

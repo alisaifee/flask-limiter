@@ -177,6 +177,9 @@ class Limiter:
     :param request_identifier: a callable that returns the unique identity the current request.
      Defaults to :attr:`flask.Request.endpoint`
     :param enabled: Whether the extension is enabled or not
+    :param stack_trace_limit: Number of stack frames to extract when identifying the location
+     of a route limit. Used to properly identify routes when custom decorators are applied.
+     Defaults to ``2``. Can also be configured via :data:`~flask_limiter.constants.ConfigVars.STACK_TRACE_LIMIT`
     """
 
     def __init__(
@@ -210,6 +213,7 @@ class Limiter:
         key_prefix: str = "",
         request_identifier: Callable[..., str] | None = None,
         enabled: bool = True,
+        stack_trace_limit: int | None = None,
     ) -> None:
         self.app = app
         self.logger = logging.getLogger("flask-limiter")
@@ -246,6 +250,7 @@ class Limiter:
         self._key_func = key_func
         self._key_prefix = key_prefix
         self._request_identifier = request_identifier
+        self._stack_trace_limit = stack_trace_limit
 
         _default_limits = (
             [
@@ -404,6 +409,8 @@ class Limiter:
         self._request_identifier = self._request_identifier or config.get(
             ConfigVars.REQUEST_IDENTIFIER, lambda: flask.request.endpoint or ""
         )
+        if self._stack_trace_limit is None:
+            self._stack_trace_limit = config.get(ConfigVars.STACK_TRACE_LIMIT, 2)
         app_limits = config.get(ConfigVars.APPLICATION_LIMITS, None)
         self._application_limits_cost = self._application_limits_cost or config.get(
             ConfigVars.APPLICATION_LIMITS_COST, 1
