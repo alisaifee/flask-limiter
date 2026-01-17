@@ -224,8 +224,8 @@ def test_stack_trace_limit_custom_decorator():
     def test_route2():
         return "ok"
 
-    app.add_url_rule("/test", 'test1', view_func=test_route)
-    app.add_url_rule("/test2", 'test2', view_func=test_route2)
+    app.add_url_rule("/test", "test1", view_func=test_route)
+    app.add_url_rule("/test2", "test2", view_func=test_route2)
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
             assert cli.get("/test").status_code == 200
@@ -238,7 +238,7 @@ def test_stack_trace_limit_custom_decorator():
 def test_stack_trace_limit_custom_decorator_fails_with_default():
     """Test that custom decorator fails with default stack trace limit"""
     app = Flask(__name__)
-    
+
     def key_func():
         return f"{get_remote_address()}:{request.endpoint}"
 
@@ -265,8 +265,8 @@ def test_stack_trace_limit_custom_decorator_fails_with_default():
     def test_route2():
         return "ok"
 
-    app.add_url_rule("/test", 'test1', view_func=test_route)
-    app.add_url_rule("/test2", 'test2', view_func=test_route2)
+    app.add_url_rule("/test", "test1", view_func=test_route)
+    app.add_url_rule("/test2", "test2", view_func=test_route2)
     with hiro.Timeline().freeze():
         with app.test_client() as cli:
             assert cli.get("/test").status_code == 200

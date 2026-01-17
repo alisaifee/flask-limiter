@@ -30,6 +30,7 @@ def get_qualified_name(callable: Callable[..., Any], stack_trace_limit: int | No
     """
     if stack_trace_limit is not None:
         import traceback
+
         tb = traceback.extract_stack(limit=stack_trace_limit)
         return f"{tb[0].filename}:{tb[0].name}:{tb[0].lineno}"
     return f"{callable.__module__}.{callable.__name__}.{callable.__qualname__}"
