@@ -179,7 +179,7 @@ class Limiter:
     :param enabled: Whether the extension is enabled or not
     :param stack_trace_limit: Number of stack frames to extract when identifying the location
      of a route limit. Used to properly identify routes when custom decorators are applied.
-     Defaults to ``2``. Can also be configured via :data:`~flask_limiter.constants.ConfigVars.STACK_TRACE_LIMIT`
+     Defaults to ``None``. Can also be configured via :data:`~flask_limiter.constants.ConfigVars.STACK_TRACE_LIMIT`
     """
 
     def __init__(
