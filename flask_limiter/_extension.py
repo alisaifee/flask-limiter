@@ -566,7 +566,7 @@ class Limiter:
          as an integer (Default: ``1``).
         :param scope: a string or callable that returns a string for further categorizing the rate
          limiting scope. This scope is combined with the current endpoint of the request.
-
+        :param stack_trace_limit: the index of the stack trace to use for the limit.
 
         Changes
           - .. versionadded:: 2.9.0
