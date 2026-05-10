@@ -125,3 +125,9 @@ def docker_services_project_name():
 @pytest.fixture(scope="session")
 def docker_compose_files(pytestconfig):
     return ["docker-compose.yml"]
+
+
+def pytest_collection_modifyitems(config, items):
+    for item in items:
+        if {"redis_connection", "memcached_connection", "mongo_connection"} & set(item.fixturenames):
+            item.add_marker(pytest.mark.docker)

@@ -311,7 +311,7 @@ def test_fallback_to_memory_with_global_override(redis_connection, extension_fac
             assert cli.get("/t2").status_code == 429
 
 
-def test_fallback_to_memory(extension_factory):
+def test_fallback_to_memory(redis_connection, extension_factory):
     app, limiter = extension_factory(
         config={ConfigVars.ENABLED: True},
         default_limits=["2/minute"],
