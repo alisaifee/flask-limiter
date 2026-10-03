@@ -919,7 +919,7 @@ class Limiter:
                         retry_after = time.time() + int(existing_retry_after_header)
 
                     if isinstance(retry_after, datetime.datetime):
-                        retry_after = time.mktime(retry_after.timetuple())
+                        retry_after = retry_after.timestamp()
 
                     reset_at = max(int(retry_after), reset_at)
 

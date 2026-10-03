@@ -9,8 +9,10 @@ from collections import Counter
 from unittest import mock
 
 import hiro
+import pytest
 from flask import Flask, abort, make_response, request
 from werkzeug.exceptions import BadRequest
+from werkzeug.http import http_date
 
 from flask_limiter import Limit, Limiter, MetaLimit
 from flask_limiter.constants import ConfigVars
@@ -501,6 +503,46 @@ def test_retry_after_exists_rfc1123():
 
         retry_after = int(resp.headers.get("Retry-After"))
         assert retry_after > 1000
+
+
+@pytest.mark.skipif(not hasattr(time, "tzset"), reason="Requires time.tzset")
+@pytest.mark.parametrize("timezone", ["UTC0", "EST5", "JST-9"])
+@pytest.mark.parametrize("retry_after", ["delta-seconds", "http-date"])
+@pytest.mark.parametrize("existing_delay", [-30, 30, 120])
+def test_retry_after_exists_rfc1123_timezone(
+    extension_factory, monkeypatch, timezone, retry_after, existing_delay
+):
+    app, _ = extension_factory(
+        default_limits=["1/minute"],
+        storage_uri="memory://",
+        headers_enabled=True,
+        retry_after=retry_after,
+    )
+
+    @app.route("/")
+    def root():
+        return "", 200, {"Retry-After": http_date(time.time() + existing_delay)}
+
+    try:
+        with monkeypatch.context() as patch:
+            patch.setenv("TZ", timezone)
+            time.tzset()
+            with hiro.Timeline().freeze():
+                with app.test_client() as cli:
+                    response = cli.get("/")
+                    reset_at = max(
+                        int(response.headers["X-RateLimit-Reset"]),
+                        int(time.time()) + existing_delay,
+                    )
+                    expected = (
+                        http_date(reset_at)
+                        if retry_after == "http-date"
+                        else str(int(reset_at - time.time()))
+                    )
+                    assert response.status_code == 200
+                    assert response.headers["Retry-After"] == expected
+    finally:
+        time.tzset()
 
 
 def test_custom_headers_from_config():
