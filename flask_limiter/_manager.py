@@ -6,7 +6,6 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 import flask
-from ordered_set import OrderedSet
 
 from ._limits import ApplicationLimit, RuntimeLimit
 from .constants import ExemptionScope
@@ -21,8 +20,8 @@ class LimitManager:
         self,
         application_limits: list[ApplicationLimit],
         default_limits: list[Limit],
-        decorated_limits: dict[str, OrderedSet[Limit]],
-        blueprint_limits: dict[str, OrderedSet[Limit]],
+        decorated_limits: dict[str, dict[Limit, None]],
+        blueprint_limits: dict[str, dict[Limit, None]],
         route_exemptions: dict[str, ExemptionScope],
         blueprint_exemptions: dict[str, ExemptionScope],
     ) -> None:
@@ -32,7 +31,7 @@ class LimitManager:
         self._blueprint_limits = blueprint_limits
         self._route_exemptions = route_exemptions
         self._blueprint_exemptions = blueprint_exemptions
-        self._endpoint_hints: dict[str, OrderedSet[str]] = {}
+        self._endpoint_hints: dict[str, dict[str, None]] = {}
         self._logger = logging.getLogger("flask-limiter")
 
     @property
@@ -52,13 +51,13 @@ class LimitManager:
     def add_decorated_limit(self, route: str, limit: Limit | None, override: bool = False) -> None:
         if limit:
             if not override:
-                self._decorated_limits.setdefault(route, OrderedSet()).add(limit)
+                self._decorated_limits.setdefault(route, {}).setdefault(limit, None)
             else:
-                self._decorated_limits[route] = OrderedSet([limit])
+                self._decorated_limits[route] = dict.fromkeys([limit])
 
     def add_blueprint_limit(self, blueprint: str, limit: Limit | None) -> None:
         if limit:
-            self._blueprint_limits.setdefault(blueprint, OrderedSet()).add(limit)
+            self._blueprint_limits.setdefault(blueprint, {}).setdefault(limit, None)
 
     def add_route_exemption(self, route: str, scope: ExemptionScope) -> None:
         self._route_exemptions[route] = scope
@@ -67,7 +66,7 @@ class LimitManager:
         self._blueprint_exemptions[blueprint] = scope
 
     def add_endpoint_hint(self, endpoint: str, callable: str) -> None:
-        self._endpoint_hints.setdefault(endpoint, OrderedSet()).add(callable)
+        self._endpoint_hints.setdefault(endpoint, {}).setdefault(callable, None)
 
     def has_hints(self, endpoint: str) -> bool:
         return bool(self._endpoint_hints.get(endpoint))
@@ -93,7 +92,7 @@ class LimitManager:
                     name = callable_name
                 decorated_limits.extend(self.decorated_limits(name))
 
-            for hint in self._endpoint_hints.get(endpoint, OrderedSet()):
+            for hint in self._endpoint_hints.get(endpoint, {}):
                 hinted_limits.extend(self.decorated_limits(hint))
 
         if blueprint:
@@ -179,11 +178,11 @@ class LimitManager:
             self_exemption, ancestor_exemptions = self._blueprint_exemption_scope(app, blueprint)
 
             if not (self_exemption & ~(ExemptionScope.DEFAULT | ExemptionScope.APPLICATION)):
-                blueprint_self_limits = self._blueprint_limits.get(blueprint_name, OrderedSet())
+                blueprint_self_limits = self._blueprint_limits.get(blueprint_name, {})
                 blueprint_limits: Iterable[Limit] = (
                     itertools.chain(
                         *(
-                            self._blueprint_limits.get(member, [])
+                            self._blueprint_limits.get(member, {})
                             for member in blueprint_ancestory.intersection(
                                 self._blueprint_limits
                             ).difference(ancestor_exemptions)

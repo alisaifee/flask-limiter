@@ -22,7 +22,6 @@ from limits import RateLimitItem, WindowStats
 from limits.errors import ConfigurationError
 from limits.storage import MemoryStorage, Storage, storage_from_string
 from limits.strategies import STRATEGIES, RateLimiter
-from ordered_set import OrderedSet
 from werkzeug.http import http_date, parse_date
 
 from ._compat import request_context
@@ -108,7 +107,7 @@ class LimiterContext:
     view_rate_limit: RequestLimit | None = None
     view_rate_limits: list[RequestLimit] = dataclasses.field(default_factory=list)
     conditional_deductions: dict[RuntimeLimit, list[str]] = dataclasses.field(default_factory=dict)
-    seen_limits: OrderedSet[RuntimeLimit] = dataclasses.field(default_factory=OrderedSet)
+    seen_limits: dict[RuntimeLimit, None] = dataclasses.field(default_factory=dict)
 
     def reset(self) -> None:
         self.view_rate_limit = None
@@ -1003,10 +1002,12 @@ class Limiter:
             in_middleware,
             marked_for_limiting,
         )
-        limits = OrderedSet(defaults) - self.context.seen_limits
-        self.context.seen_limits.update(defaults)
+        unique_defaults = dict.fromkeys(defaults)
 
-        return list(limits) + list(decorated)
+        limits = [limit for limit in unique_defaults if limit not in self.context.seen_limits]
+        self.context.seen_limits.update(unique_defaults)
+
+        return limits + list(decorated)
 
     def __evaluate_limits(self, endpoint: str, limits: list[RuntimeLimit]) -> None:
         failed_limits: list[tuple[RuntimeLimit, list[str]]] = []
